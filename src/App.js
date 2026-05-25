@@ -1,0 +1,49 @@
+import React from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import Login from "./components/Auth/Login";
+import Register from "./components/Auth/Register";
+import CustomGeofence from "./components/Pets/CustomGeofence";
+import DashboardLayout from "./components/Dashboard/DashboardLayout";
+import MapViewRoute from "./components/Pets/MapViewRoute";
+import MultiPetRouteView from "./components/Pets/MultiPetRouteView";
+import OwnerDashboard from "./components/Dashboard/OwnerDashboard";/* First version list above map  */
+import FiruappDashboard from "./components/Dashboard/FiruappDashboard.tsx";/* Second version glass colors list on map  */
+import PetsGlassPage from "./components/Dashboard/PetsGlassPage.tsx";/* Didnt work  */
+import UltraGlassDashboard from "./components/Dashboard/ui-black/UltraGlassDashboard.tsx";/*  All black  */
+import FiruappGlassDashboard from "./components/Dashboard/ui/FiruappGlassDashboard.tsx";/* Good glass colors more menu options  */
+import UsersListPage from "./components/Users/UsersListPage.tsx";
+import SensorsListPage from "./components/Users/SensorsListPage.tsx";
+import PetsListPage from "./components/Users/PetsListPage.tsx";
+ // ✅ no {}
+
+
+function App() {
+  console.log("App loaded ✅");
+  return (
+    <Routes>
+      {/* Default routes */}
+      <Route path="/" element={<Navigate to="/login" replace />} />
+
+      {/* Public routes */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+
+      <Route path="/owner-dashboard" element={<FiruappDashboard />} />
+
+      {/* Protected routes with sidebar layout */}
+      <Route element={<DashboardLayout />}>
+        <Route path="/geofence" element={<CustomGeofence />} />
+        <Route path="/route" element={<MapViewRoute />} />
+        <Route path="/routes/recent" element={<MultiPetRouteView />} />
+        <Route path="/users" element={<UsersListPage />} />
+        <Route path="/pets" element={<PetsListPage />} />
+        <Route path="/sensors" element={<SensorsListPage />} />
+      </Route>
+
+      {/* Catch-all */}
+      <Route path="*" element={<Navigate to="/login" replace />} />
+    </Routes>
+  );
+}
+
+export default App;

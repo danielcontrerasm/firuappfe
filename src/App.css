@@ -1,0 +1,169 @@
+.App {
+  text-align: center;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+/* 🌐 GLOBAL STYLES */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  font-family: "Inter", "Roboto", sans-serif;
+  background-color: #f7fafa;
+  color: #333;
+}
+
+/* 🌈 LAYOUT */
+.dashboard {
+  display: flex;
+  flex-direction: row;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 260px;
+  background-color: #004d40;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 20px;
+  transition: transform 0.3s ease-in-out;
+}
+
+.sidebar h2 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+/* Pet list inside sidebar */
+.sidebar .pet-list {
+  overflow-y: auto;
+  flex-grow: 1;
+  scrollbar-width: thin;
+  scrollbar-color: #00695c #00332e;
+}
+
+.sidebar .pet-list::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar .pet-list::-webkit-scrollbar-thumb {
+  background-color: #009688;
+  border-radius: 3px;
+}
+
+/* Map container */
+.map-container {
+  flex-grow: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+}
+
+/* Context menu */
+.context-menu {
+  position: absolute;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  border-radius: 8px;
+  z-index: 2000;
+  padding: 4px 0;
+  animation: fadeIn 0.2s ease;
+}
+.context-menu button {
+  display: block;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 10px 16px;
+  text-align: left;
+  cursor: pointer;
+  color: #333;
+  font-size: 0.9rem;
+}
+.context-menu button:hover {
+  background: #e0f2f1;
+}
+
+/* 🧭 RESPONSIVE DESIGN */
+@media (max-width: 1024px) {
+  .dashboard {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+    overflow-x: auto;
+    padding: 10px;
+  }
+
+  .sidebar h2 {
+    display: none;
+  }
+
+  .map-container {
+    height: calc(100vh - 80px);
+  }
+}
+
+@media (max-width: 600px) {
+  .sidebar {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    height: 70px;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0;
+    z-index: 1000;
+    background-color: #004d40;
+  }
+
+  .map-container {
+    height: calc(100vh - 70px);
+  }
+
+  .pet-list {
+    display: flex;
+    flex-direction: row;
+    overflow-x: scroll;
+  }
+
+  .pet-item {
+    margin: 0 10px;
+    flex: 0 0 auto;
+  }
+
+  .leaflet-control-zoom {
+    bottom: 80px !important;
+    right: 10px !important;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}

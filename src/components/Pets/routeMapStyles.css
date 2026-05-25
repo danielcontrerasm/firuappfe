@@ -1,0 +1,372 @@
+.firu-route-page {
+  min-height: calc(100vh - 32px);
+  padding: 16px;
+  background:
+    linear-gradient(180deg, rgba(244, 248, 251, 0.96) 0%, rgba(236, 254, 255, 0.72) 100%);
+  color: #102033;
+}
+
+.firu-route-page.geofence-page {
+  background:
+    radial-gradient(circle at top right, rgba(6, 182, 212, 0.14), transparent 34%),
+    linear-gradient(180deg, #f4f8fb 0%, #eefbf8 100%);
+}
+
+.firu-route-header {
+  margin-bottom: 16px;
+}
+
+.firu-route-header h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.firu-route-header p {
+  margin: 6px 0 0;
+  color: #64748b;
+}
+
+.firu-route-map-shell {
+  position: relative;
+  height: calc(100vh - 230px);
+  min-height: 560px;
+  overflow: hidden;
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  border-radius: 20px;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.1);
+}
+
+.firu-route-map-shell .leaflet-container {
+  background: #e7f4f6;
+}
+
+.firu-route-map-shell.map-style-natural .leaflet-tile-pane {
+  filter: saturate(1.45) contrast(1.08) brightness(1.02);
+}
+
+.firu-route-map-shell.map-style-clean .leaflet-tile-pane {
+  filter: saturate(0.82) contrast(1.02) brightness(1.03);
+}
+
+.firu-route-map-shell .leaflet-control-zoom {
+  border: none !important;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
+}
+
+.firu-route-map-shell .leaflet-control-zoom a {
+  border: none !important;
+  color: #0f172a;
+}
+
+.firu-route-map-shell .leaflet-popup-content-wrapper,
+.firu-route-map-shell .leaflet-popup-tip {
+  border-radius: 16px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+}
+
+.firu-marker-wrap {
+  position: relative;
+  width: 58px;
+  height: 58px;
+}
+
+.firu-marker-pulse {
+  position: absolute;
+  inset: 0;
+  border: 2px solid rgba(6, 182, 212, 0.75);
+  border-radius: 50%;
+  background: rgba(6, 182, 212, 0.22);
+  animation: firuPulse 1.8s ease-out infinite;
+}
+
+.firu-marker-core {
+  position: absolute;
+  top: 9px;
+  left: 9px;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 4px solid #ffffff;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.28);
+  font-size: 23px;
+}
+
+.firu-route-tools,
+.firu-route-status,
+.firu-route-card {
+  position: absolute;
+  z-index: 1000;
+}
+
+.firu-route-tools {
+  top: 24px;
+  right: 24px;
+  display: flex;
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.1);
+  backdrop-filter: blur(16px);
+}
+
+.firu-route-tool {
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.firu-geofence-actions {
+  gap: 6px;
+}
+
+.firu-geofence-button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.firu-geofence-button:first-child {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.firu-geofence-button.active,
+.firu-geofence-actions > .firu-geofence-button:nth-last-of-type(2) {
+  background: #0f172a;
+  color: #ffffff;
+}
+
+.firu-geofence-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.firu-geofence-radius {
+  width: 82px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: #ffffff;
+  color: #0f172a;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  outline: none;
+}
+
+.firu-geofence-name-select {
+  max-width: 138px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: #ffffff;
+  color: #0f172a;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  outline: none;
+}
+
+.firu-geofence-popup {
+  display: grid;
+  gap: 6px;
+  min-width: 150px;
+}
+
+.firu-geofence-popup strong {
+  color: #0f172a;
+}
+
+.firu-geofence-popup span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.firu-geofence-popup button {
+  border: 0;
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: #ef4444;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.firu-geofence-list {
+  position: absolute;
+  top: 86px;
+  right: 24px;
+  z-index: 1000;
+  width: 260px;
+  max-height: 260px;
+  overflow: auto;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(16px);
+}
+
+.firu-geofence-list-title {
+  margin-bottom: 8px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.firu-geofence-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 0;
+  border-top: 1px solid #e2e8f0;
+}
+
+.firu-geofence-list-row:first-of-type {
+  border-top: 0;
+}
+
+.firu-geofence-list-row strong,
+.firu-geofence-list-row span {
+  display: block;
+}
+
+.firu-geofence-list-row strong {
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.firu-geofence-list-row span {
+  margin-top: 2px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.firu-geofence-list-row button {
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: #fee2e2;
+  color: #b91c1c;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.firu-route-status {
+  bottom: 24px;
+  left: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.firu-route-pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.1);
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.firu-route-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #06b6d4;
+}
+
+.firu-route-card {
+  right: 24px;
+  bottom: 24px;
+  width: 220px;
+  box-sizing: border-box;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.92);
+  color: #ffffff;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.25);
+}
+
+.firu-route-card-label {
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.firu-route-card-value {
+  margin-top: 4px;
+  font-size: 34px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.firu-route-card-copy {
+  margin-top: 6px;
+  color: #cbd5e1;
+  font-size: 14px;
+}
+
+@keyframes firuPulse {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.72);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.65);
+  }
+}
+
+@media (max-width: 720px) {
+  .firu-route-map-shell {
+    height: 520px;
+    min-height: 520px;
+  }
+
+  .firu-route-tools,
+  .firu-route-card {
+    right: 14px;
+  }
+
+  .firu-route-tools {
+    top: 14px;
+  }
+
+  .firu-route-status {
+    right: 14px;
+    bottom: 14px;
+    left: 14px;
+  }
+
+  .firu-route-card {
+    display: none;
+  }
+}

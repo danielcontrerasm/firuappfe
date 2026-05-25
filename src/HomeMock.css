@@ -1,0 +1,234 @@
+/* Font: Inter first (optional), fallback to system */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+:root {
+  --bg: #f3f4f6;
+  --frame: #ffffff;
+  --border: #e5e7eb;
+  --text: #111827;
+  --muted: #4b5563;
+  --blue: #1d4ed8;
+  --blue2: #2563eb;
+  --radius-xl: 18px;
+  --radius-lg: 16px;
+  --shadow: 0 18px 50px rgba(17, 24, 39, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* grey page padding */
+.page {
+  padding: 22px;
+}
+
+/* main rounded frame like the screenshot */
+.frame {
+  max-width: 1280px;
+  margin: 0 auto;
+  background: var(--frame);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 18px 18px 26px;
+}
+
+/* top bar */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px 14px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.shield {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: #0f172a;
+  color: #fff;
+}
+
+.brandText {
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.nav {
+  display: flex;
+  gap: 36px;
+}
+
+.navLink {
+  text-decoration: none;
+  color: #111827;
+  font-weight: 500;
+  font-size: 16px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid transparent;
+}
+
+.navActive {
+  border-bottom-color: var(--blue2);
+}
+
+/* hero */
+.hero {
+  padding: 12px 10px 0;
+}
+
+.heroInner {
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 44px 26px 40px;
+  text-align: center;
+}
+
+.heroTitleRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.bolt {
+  font-size: 28px;
+  transform: translateY(-2px);
+}
+
+.heroTitle {
+  margin: 0;
+  font-size: 44px;
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+  font-weight: 700;
+}
+
+.heroSub {
+  margin: 18px auto 26px;
+  max-width: 880px;
+  font-size: 18px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.cta {
+  border: 0;
+  cursor: pointer;
+  color: #fff;
+  background: var(--blue2);
+  padding: 14px 30px;
+  font-size: 18px;
+  font-weight: 600;
+  border-radius: 10px;
+  box-shadow: 0 16px 30px rgba(37, 99, 235, 0.25);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ctaIcon {
+  font-size: 18px;
+}
+
+/* section */
+.section {
+  padding: 20px 10px 0;
+}
+
+.sectionTitle {
+  margin: 18px 0 18px;
+  font-size: 32px;
+  font-weight: 700;
+}
+
+/* cards row */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.art {
+  padding: 14px 14px 0;
+}
+
+.svgArt {
+  width: 100%;
+  height: 170px;
+  display: block;
+}
+
+.cardBody {
+  padding: 16px 18px 18px;
+}
+
+.cardTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.miniIcon {
+  font-size: 18px;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.cardText {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.cardLink {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--blue2);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* responsiveness */
+@media (max-width: 1100px) {
+  .heroTitle {
+    font-size: 38px;
+  }
+  .cards {
+    grid-template-columns: 1fr;
+  }
+  .svgArt {
+    height: 190px;
+  }
+}
