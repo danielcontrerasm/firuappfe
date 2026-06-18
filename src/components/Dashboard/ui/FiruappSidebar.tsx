@@ -4,7 +4,6 @@ import { Avatar, Box, Button } from "@mui/material";
 import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import PetsIcon from "@mui/icons-material/Pets";
 import RadarIcon from "@mui/icons-material/Radar";
-import TimelineIcon from "@mui/icons-material/Timeline";
 import LogoutIcon from "@mui/icons-material/Logout";
 import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
 import PersonIcon from "@mui/icons-material/Person";
@@ -21,10 +20,9 @@ interface SidebarProps {
 
 const navItems = [
   { label: "Dashboard", icon: DashboardRoundedIcon, to: "/owner-dashboard", section: "all" as const },
-  { label: "My Pets", icon: PetsIcon, to: "/pets" },
-  { label: "Geofences", icon: RadarIcon, to: "/geofence", section: "geofence" as const },
-  { label: "Day Route", icon: TimelineIcon, to: "/route", section: "route" as const },
   { label: "Recent Routes", icon: AssessmentIcon, to: "/routes/recent" },
+  { label: "Geofences", icon: RadarIcon, to: "/geofence", section: "geofence" as const },
+  { label: "My Pets", icon: PetsIcon, to: "/pets" },
   { label: "Users", icon: PersonIcon, to: "/users" },
   { label: "GPS Sensors", icon: SensorsIcon, to: "/sensors" },
   { label: "Volunteer Groups", icon: GroupIcon, to: "/volunteers" },

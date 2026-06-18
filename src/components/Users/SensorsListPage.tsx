@@ -17,7 +17,7 @@ const mockSensors: SensorRow[] = [
   {
     id: "s1",
     name: "Collar-001",
-    petName: "Peluche",
+    petName: "Bella",
     type: "GPS Collar",
     status: "online",
     lastSignal: "1 min ago",

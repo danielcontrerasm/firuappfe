@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import {
   Avatar,
   Box,
@@ -12,6 +13,7 @@ import {
   TextField,
 } from "@mui/material";
 import EntityListPage, { Column } from "./EntityListPage.tsx";
+import { petImageEndpoint, usePetImage } from "../../services/usePetImage.ts";
 
 type PetStatus = "active" | "lost" | "offline";
 
@@ -19,7 +21,7 @@ export interface PetRow {
   id: string;
   name: string;
   ownerName: string;
-  species: string;
+  type: string;
   race: string;
   weight: string;
   age: string;
@@ -28,44 +30,80 @@ export interface PetRow {
   lastSeen: string;
 }
 
-const mockPets: PetRow[] = [
-  {
-    id: "1",
-    name: "Peluche",
-    ownerName: "Daniel",
-    species: "Dog",
-    race: "Golden Retriever",
-    weight: "28 kg",
-    age: "4 years",
-    imageUrl: "/beagle.png",
-    status: "active",
-    lastSeen: "2 min ago",
-  },
-  {
-    id: "2",
-    name: "Bella",
-    ownerName: "Daniel",
-    species: "Dog",
-    race: "Beagle",
-    weight: "11 kg",
-    age: "2 years",
-    imageUrl: "/german.png",
-    status: "active",
-    lastSeen: "12 min ago",
-  },
-  {
-    id: "3",
-    name: "Rocky",
-    ownerName: "Laura",
-    species: "Dog",
-    race: "Mixed Breed",
-    weight: "22 kg",
-    age: "6 years",
-    imageUrl: "/labrador.png",
-    status: "lost",
-    lastSeen: "Yesterday 18:30",
-  },
-];
+const emptyPetDraft: PetRow = {
+  id: "",
+  name: "",
+  ownerName: "",
+  type: "Dog",
+  race: "",
+  weight: "",
+  age: "",
+  imageUrl: "",
+  status: "active",
+  lastSeen: "New pet",
+};
+
+const API_BASE_URL = "http://localhost:8080";
+
+const normalizeImageUrl = (imageUrl?: string) => {
+  const cleanedUrl = imageUrl?.trim().replaceAll("\\", "/");
+  if (!cleanedUrl) return undefined;
+  if (cleanedUrl.startsWith("http") || cleanedUrl.startsWith("data:")) return cleanedUrl;
+  return encodeURI(`${API_BASE_URL}${cleanedUrl.startsWith("/") ? "" : "/"}${cleanedUrl}`);
+};
+
+const getPetImageUrl = (dto: any) =>
+  dto.imageUrl ??
+  dto.avatarUrl ??
+  dto.photoUrl ??
+  dto.petImageUrl ??
+  dto.image ??
+  dto.imagePath;
+
+const mapDtoToPetRow = (dto: any, fallback: PetRow = emptyPetDraft): PetRow => ({
+  ...fallback,
+  id: String(dto.id ?? fallback.id),
+  name: dto.name ?? fallback.name,
+  ownerName: dto.ownerName ?? fallback.ownerName,
+  type: dto.type ?? fallback.type,
+  race: dto.race ?? fallback.race,
+  weight: dto.weight != null ? `${dto.weight} kg` : fallback.weight,
+  age: dto.age != null ? `${dto.age} years` : fallback.age,
+  status: (dto.status ?? fallback.status) as PetStatus,
+  imageUrl: normalizeImageUrl(getPetImageUrl(dto)) ?? petImageEndpoint(dto.id) ?? fallback.imageUrl,
+  lastSeen: dto.createdAt ? new Date(dto.createdAt).toLocaleDateString() : fallback.lastSeen,
+});
+
+const AuthenticatedPetAvatar = ({
+  name,
+  petId,
+  imageUrl,
+  size = 32,
+  onStatusChange,
+}: {
+  name: string;
+  petId?: string | number;
+  imageUrl?: string;
+  size?: number;
+  onStatusChange?: (status: string) => void;
+}) => {
+  const resolvedSrc = usePetImage(petId, imageUrl);
+
+  useEffect(() => {
+    if (!onStatusChange) return;
+    if (resolvedSrc) {
+      onStatusChange(resolvedSrc.startsWith("blob:") ? "Image loaded from cache" : "Using local preview");
+    } else {
+      onStatusChange(petId ? "No image available" : "No image endpoint");
+    }
+  }, [onStatusChange, petId, resolvedSrc]);
+
+  return (
+    <Avatar src={resolvedSrc} sx={{ width: size, height: size }}>
+      {name?.charAt(0).toUpperCase()}
+    </Avatar>
+  );
+};
 
 const statusColor = (s: PetStatus) => {
   switch (s) {
@@ -84,15 +122,13 @@ const columns: Column<PetRow>[] = [
     label: "Pet",
     render: (row) => (
       <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-        <Avatar src={row.imageUrl} sx={{ width: 32, height: 32 }}>
-          {row.name.charAt(0).toUpperCase()}
-        </Avatar>
+        <AuthenticatedPetAvatar name={row.name} petId={row.id} imageUrl={row.imageUrl} />
         {row.name}
       </Box>
     ),
   },
   { field: "ownerName", label: "Owner" },
-  { field: "species", label: "Species" },
+  { field: "type", label: "Type" },
   { field: "race", label: "Race" },
   { field: "weight", label: "Weight" },
   { field: "age", label: "Age" },
@@ -111,25 +147,124 @@ const columns: Column<PetRow>[] = [
 ];
 
 const PetsListPage: React.FC = () => {
-  const [pets, setPets] = useState<PetRow[]>(mockPets);
+  const [pets, setPets] = useState<PetRow[]>([]);
   const [editingPet, setEditingPet] = useState<PetRow | null>(null);
+  const [creatingPet, setCreatingPet] = useState<PetRow | null>(null);
+  const [newPetImage, setNewPetImage] = useState<File | null>(null);
+  const [editPetImage, setEditPetImage] = useState<File | null>(null);
+  const [savingPet, setSavingPet] = useState(false);
+  const [creatingPetRequest, setCreatingPetRequest] = useState(false);
+  const [loadingPets, setLoadingPets] = useState(true);
+  const [editImageStatus, setEditImageStatus] = useState("");
 
   const handleEditChange = (field: keyof PetRow, value: string) => {
     setEditingPet((current) => current ? { ...current, [field]: value } : current);
   };
 
-  const handleSaveEdit = () => {
+  const handleCreateChange = (field: keyof PetRow, value: string) => {
+    setCreatingPet((current) => current ? { ...current, [field]: value } : current);
+  };
+
+  const parseNumber = (value: string) => {
+    const parsed = Number(String(value).replace(/[^\d.]/g, ""));
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchPets = async () => {
+      setLoadingPets(true);
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get(`${API_BASE_URL}/api/pets`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+        const petDtos = Array.isArray(response.data)
+          ? response.data
+          : response.data?.content || response.data?.items || [];
+
+        if (!cancelled) {
+          setPets(petDtos.map((dto: any) => mapDtoToPetRow(dto)));
+        }
+      } catch (error) {
+        console.error("Error fetching pets:", error);
+        if (!cancelled) {
+          setPets([]);
+          alert("Failed to load pets from the database.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingPets(false);
+        }
+      }
+    };
+
+    fetchPets();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleSaveEdit = async () => {
     if (!editingPet) return;
 
-    setPets((currentPets) =>
-      currentPets.map((pet) => pet.id === editingPet.id ? editingPet : pet)
-    );
-    setEditingPet(null);
+    setSavingPet(true);
+    try {
+      const token = localStorage.getItem("token");
+      const payload = {
+        id: Number(editingPet.id),
+        name: editingPet.name,
+        type: editingPet.type,
+        race: editingPet.race,
+        age: parseNumber(editingPet.age),
+        weight: parseNumber(editingPet.weight),
+        status: editingPet.status,
+        ownerName: editingPet.ownerName,
+        imageUrl: editingPet.imageUrl,
+      };
+
+      const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+      const response = editPetImage
+        ? await axios.put(
+            `http://localhost:8080/api/pets/${editingPet.id}`,
+            (() => {
+              const formData = new FormData();
+              formData.append(
+                "pet",
+                new Blob([JSON.stringify(payload)], { type: "application/json" })
+              );
+              formData.append("image", editPetImage);
+              return formData;
+            })(),
+            { headers }
+          )
+        : await axios.put(
+            `http://localhost:8080/api/pets/${editingPet.id}`,
+            payload,
+            { headers }
+          );
+
+      setPets((currentPets) =>
+        currentPets.map((pet) =>
+          pet.id === editingPet.id ? mapDtoToPetRow(response.data, editingPet) : pet
+        )
+      );
+      setEditingPet(null);
+      setEditPetImage(null);
+    } catch (error) {
+      console.error("Error updating pet:", error);
+      alert("Failed to update pet.");
+    } finally {
+      setSavingPet(false);
+    }
   };
 
   const handleImageUpload = (file?: File) => {
     if (!file) return;
 
+    setEditPetImage(file);
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === "string") {
@@ -139,10 +274,65 @@ const PetsListPage: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
+  const handleNewPetImageUpload = (file?: File) => {
+    if (!file) return;
+
+    setNewPetImage(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        handleCreateChange("imageUrl", reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCreatePet = async () => {
+    if (!creatingPet) return;
+
+    setCreatingPetRequest(true);
+    try {
+      const token = localStorage.getItem("token");
+      const payload = {
+        name: creatingPet.name,
+        type: creatingPet.type,
+        race: creatingPet.race,
+        age: parseNumber(creatingPet.age),
+        weight: parseNumber(creatingPet.weight),
+        status: creatingPet.status,
+      };
+      const formData = new FormData();
+      formData.append(
+        "pet",
+        new Blob([JSON.stringify(payload)], { type: "application/json" })
+      );
+      if (newPetImage) {
+        formData.append("image", newPetImage);
+      }
+
+      const response = await axios.post("http://localhost:8080/api/pets", formData, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      const createdPet = mapDtoToPetRow(response.data, {
+        ...creatingPet,
+        id: String(response.data?.id ?? Date.now()),
+      });
+
+      setPets((currentPets) => [...currentPets, createdPet]);
+      setCreatingPet(null);
+      setNewPetImage(null);
+    } catch (error) {
+      console.error("Error creating pet:", error);
+      alert("Failed to create pet.");
+    } finally {
+      setCreatingPetRequest(false);
+    }
+  };
+
   return (
     <>
       <EntityListPage<PetRow>
-        title="Pets"
+        title={loadingPets ? "Pets · Loading..." : "Pets"}
         columns={columns}
         rows={pets}
         searchField="name"
@@ -155,18 +345,140 @@ const PetsListPage: React.FC = () => {
           { label: "Offline", value: "offline" },
         ]}
         onCreate={() => {
-          console.log("Create Pet clicked");
-          // open modal or navigate to /pets/new
+          setCreatingPet(emptyPetDraft);
+          setNewPetImage(null);
         }}
-        onEdit={(row) => setEditingPet(row)}
+        onEdit={(row) => {
+          setEditImageStatus("");
+          setEditPetImage(null);
+          setEditingPet(row);
+        }}
         onDelete={(row) => {
           setPets((currentPets) => currentPets.filter((pet) => pet.id !== row.id));
         }}
       />
 
       <Dialog
+        open={Boolean(creatingPet)}
+        onClose={() => setCreatingPet(null)}
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{
+          sx: {
+            borderRadius: 4,
+            background: "rgba(255,255,255,0.96)",
+            border: "1px solid rgba(226,232,240,0.95)",
+            boxShadow: "0 24px 70px rgba(15,23,42,0.22)",
+          },
+        }}
+      >
+        <DialogTitle sx={{ color: "#0f172a", fontWeight: 900 }}>
+          New pet
+        </DialogTitle>
+        <DialogContent sx={{ display: "grid", gap: 2, pt: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Box
+              sx={{
+                "& .MuiAvatar-root": {
+                  border: "3px solid #ffffff",
+                  boxShadow: "0 12px 28px rgba(15,23,42,0.18)",
+                },
+              }}
+            >
+              <AuthenticatedPetAvatar
+                name={creatingPet?.name || "Pet"}
+                imageUrl={creatingPet?.imageUrl}
+                size={72}
+              />
+            </Box>
+            <Button
+              component="label"
+              variant="outlined"
+              sx={{ borderRadius: 3, textTransform: "none", fontWeight: 800 }}
+            >
+              Upload image
+              <input
+                hidden
+                accept="image/*"
+                type="file"
+                onChange={(event) => handleNewPetImageUpload(event.target.files?.[0])}
+              />
+            </Button>
+          </Box>
+          {creatingPet?.imageUrl && (
+            <TextField
+              label="Image URL"
+              value={creatingPet.imageUrl}
+              fullWidth
+              size="small"
+              InputProps={{ readOnly: true }}
+            />
+          )}
+          <TextField
+            label="Name"
+            value={creatingPet?.name ?? ""}
+            onChange={(event) => handleCreateChange("name", event.target.value)}
+            fullWidth
+          />
+          <TextField
+            label="Type"
+            value={creatingPet?.type ?? ""}
+            onChange={(event) => handleCreateChange("type", event.target.value)}
+            fullWidth
+          />
+          <TextField
+            label="Race"
+            value={creatingPet?.race ?? ""}
+            onChange={(event) => handleCreateChange("race", event.target.value)}
+            fullWidth
+          />
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
+            <TextField
+              label="Weight"
+              value={creatingPet?.weight ?? ""}
+              onChange={(event) => handleCreateChange("weight", event.target.value)}
+              fullWidth
+            />
+            <TextField
+              label="Age"
+              value={creatingPet?.age ?? ""}
+              onChange={(event) => handleCreateChange("age", event.target.value)}
+              fullWidth
+            />
+          </Box>
+          <TextField
+            select
+            label="Status"
+            value={creatingPet?.status ?? "active"}
+            onChange={(event) => handleCreateChange("status", event.target.value as PetStatus)}
+            fullWidth
+          >
+            <MenuItem value="active">Active</MenuItem>
+            <MenuItem value="lost">Lost</MenuItem>
+            <MenuItem value="offline">Offline</MenuItem>
+          </TextField>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={() => setCreatingPet(null)} sx={{ borderRadius: 3, textTransform: "none" }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleCreatePet}
+            disabled={creatingPetRequest || !creatingPet?.name.trim()}
+            sx={{ bgcolor: "#0f172a", borderRadius: 3, textTransform: "none", fontWeight: 900 }}
+          >
+            {creatingPetRequest ? "Creating..." : "Create pet"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
         open={Boolean(editingPet)}
-        onClose={() => setEditingPet(null)}
+        onClose={() => {
+          setEditingPet(null);
+          setEditPetImage(null);
+        }}
         fullWidth
         maxWidth="sm"
         PaperProps={{
@@ -183,17 +495,22 @@ const PetsListPage: React.FC = () => {
         </DialogTitle>
         <DialogContent sx={{ display: "grid", gap: 2, pt: 1 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Avatar
-              src={editingPet?.imageUrl}
+            <Box
               sx={{
-                width: 72,
-                height: 72,
-                border: "3px solid #ffffff",
-                boxShadow: "0 12px 28px rgba(15,23,42,0.18)",
+                "& .MuiAvatar-root": {
+                  border: "3px solid #ffffff",
+                  boxShadow: "0 12px 28px rgba(15,23,42,0.18)",
+                },
               }}
             >
-              {editingPet?.name?.charAt(0).toUpperCase()}
-            </Avatar>
+              <AuthenticatedPetAvatar
+                name={editingPet?.name || "Pet"}
+                petId={editingPet?.id}
+                imageUrl={editingPet?.imageUrl}
+                size={72}
+                onStatusChange={setEditImageStatus}
+              />
+            </Box>
             <Button
               component="label"
               variant="outlined"
@@ -208,6 +525,24 @@ const PetsListPage: React.FC = () => {
               />
             </Button>
           </Box>
+          {editImageStatus && (
+            <TextField
+              label="Image status"
+              value={editImageStatus}
+              fullWidth
+              size="small"
+              InputProps={{ readOnly: true }}
+            />
+          )}
+          {editingPet?.imageUrl && (
+            <TextField
+              label="Image URL"
+              value={editingPet.imageUrl}
+              fullWidth
+              size="small"
+              InputProps={{ readOnly: true }}
+            />
+          )}
           <TextField
             label="Name"
             value={editingPet?.name ?? ""}
@@ -221,9 +556,9 @@ const PetsListPage: React.FC = () => {
             fullWidth
           />
           <TextField
-            label="Species"
-            value={editingPet?.species ?? ""}
-            onChange={(event) => handleEditChange("species", event.target.value)}
+            label="Type"
+            value={editingPet?.type ?? ""}
+            onChange={(event) => handleEditChange("type", event.target.value)}
             fullWidth
           />
           <TextField
@@ -265,15 +600,22 @@ const PetsListPage: React.FC = () => {
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={() => setEditingPet(null)} sx={{ borderRadius: 3, textTransform: "none" }}>
+          <Button
+            onClick={() => {
+              setEditingPet(null);
+              setEditPetImage(null);
+            }}
+            sx={{ borderRadius: 3, textTransform: "none" }}
+          >
             Cancel
           </Button>
           <Button
             variant="contained"
             onClick={handleSaveEdit}
+            disabled={savingPet}
             sx={{ bgcolor: "#0f172a", borderRadius: 3, textTransform: "none", fontWeight: 900 }}
           >
-            Save changes
+            {savingPet ? "Saving..." : "Save changes"}
           </Button>
         </DialogActions>
       </Dialog>

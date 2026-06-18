@@ -4,7 +4,6 @@ import MapPanel from "./MapPanel.tsx";
 import PetsListOverlay from "./PetsListOverlay.tsx";
 
 const demoPets = [
-  { id: "1", name: "Peluche", status: "active", avatarUrl: "/dog1.png" },
   { id: "2", name: "Bella", status: "active", avatarUrl: "/dog2.png" },
   { id: "3", name: "Rocky", status: "lost", avatarUrl: "/dog3.png" },
 ];

@@ -43,12 +43,6 @@ interface Pet {
 
 const mockPets: Pet[] = [
   {
-    id: "1",
-    name: "Peluche",
-    status: "active",
-    avatarUrl: "https://place-puppy.com/96x96",
-  },
-  {
     id: "2",
     name: "Bella",
     status: "active",
@@ -63,7 +57,7 @@ const mockPets: Pet[] = [
 ];
 
 const FiruappGlassDashboard: React.FC = () => {
-  const [selectedPetId, setSelectedPetId] = useState<string>("1");
+  const [selectedPetId, setSelectedPetId] = useState<string>("2");
 
   return (
     <Box

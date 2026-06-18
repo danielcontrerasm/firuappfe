@@ -14,6 +14,7 @@ import {
   Chip,
 } from "@mui/material";
 import axios from "axios";
+import { jwtDecode } from "jwt-decode";
 import AddLocationAltIcon from "@mui/icons-material/AddLocationAlt";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import GroupsIcon from "@mui/icons-material/Groups";
@@ -22,6 +23,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { useNavigate } from "react-router-dom";
 import { compactPanel, firuColors, Pet } from "./FiruappStyles.ts";
+import { usePetImage } from "../../../services/usePetImage.ts";
 
 interface PetsListProps {
   pets: Pet[];
@@ -33,6 +35,27 @@ interface PetsListProps {
 const statusColorMap: Record<string, string> = {
   active: firuColors.green,
   lost: firuColors.orange,
+};
+
+const FiruappPetAvatar: React.FC<{ pet: Pet; petStatus: string }> = ({ pet, petStatus }) => {
+  const resolvedSrc = usePetImage(pet.apiId || pet.id, pet.imageUrl || pet.avatarUrl);
+
+  return (
+    <Avatar
+      src={resolvedSrc}
+      sx={{
+        width: 38,
+        height: 38,
+        bgcolor: petStatus === "lost" ? "#fed7aa" : "#bbf7d0",
+        color: petStatus === "lost" ? "#c2410c" : "#15803d",
+        border: "3px solid white",
+        boxShadow: "0 8px 18px rgba(15,23,42,0.12)",
+        fontWeight: 900,
+      }}
+    >
+      {pet.name.charAt(0)}
+    </Avatar>
+  );
 };
 
 const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, onStatusChange }) => {
@@ -54,7 +77,7 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
   const updatePetStatus = async (status: Pet["status"]) => {
     if (!menuPet) return;
 
-    const petId = menuPet.id;
+    const petId = menuPet.apiId || menuPet.id;
     const endpoint =
       status === "lost"
         ? `http://localhost:8080/api/pets/${petId}/lost`
@@ -62,18 +85,31 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
 
     try {
       const token = localStorage.getItem("token");
-      await axios.put(endpoint, {}, { headers: token ? { Authorization: `Bearer ${token}` } : undefined });
+      const decodedToken = token ? jwtDecode<Record<string, any>>(token) : null;
+      console.log("Updating pet status:", {
+        petName: menuPet.name,
+        dashboardId: menuPet.id,
+        apiId: menuPet.apiId,
+        petId,
+        status,
+        endpoint,
+        hasToken: Boolean(token),
+        tokenUserId: decodedToken?.id ?? decodedToken?.userId ?? decodedToken?.sub,
+        tokenRole: decodedToken?.role ?? decodedToken?.authorities,
+      });
+      await axios.post(endpoint, {}, { headers: token ? { Authorization: `Bearer ${token}` } : undefined });
       onStatusChange?.(petId, status);
       handleCloseMenu();
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error marking pet as ${status}:`, error);
-      alert(`Could not mark ${menuPet.name} as ${status}.`);
+      const message = error?.response?.data?.message || error?.response?.data?.error || error?.message || "Unknown error";
+      alert(`Could not mark ${menuPet.name} as ${status}. ${message}`);
     }
   };
 
   const handleCreateGeofence = () => {
     if (menuPet) {
-      navigate(`/geofence?petId=${menuPet.id}`);
+      navigate(`/geofence?petId=${menuPet.apiId || menuPet.id}`);
     }
     handleCloseMenu();
   };
@@ -132,20 +168,7 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
               }}
             >
               <ListItemAvatar sx={{ minWidth: 46 }}>
-                <Avatar
-                 src={pet.imageUrl || pet.avatarUrl}
-                  sx={{
-                    width: 38,
-                    height: 38,
-                    bgcolor: petStatus === "lost" ? "#fed7aa" : "#bbf7d0",
-                    color: petStatus === "lost" ? "#c2410c" : "#15803d",
-                    border: "3px solid white",
-                    boxShadow: "0 8px 18px rgba(15,23,42,0.12)",
-                    fontWeight: 900,
-                  }}
-                >
-                  {pet.name.charAt(0)}
-                </Avatar>
+                <FiruappPetAvatar pet={pet} petStatus={petStatus} />
               </ListItemAvatar>
               <ListItemText
                 primary={

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FeatureGroup,
   Circle,
@@ -30,6 +30,11 @@ const mapStyles = {
   },
 };
 
+const extractPetDtos = (data) => {
+  if (Array.isArray(data)) return data;
+  return data?.content || data?.items || data?.pets || data?.data || data?.results || [];
+};
+
 const normalizeCoordinate = (coordinate) => {
   if (Array.isArray(coordinate)) {
     // Stored polygons commonly come back as GeoJSON-style [longitude, latitude].
@@ -57,13 +62,13 @@ const normalizeCircleCenter = (geofence) => {
     : null;
 };
 
-const normalizeGeofences = (data, activePetId, fallbackName) => {
+const normalizeGeofences = (data, activePetId, fallbackName, fallbackPet) => {
   const rawGeofences = data?.geofences || data?.items || data || [];
   const geofences = Array.isArray(rawGeofences) ? rawGeofences : [rawGeofences];
 
   return geofences
     .map((geofence, index) => {
-      if (activePetId && geofence.petId != null && String(geofence.petId) !== String(activePetId)) {
+      if (activePetId !== "all" && geofence.petId != null && String(geofence.petId) !== String(activePetId)) {
         return null;
       }
 
@@ -74,8 +79,9 @@ const normalizeGeofences = (data, activePetId, fallbackName) => {
       if (type === "circle" || (center && Number.isFinite(radiusMeters))) {
         if (!center || !Number.isFinite(radiusMeters)) return null;
         return {
-          id: geofence.id ?? `geofence-${index}`,
-          petId: geofence.petId,
+          id: geofence.id ?? `geofence-${fallbackPet?.id ?? activePetId}-${index}`,
+          petId: geofence.petId ?? fallbackPet?.id ?? activePetId,
+          petName: geofence.petName ?? geofence.pet?.name ?? fallbackPet?.name,
           name: geofence.name ?? geofence.label ?? fallbackName ?? defaultGeofenceNames[index % defaultGeofenceNames.length],
           type: "circle",
           center,
@@ -90,8 +96,9 @@ const normalizeGeofences = (data, activePetId, fallbackName) => {
       if (coordinates.length < 3) return null;
 
       return {
-        id: geofence.id ?? `geofence-${index}`,
-        petId: geofence.petId,
+        id: geofence.id ?? `geofence-${fallbackPet?.id ?? activePetId}-${index}`,
+        petId: geofence.petId ?? fallbackPet?.id ?? activePetId,
+        petName: geofence.petName ?? geofence.pet?.name ?? fallbackPet?.name,
         name: geofence.name ?? geofence.label ?? fallbackName ?? defaultGeofenceNames[index % defaultGeofenceNames.length],
         type: "polygon",
         coordinates,
@@ -132,9 +139,9 @@ const FitGeofences = ({ geofences, polygon, circleCenter }) => {
   return null;
 };
 
-const CustomGeofence = ({ petId = 1 }) => {
-  const [searchParams] = useSearchParams();
-  const activePetId = searchParams.get("petId") || petId;
+const CustomGeofence = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activePetId = searchParams.get("petId") || "all";
   const activePetIdNumber = Number(activePetId);
   const [drawMode, setDrawMode] = useState("polygon");
   const [polygon, setPolygon] = useState([]);
@@ -142,23 +149,137 @@ const CustomGeofence = ({ petId = 1 }) => {
   const [circleRadius, setCircleRadius] = useState(500);
   const [geofenceName, setGeofenceName] = useState(defaultGeofenceNames[0]);
   const [storedGeofences, setStoredGeofences] = useState([]);
+  const [pets, setPets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingPets, setLoadingPets] = useState(true);
   const [mapStyle, setMapStyle] = useState("natural");
+  const [petFilters, setPetFilters] = useState({
+    city: "",
+    neighborhood: "",
+    ownerName: "",
+    petName: "",
+  });
 
   const token = useMemo(() => localStorage.getItem("token"), []);
   const activeMapStyle = mapStyles[mapStyle];
+  const selectedPet = pets.find((pet) => pet.id === String(activePetId));
+  const selectedPetLabel = activePetId === "all" ? "All pets" : selectedPet?.name || "Selected pet";
+  const handlePetSelection = useCallback((nextPetId) => {
+    setPolygon([]);
+    setCircleCenter(null);
+
+    if (nextPetId === "all") {
+      setSearchParams({});
+      return;
+    }
+
+    setSearchParams({ petId: nextPetId });
+  }, [setSearchParams]);
+  const filteredPets = useMemo(() => {
+    const cityTerm = petFilters.city.trim().toLowerCase();
+    const neighborhoodTerm = petFilters.neighborhood.trim().toLowerCase();
+    const ownerTerm = petFilters.ownerName.trim().toLowerCase();
+    const petTerm = petFilters.petName.trim().toLowerCase();
+
+    return pets.filter((pet) => {
+      const matchesCity = !cityTerm || pet.city.toLowerCase().includes(cityTerm);
+      const matchesNeighborhood = !neighborhoodTerm || pet.neighborhood.toLowerCase().includes(neighborhoodTerm);
+      const matchesOwner = !ownerTerm || pet.ownerName.toLowerCase().includes(ownerTerm);
+      const matchesPet = !petTerm || pet.name.toLowerCase().includes(petTerm);
+      return matchesCity && matchesNeighborhood && matchesOwner && matchesPet;
+    });
+  }, [petFilters.city, petFilters.neighborhood, petFilters.ownerName, petFilters.petName, pets]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchPets = async () => {
+      setLoadingPets(true);
+      try {
+        const response = await axios.get("http://localhost:8080/api/pets", {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+        const petDtos = extractPetDtos(response.data);
+        if (!cancelled) {
+          setPets(
+            petDtos.map((pet) => ({
+              id: String(pet.id),
+              name: pet.name || `Pet ${pet.id}`,
+              status: String(pet.status || "active").toLowerCase(),
+              ownerName: pet.ownerName || pet.owner?.name || "",
+              city: pet.city || pet.owner?.city || pet.address?.city || "",
+              neighborhood:
+                pet.neighborhood ||
+                pet.owner?.neighborhood ||
+                pet.address?.neighborhood ||
+                pet.zone ||
+                "",
+            }))
+          );
+        }
+      } catch (error) {
+        console.error("Error fetching pets for geofence builder:", error);
+        if (!cancelled) {
+          setPets([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingPets(false);
+        }
+      }
+    };
+
+    fetchPets();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  useEffect(() => {
+    if (activePetId === "all") return;
+    if (filteredPets.some((pet) => pet.id === String(activePetId))) return;
+    if (filteredPets.length === 1) {
+      handlePetSelection(filteredPets[0].id);
+    }
+  }, [activePetId, filteredPets, handlePetSelection]);
 
   useEffect(() => {
     const fetchStoredGeofences = async () => {
+      setLoading(true);
       try {
-        const response = await axios.get(
-          `http://localhost:8080/api/geofences/${activePetId}`,
-          {
-            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        if (activePetId === "all") {
+          if (!pets.length) {
+            setStoredGeofences([]);
+            return;
           }
-        );
 
-        setStoredGeofences(normalizeGeofences(response.data, activePetId));
+          const responses = await Promise.all(
+            pets.map(async (pet) => {
+              try {
+                const response = await axios.get(`http://localhost:8080/api/geofences/${pet.id}`, {
+                  headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+                });
+
+                return normalizeGeofences(response.data, pet.id, undefined, pet);
+              } catch (error) {
+                console.error(`Error fetching stored geofences for ${pet.name}:`, error);
+                return [];
+              }
+            })
+          );
+
+          setStoredGeofences(responses.flat());
+        } else {
+          const response = await axios.get(
+            `http://localhost:8080/api/geofences/${activePetId}`,
+            {
+              headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+            }
+          );
+
+          setStoredGeofences(normalizeGeofences(response.data, activePetId, undefined, selectedPet));
+        }
       } catch (error) {
         console.error("Error fetching stored geofences:", error);
         setStoredGeofences([]);
@@ -168,7 +289,11 @@ const CustomGeofence = ({ petId = 1 }) => {
     };
 
     fetchStoredGeofences();
-  }, [activePetId, token]);
+  }, [activePetId, pets, selectedPet, token]);
+
+  const handlePetFilterChange = (event) => {
+    handlePetSelection(event.target.value);
+  };
 
   const handleMapClick = (e) => {
     const { lat, lng } = e.latlng;
@@ -186,6 +311,11 @@ const CustomGeofence = ({ petId = 1 }) => {
   };
 
   const handleSaveGeofence = async () => {
+    if (activePetId === "all") {
+      alert("Select one pet before saving a new geofence.");
+      return;
+    }
+
     if (drawMode === "circle" && !circleCenter) {
       alert("Click the map to choose the circle center.");
       return;
@@ -219,7 +349,7 @@ const CustomGeofence = ({ petId = 1 }) => {
         }
       );
 
-      const saved = normalizeGeofences([response.data], activePetId, geofenceName);
+      const saved = normalizeGeofences([response.data], activePetId, geofenceName, selectedPet);
       setStoredGeofences((prev) => [...prev, ...saved]);
       setPolygon([]);
       setCircleCenter(null);
@@ -231,15 +361,17 @@ const CustomGeofence = ({ petId = 1 }) => {
     }
   };
 
-  const handleDeleteGeofence = async () => {
-    const confirmed = window.confirm("Delete saved geofence for this pet?");
+  const handleDeleteGeofence = async (geofence) => {
+    const deletePetId = geofence?.petId ?? activePetId;
+    const petName = geofence?.petName || pets.find((pet) => pet.id === String(deletePetId))?.name || "this pet";
+    const confirmed = window.confirm(`Delete saved geofence for ${petName}?`);
     if (!confirmed) return;
 
     try {
-      await axios.delete(`http://localhost:8080/api/geofences/${activePetId}`, {
+      await axios.delete(`http://localhost:8080/api/geofences/${deletePetId}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
-      setStoredGeofences([]);
+      setStoredGeofences((current) => current.filter((item) => String(item.petId) !== String(deletePetId)));
     } catch (error) {
       console.error("Error deleting geofence:", error);
       alert("Failed to delete geofence.");
@@ -251,8 +383,45 @@ const CustomGeofence = ({ petId = 1 }) => {
       <div className="firu-route-header">
         <h2>Geofence builder</h2>
         <p>
-          Click the map to draw a safe zone, then save it for this pet.
+          {activePetId === "all"
+            ? "Viewing saved safe zones for all pets. Select one pet to draw and save a new geofence."
+            : `Click the map to draw a safe zone, then save it for ${selectedPetLabel}.`}
         </p>
+      </div>
+
+      <div className="firu-geofence-searchbar">
+        <input
+          className="firu-geofence-search-input"
+          placeholder="Search by city"
+          value={petFilters.city}
+          onChange={(event) =>
+            setPetFilters((current) => ({ ...current, city: event.target.value }))
+          }
+        />
+        <input
+          className="firu-geofence-search-input"
+          placeholder="Search by neighborhood"
+          value={petFilters.neighborhood}
+          onChange={(event) =>
+            setPetFilters((current) => ({ ...current, neighborhood: event.target.value }))
+          }
+        />
+        <input
+          className="firu-geofence-search-input"
+          placeholder="Search by owner name"
+          value={petFilters.ownerName}
+          onChange={(event) =>
+            setPetFilters((current) => ({ ...current, ownerName: event.target.value }))
+          }
+        />
+        <input
+          className="firu-geofence-search-input"
+          placeholder="Search by pet name"
+          value={petFilters.petName}
+          onChange={(event) =>
+            setPetFilters((current) => ({ ...current, petName: event.target.value }))
+          }
+        />
       </div>
 
       <div className={`firu-route-map-shell map-style-${mapStyle}`}>
@@ -282,8 +451,8 @@ const CustomGeofence = ({ petId = 1 }) => {
                   <Popup>
                     <div className="firu-geofence-popup">
                       <strong>{geofence.name}</strong>
-                      <span>Circle geofence · {Math.round(geofence.radiusMeters)} m</span>
-                      <button type="button" onClick={handleDeleteGeofence}>
+                      <span>{geofence.petName || "Pet"} · Circle · {Math.round(geofence.radiusMeters)} m</span>
+                      <button type="button" onClick={() => handleDeleteGeofence(geofence)}>
                         Delete
                       </button>
                     </div>
@@ -298,8 +467,8 @@ const CustomGeofence = ({ petId = 1 }) => {
                   <Popup>
                     <div className="firu-geofence-popup">
                       <strong>{geofence.name}</strong>
-                      <span>Polygon geofence · {geofence.coordinates.length} points</span>
-                      <button type="button" onClick={handleDeleteGeofence}>
+                      <span>{geofence.petName || "Pet"} · Polygon · {geofence.coordinates.length} points</span>
+                      <button type="button" onClick={() => handleDeleteGeofence(geofence)}>
                         Delete
                       </button>
                     </div>
@@ -332,7 +501,61 @@ const CustomGeofence = ({ petId = 1 }) => {
           </FeatureGroup>
         </MapContainer>
 
+        <div className="firu-geofence-pets">
+          <div className="firu-geofence-pets-title">Pets</div>
+          <button
+            type="button"
+            className={`firu-geofence-pet-row ${activePetId === "all" ? "active" : ""}`}
+            onClick={() => handlePetSelection("all")}
+          >
+            <div>
+              <strong>All pets</strong>
+              <span>View all saved geofences</span>
+            </div>
+          </button>
+          {loadingPets ? (
+            <div className="firu-geofence-pets-empty">Loading pets...</div>
+          ) : filteredPets.length === 0 ? (
+            <div className="firu-geofence-pets-empty">No pets match the current filters.</div>
+          ) : pets.length === 0 ? (
+            <div className="firu-geofence-pets-empty">No pets available.</div>
+          ) : (
+            filteredPets.map((pet) => (
+              <button
+                type="button"
+                key={pet.id}
+                className={`firu-geofence-pet-row ${activePetId === pet.id ? "active" : ""}`}
+                onClick={() => handlePetSelection(pet.id)}
+              >
+                <div>
+                  <strong>{pet.name}</strong>
+                  <span>
+                    {pet.ownerName ? `${pet.ownerName} · ` : ""}
+                    {pet.neighborhood ? `${pet.neighborhood}, ` : ""}
+                    {pet.city || (pet.status === "lost" ? "Lost pet" : "Active tracking")}
+                  </span>
+                </div>
+                <span className={`firu-geofence-pet-badge ${pet.status === "lost" ? "lost" : "active"}`}>
+                  {pet.status === "lost" ? "Lost" : "Live"}
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+
         <div className="firu-route-tools firu-geofence-actions">
+          <select
+            className="firu-geofence-pet-select"
+            value={activePetId}
+            onChange={handlePetFilterChange}
+          >
+            <option value="all">All pets</option>
+            {filteredPets.map((pet) => (
+              <option key={pet.id} value={pet.id}>
+                {pet.name}
+              </option>
+            ))}
+          </select>
           <select
             className="firu-geofence-name-select"
             value={geofenceName}
@@ -387,6 +610,7 @@ const CustomGeofence = ({ petId = 1 }) => {
 
         <div className="firu-route-status">
           <span className="firu-route-pill"><span className="firu-route-dot" /> {drawMode.toUpperCase()} MODE</span>
+          <span className="firu-route-pill"><span className="firu-route-dot" /> {selectedPetLabel.toUpperCase()}</span>
           <span className="firu-route-pill"><span className="firu-route-dot" /> {drawMode === "circle" ? `${circleRadius} M` : `${polygon.length} POINTS`}</span>
           <span className="firu-route-pill"><span className="firu-route-dot" /> {storedGeofences.length} SAVED</span>
         </div>
@@ -399,12 +623,13 @@ const CustomGeofence = ({ petId = 1 }) => {
                 <div>
                   <strong>{geofence.name}</strong>
                   <span>
+                    {geofence.petName ? `${geofence.petName} · ` : ""}
                     {geofence.type === "circle"
                       ? `Circle · ${Math.round(geofence.radiusMeters)} m`
                       : `Polygon · ${geofence.coordinates.length} points`}
                   </span>
                 </div>
-                <button type="button" onClick={handleDeleteGeofence}>
+                <button type="button" onClick={() => handleDeleteGeofence(geofence)}>
                   Delete
                 </button>
               </div>

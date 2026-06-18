@@ -3,8 +3,12 @@ export type PetStatus = "active" | "lost";
 
 export interface Pet {
   id: string;
+  apiId?: string;
   name: string;
   status: PetStatus;
+  ownerName?: string;
+  city?: string;
+  neighborhood?: string;
   imageUrl?: string;
   avatarUrl?: string;
   race?: string;

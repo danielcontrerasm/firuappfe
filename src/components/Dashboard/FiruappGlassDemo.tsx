@@ -10,13 +10,12 @@ export const glassPanel = {
 };
 
 const mockPets = [
-  { id: "1", name: "Peluche", status: "Active", color: "#22c55e" },
   { id: "2", name: "Bella", status: "Active", color: "#22c55e" },
   { id: "3", name: "Rocky", status: "Lost",   color: "#f97316" },
 ];
 
 const FiruappGlassDemo: React.FC = () => {
-  const [selectedId, setSelectedId] = useState<string>("1");
+  const [selectedId, setSelectedId] = useState<string>("2");
 
   return (
     <Box

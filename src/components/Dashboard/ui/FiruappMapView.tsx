@@ -1,5 +1,5 @@
 // ui/FiruappMapView.tsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Box, Chip, Stack, Typography } from "@mui/material";
 import axios from "axios";
 import { Circle, MapContainer, Marker, Polygon, Popup, TileLayer, useMap } from "react-leaflet";
@@ -9,6 +9,7 @@ import DrawIcon from "@mui/icons-material/Draw";
 import PolylineIcon from "@mui/icons-material/Polyline";
 import RadarIcon from "@mui/icons-material/Radar";
 import { firuColors, Pet } from "./FiruappStyles.ts";
+import { loadPetImage } from "../../../services/usePetImage.ts";
 
 interface PetLocation {
   id: string | number;
@@ -35,27 +36,22 @@ interface PetGeofence {
 interface MapViewProps {
   apiUrl?: string;
   selectedPet?: Pet;
+  pets?: Pet[];
+  petDataMode?: "mock" | "database" | "mixed";
+  onSelectPet?: (id: string) => void;
 }
 
 const fallbackCenter: LatLngExpression = [6.2442, -75.5812];
 
 const petImagesById: Record<string, string> = {
-  "1": "/beagle.png",
   "2": "/german.png",
   "3": "/labrador.png",
 };
 
 const petImagesByName: Record<string, string> = {
-  peluche: "/beagle.png",
   bella: "/german.png",
   rocky: "/labrador.png",
 };
-
-const knownPets = [
-  { id: "1", name: "Peluche" },
-  { id: "2", name: "Bella" },
-  { id: "3", name: "Rocky" },
-];
 
 const geofenceColors = [firuColors.cyan, firuColors.green, firuColors.orange, firuColors.violet];
 const mapStyles = {
@@ -74,6 +70,11 @@ const mapStyles = {
 };
 
 const normalizePetName = (name?: string) => name?.trim().toLowerCase();
+const normalizeStatus = (status?: string) => status?.trim().toLowerCase().replace(/[\s-]+/g, "_");
+const isAlertStatus = (status?: string) => {
+  const normalized = normalizeStatus(status);
+  return normalized === "lost" || normalized === "out_of_geofence" || normalized === "outside_geofence" || normalized === "outside_safe_zone";
+};
 
 const normalizeImageUrl = (url?: string) => {
   if (!url) return undefined;
@@ -99,6 +100,16 @@ const normalizeCircleCenter = (geofence: any): LatLngExpression | null => {
   const longitude = Number(center.longitude ?? center.lng ?? center.lon ?? geofence?.centerLng ?? geofence?.centerLongitude ?? geofence?.longitude);
   return Number.isFinite(latitude) && Number.isFinite(longitude) ? [latitude, longitude] : null;
 };
+
+/*
+ * Optional client-side geofence containment detection.
+ * Disabled for now while we decide whether alert state should come only from the backend.
+ *
+ * const toLatLngPair = ...
+ * const distanceMeters = ...
+ * const pointInPolygon = ...
+ * const isPointInsideGeofence = ...
+ */
 
 const normalizeGeofences = (data: any, pet: { id: string; name: string }): PetGeofence[] => {
   const rawGeofences = data?.geofences || data?.items || data || [];
@@ -154,8 +165,10 @@ const createPetIcon = (imageUrl?: string, status?: string) =>
   L.divIcon({
     className: "firu-pet-marker-wrapper",
     html: `
-      <div class="firu-pet-marker ${status === "lost" ? "lost" : ""}">
-        ${imageUrl ? `<img src="${imageUrl}" alt="" />` : "🐾"}
+      <div class="firu-pet-marker-shell ${isAlertStatus(status) ? "alert" : ""}">
+        <div class="firu-pet-marker ${isAlertStatus(status) ? "alert" : ""}">
+          ${imageUrl ? `<img src="${imageUrl}" alt="" />` : "🐾"}
+        </div>
       </div>
     `,
     iconSize: [58, 58],
@@ -163,12 +176,75 @@ const createPetIcon = (imageUrl?: string, status?: string) =>
     popupAnchor: [0, -58],
   });
 
-const FiruappMapView: React.FC<MapViewProps> = ({ apiUrl = "http://localhost:8080/api/pets/locations", selectedPet }) => {
+const mockPetLocations: PetLocation[] = [
+  {
+    id: "mock-location-1",
+    petId: "mock-2",
+    latitude: 6.2442,
+    longitude: -75.5812,
+    petName: "Bella",
+    timestamp: new Date().toISOString(),
+    imageUrl: "/german.png",
+    status: "active",
+  },
+  {
+    id: "mock-location-2",
+    petId: "mock-3",
+    latitude: 6.2482,
+    longitude: -75.5862,
+    petName: "Rocky",
+    timestamp: new Date().toISOString(),
+    imageUrl: "/labrador.png",
+    status: "lost",
+  },
+];
+
+const FiruappMapView: React.FC<MapViewProps> = ({
+  apiUrl = "http://localhost:8080/api/pets/locations",
+  selectedPet,
+  pets = [],
+  petDataMode = "mixed",
+  onSelectPet,
+}) => {
   const [petLocations, setPetLocations] = useState<PetLocation[]>([]);
   const [petGeofences, setPetGeofences] = useState<PetGeofence[]>([]);
   const [geofencesLoaded, setGeofencesLoaded] = useState(false);
   const [showGeofences, setShowGeofences] = useState(true);
   const [mapStyle, setMapStyle] = useState<"clean" | "natural">("natural");
+  const [petImageBlobUrls, setPetImageBlobUrls] = useState<Record<string, string>>({});
+  const statusByPetId = useMemo(
+    () =>
+      Object.fromEntries(
+        pets
+          .map((pet) => [String(pet.apiId || pet.id), pet.status] as const)
+          .filter(([petId]) => !petId.startsWith("mock-"))
+      ),
+    [pets]
+  );
+  const dashboardPetIdByLocationPetId = useMemo(
+    () =>
+      Object.fromEntries(
+        pets.flatMap((pet) => {
+          const ids = new Set([pet.id, pet.apiId].filter(Boolean).map(String));
+          return Array.from(ids).map((id) => [id, pet.id] as const);
+        })
+      ),
+    [pets]
+  );
+  const statusAlertPetIds = useMemo(
+    () =>
+      pets
+        .filter((pet) => isAlertStatus(pet.status))
+        .map((pet) => String(pet.apiId || pet.id)),
+    [pets]
+  );
+  const visiblePetIds = useMemo(
+    () =>
+      new Set(
+        pets.flatMap((pet) => Array.from(new Set([pet.id, pet.apiId].filter(Boolean).map(String))))
+      ),
+    [pets]
+  );
 
   useEffect(() => {
     const fetchPetLocations = async () => {
@@ -224,10 +300,23 @@ const FiruappMapView: React.FC<MapViewProps> = ({ apiUrl = "http://localhost:808
 
   useEffect(() => {
     const fetchPetGeofences = async () => {
+      const petsForGeofences = pets
+        .map((pet) => ({
+          id: pet.apiId || pet.id,
+          name: pet.name,
+        }))
+        .filter((pet) => pet.id && !String(pet.id).startsWith("mock-"));
+
+      if (!petsForGeofences.length) {
+        setPetGeofences([]);
+        setGeofencesLoaded(true);
+        return;
+      }
+
       try {
         const token = localStorage.getItem("token");
         const responses = await Promise.all(
-          knownPets.map(async (pet) => {
+          petsForGeofences.map(async (pet) => {
             try {
               const response = await axios.get(`http://localhost:8080/api/geofences/${pet.id}`, {
                 headers: token ? { Authorization: `Bearer ${token}` } : undefined,
@@ -247,14 +336,78 @@ const FiruappMapView: React.FC<MapViewProps> = ({ apiUrl = "http://localhost:808
     };
 
     fetchPetGeofences();
-  }, []);
+  }, [pets]);
 
-  const displayMarkers = petLocations.length
-    ? petLocations
-    : [
-        { id: "demo-1", petId: selectedPet?.id || "1", latitude: 6.2442, longitude: -75.5812, petName: selectedPet?.name || "Peluche", timestamp: new Date().toISOString(), imageUrl: selectedPet?.imageUrl || selectedPet?.avatarUrl || petImagesById[String(selectedPet?.id || "1")], status: selectedPet?.status },
-        { id: "demo-2", petId: "2", latitude: 6.2482, longitude: -75.5862, petName: "Bella", timestamp: new Date().toISOString(), imageUrl: petImagesById["2"], status: "active" },
-      ];
+  const displayMarkers = useMemo(
+    () => {
+      if (petDataMode === "mock") {
+        return mockPetLocations.filter((location) => visiblePetIds.has(String(location.petId ?? location.id)));
+      }
+
+      if (petDataMode === "database") {
+        return petLocations.filter((location) => visiblePetIds.has(String(location.petId ?? location.id)));
+      }
+
+      return [...mockPetLocations, ...petLocations].filter((location) => visiblePetIds.has(String(location.petId ?? location.id)));
+    },
+    [petDataMode, petLocations, visiblePetIds]
+  );
+  const markerPetIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          displayMarkers
+            .map((pet) => pet.petId)
+            .filter((petId): petId is string | number => petId != null)
+            .map(String)
+        )
+      ),
+    [displayMarkers]
+  );
+  const markerPetIdsKey = markerPetIds.join("|");
+
+  /*
+   * Optional client-side outside-geofence marker detection.
+   * Keep disabled for now; current alert styling follows explicit backend pet status only.
+   *
+   * const outsideGeofencePetIds = useMemo(() => { ... }, [displayMarkers, petGeofences]);
+   */
+  const alertPetIds = useMemo(
+    () => new Set(statusAlertPetIds),
+    [statusAlertPetIds]
+  );
+
+  useEffect(() => {
+    if (!markerPetIds.length) return undefined;
+
+    let cancelled = false;
+
+    const fetchMarkerImages = async () => {
+      const entries = await Promise.all(
+        markerPetIds.map(async (petId) => {
+          try {
+            const objectUrl = await loadPetImage(petId);
+            if (!objectUrl) return null;
+            return [petId, objectUrl] as const;
+          } catch (error) {
+            console.error(`Error loading marker image for pet ${petId}:`, error);
+            return null;
+          }
+        })
+      );
+
+      if (!cancelled) {
+        setPetImageBlobUrls(Object.fromEntries(entries.filter(Boolean) as Array<readonly [string, string]>));
+      }
+    };
+
+    fetchMarkerImages();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [markerPetIds, markerPetIdsKey]);
+
   const isLiveLocationData = petLocations.length > 0;
   const activeMapStyle = mapStyles[mapStyle];
 
@@ -279,6 +432,8 @@ const FiruappMapView: React.FC<MapViewProps> = ({ apiUrl = "http://localhost:808
             boxShadow: "0 18px 40px rgba(15,23,42,.18)",
           },
           "& .firu-pet-marker": {
+            position: "relative",
+            zIndex: 1,
             width: 50,
             height: 50,
             display: "grid",
@@ -293,10 +448,37 @@ const FiruappMapView: React.FC<MapViewProps> = ({ apiUrl = "http://localhost:808
           "& .firu-pet-marker.lost": {
             borderColor: firuColors.orange,
           },
+          "& .firu-pet-marker.alert": {
+            borderColor: firuColors.red,
+            boxShadow: "0 14px 32px rgba(239,68,68,.34)",
+          },
+          "& .firu-pet-marker-shell": {
+            position: "relative",
+            width: 58,
+            height: 58,
+            display: "grid",
+            placeItems: "center",
+          },
+          "& .firu-pet-marker-shell.alert::before": {
+            content: '""',
+            position: "absolute",
+            inset: 0,
+            borderRadius: "50%",
+            border: `2px solid ${firuColors.red}`,
+            background: "rgba(239,68,68,.2)",
+            animation: "firuRedPulse 1.35s ease-out infinite",
+          },
+          "& .firu-pet-marker-wrapper:has(.firu-pet-marker-shell.alert)": {
+            filter: "drop-shadow(0 0 12px rgba(239,68,68,.55))",
+          },
           "& .firu-pet-marker img": {
             width: "100%",
             height: "100%",
             objectFit: "cover",
+          },
+          "& .firu-geofence-alert": {
+            animation: "firuGeofenceAlertPulse 1.4s ease-in-out infinite",
+            filter: "drop-shadow(0 0 8px rgba(239,68,68,.45))",
           },
           "& .firu-marker-wrap": { position: "relative", width: 58, height: 58 },
           "& .firu-marker-pulse": {
@@ -325,6 +507,14 @@ const FiruappMapView: React.FC<MapViewProps> = ({ apiUrl = "http://localhost:808
             "0%": { transform: "scale(.72)", opacity: 0.9 },
             "100%": { transform: "scale(1.65)", opacity: 0 },
           },
+          "@keyframes firuRedPulse": {
+            "0%": { transform: "scale(.72)", opacity: 0.85 },
+            "100%": { transform: "scale(1.9)", opacity: 0 },
+          },
+          "@keyframes firuGeofenceAlertPulse": {
+            "0%, 100%": { strokeOpacity: 1, fillOpacity: 0.14, strokeWidth: 4 },
+            "50%": { strokeOpacity: 0.42, fillOpacity: 0.28, strokeWidth: 7 },
+          },
         }}
       >
         <MapContainer center={fallbackCenter} zoom={14} style={{ height: "100%", width: "100%" }}>
@@ -342,13 +532,14 @@ const FiruappMapView: React.FC<MapViewProps> = ({ apiUrl = "http://localhost:808
           */}
 
           {showGeofences && petGeofences.map((geofence, index) => {
-            const color = geofenceColors[index % geofenceColors.length];
+            const isAlertGeofence = alertPetIds.has(String(geofence.petId));
+            const color = isAlertGeofence ? firuColors.red : geofenceColors[index % geofenceColors.length];
             return geofence.type === "circle" ? (
               <Circle
-                key={`${geofence.petId}-${geofence.id}`}
+                key={`${geofence.petId}-${geofence.id}-${isAlertGeofence ? "alert" : "safe"}`}
                 center={geofence.center as LatLngExpression}
                 radius={geofence.radiusMeters}
-                pathOptions={{ color, fillColor: color, fillOpacity: 0.1, weight: 3 }}
+                pathOptions={{ color, fillColor: color, fillOpacity: isAlertGeofence ? 0.16 : 0.1, weight: isAlertGeofence ? 4 : 3, className: isAlertGeofence ? "firu-geofence-alert" : undefined }}
               >
                 <Popup>
                   <strong>{geofence.petName}</strong>
@@ -358,9 +549,9 @@ const FiruappMapView: React.FC<MapViewProps> = ({ apiUrl = "http://localhost:808
               </Circle>
             ) : (
               <Polygon
-                key={`${geofence.petId}-${geofence.id}`}
+                key={`${geofence.petId}-${geofence.id}-${isAlertGeofence ? "alert" : "safe"}`}
                 positions={geofence.coordinates as LatLngExpression[]}
-                pathOptions={{ color, fillColor: color, fillOpacity: 0.1, weight: 3 }}
+                pathOptions={{ color, fillColor: color, fillOpacity: isAlertGeofence ? 0.16 : 0.1, weight: isAlertGeofence ? 4 : 3, className: isAlertGeofence ? "firu-geofence-alert" : undefined }}
               >
                 <Popup>
                   <strong>{geofence.petName}</strong>
@@ -371,15 +562,34 @@ const FiruappMapView: React.FC<MapViewProps> = ({ apiUrl = "http://localhost:808
             );
           })}
 
-          {displayMarkers.map((pet) => (
-            <Marker key={pet.id} position={[pet.latitude, pet.longitude]} icon={createPetIcon(pet.imageUrl || pet.avatarUrl, pet.status)}>
-              <Popup>
-                <strong>{pet.petName || "Unnamed Pet"}</strong>
-                <br />
-                Last seen: {pet.timestamp ? new Date(pet.timestamp).toLocaleString() : "Unknown"}
-              </Popup>
-            </Marker>
-          ))}
+          {displayMarkers.map((pet) => {
+            const petId = pet.petId != null ? String(pet.petId) : undefined;
+            const markerImage = petId ? petImageBlobUrls[petId] : undefined;
+            const markerStatus = petId && alertPetIds.has(petId)
+              ? "out_of_geofence"
+              : (petId && statusByPetId[petId]) || pet.status;
+            const markerState = isAlertStatus(markerStatus) ? "alert" : "safe";
+            const dashboardPetId = petId ? dashboardPetIdByLocationPetId[petId] : undefined;
+
+            return (
+              <Marker
+                key={`${pet.id}-${markerState}-${markerImage || pet.imageUrl || pet.avatarUrl || "no-image"}`}
+                position={[pet.latitude, pet.longitude]}
+                icon={createPetIcon(markerImage || pet.imageUrl || pet.avatarUrl, markerStatus)}
+                eventHandlers={{
+                  click: () => {
+                    if (dashboardPetId) onSelectPet?.(dashboardPetId);
+                  },
+                }}
+              >
+                <Popup>
+                  <strong>{pet.petName || "Unnamed Pet"}</strong>
+                  <br />
+                  Last seen: {pet.timestamp ? new Date(pet.timestamp).toLocaleString() : "Unknown"}
+                </Popup>
+              </Marker>
+            );
+          })}
         </MapContainer>
       </Box>
 

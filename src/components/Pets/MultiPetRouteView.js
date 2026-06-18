@@ -21,7 +21,6 @@ const mapStyles = {
 };
 
 const petsWithoutPositions = [
-  { id: "1", name: "Peluche", status: "active", breed: "Golden Retriever", age: "4 years", weight: "28 kg", imageUrl: "/beagle.png" },
   { id: "2", name: "Bella", status: "active", breed: "Beagle", age: "2 years", weight: "11 kg", imageUrl: "/german.png" },
   { id: "3", name: "Rocky", status: "lost", breed: "Mixed Breed", age: "6 years", weight: "22 kg", imageUrl: "/labrador.png" },
 ];
