@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
   Box,
-  Paper,
   Typography,
   Avatar,
   List,
@@ -13,8 +12,6 @@ import {
 } from "@mui/material";
 import axios from "axios";
 import MapView from "../Pets/MapView"; // your existing map component
-import { Fab } from "@mui/material";
-import PetsIcon from "@mui/icons-material/Pets";
 import { Menu, MenuItem } from "@mui/material";
 import { buildApiUrl } from "../../config/runtime";
 

@@ -83,25 +83,6 @@ const normalizeMedellinCity = (dto: any) => {
   return neighborhood ? "Medellin" : "";
 };
 
-const createPetIcon = (pet: any) =>
-  L.divIcon({
-    className: "firu-marker-wrapper",
-    html: `
-      <div class="firu-marker-card ${pet.status === "lost" ? "lost" : "live"}">
-        <div class="firu-marker-avatar">
-          <img src="${pet.imageUrl || pet.avatarUrl || "/pets/luna_golden_retriever.png"}" />
-        </div>
-
-        <div class="firu-marker-info">
-          <strong>${pet.petName || pet.name || "Pet"}</strong>
-          <span>${pet.status || "Live"} · ${pet.lastSeen || "2 min ago"}</span>
-        </div>
-      </div>
-    `,
-    iconSize: [190, 64],
-    iconAnchor: [38, 58],
-    popupAnchor: [0, -58],
-  });
 const mapPetDtoToDashboardPet = (dto: any): Pet => ({
   id: `db-${dto.id}`,
   apiId: String(dto.id),
