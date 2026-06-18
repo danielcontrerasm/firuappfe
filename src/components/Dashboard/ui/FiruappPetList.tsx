@@ -24,6 +24,7 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { useNavigate } from "react-router-dom";
 import { compactPanel, firuColors, Pet } from "./FiruappStyles.ts";
 import { usePetImage } from "../../../services/usePetImage.ts";
+import { buildApiUrl } from "../../../config/runtime";
 
 interface PetsListProps {
   pets: Pet[];
@@ -80,8 +81,8 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
     const petId = menuPet.apiId || menuPet.id;
     const endpoint =
       status === "lost"
-        ? `http://localhost:8080/api/pets/${petId}/lost`
-        : `http://localhost:8080/api/pets/${petId}/found`;
+        ? buildApiUrl(`/api/pets/${petId}/lost`)
+        : buildApiUrl(`/api/pets/${petId}/found`);
 
     try {
       const token = localStorage.getItem("token");

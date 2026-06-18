@@ -34,13 +34,13 @@ import SpeedIcon from "@mui/icons-material/Speed";
 import PlaceIcon from "@mui/icons-material/Place";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import { usePetImage } from "../../services/usePetImage.ts";
+import { buildApiUrl, buildWsUrl } from "../../config/runtime";
 
 const mockPets: Pet[] = [
   { id: "mock-2", apiId: "2", name: "Bella", status: "active", ownerName: "Daniel Contreras", city: "Medellin", neighborhood: "Laureles", breed: "Beagle", age: "2 years", weight: "11 kg", battery: 74, signal: "Good", speed: "1.8 km/h", lastSeen: "1 min ago", imageUrl: "/german.png" },
   { id: "mock-3", apiId: "3", name: "Rocky", status: "lost", ownerName: "Laura Perez", city: "Medellin", neighborhood: "El Poblado", breed: "Mixed Breed", age: "6 years", weight: "22 kg", battery: 28, signal: "Weak", speed: "0.6 km/h", lastSeen: "Just now", imageUrl: "/labrador.png" },
 ];
 
-const API_BASE_URL = "http://localhost:8080";
 const ALERT_USER_ID = 1;
 
 interface DashboardAlert {
@@ -197,7 +197,7 @@ const FiruappDashboard: React.FC = () => {
 
   const fetchDatabasePets = useCallback(async () => {
     const token = localStorage.getItem("token");
-    const response = await axios.get(`${API_BASE_URL}/api/pets`, {
+    const response = await axios.get(buildApiUrl("/api/pets"), {
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     });
     const petDtos = extractPetDtos(response.data);
@@ -275,7 +275,7 @@ const FiruappDashboard: React.FC = () => {
 
   useEffect(() => {
     const client = new Client({
-      webSocketFactory: () => new SockJS(`${API_BASE_URL}/ws`),
+      webSocketFactory: () => new SockJS(buildWsUrl("/ws")),
       reconnectDelay: 5000,
       onConnect: () => {
         setAlertsConnected(true);

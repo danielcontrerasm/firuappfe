@@ -13,6 +13,7 @@ import {
 import GpsFixedIcon from "@mui/icons-material/GpsFixed";
 import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
 import RadarIcon from "@mui/icons-material/Radar";
+import { buildApiUrl } from "../../config/runtime";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -23,7 +24,7 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await axios.post("http://localhost:8080/api/auth/login", {
+      const res = await axios.post(buildApiUrl("/api/auth/login"), {
         email,
         password,
       });

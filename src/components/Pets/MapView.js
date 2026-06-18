@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup,useMap } from "react-leaflet";
 import L from "leaflet";
 import axios from "axios";
+import { buildApiUrl } from "../../config/runtime";
 
 /**
  * @typedef {Object} PetLocation
@@ -41,7 +42,7 @@ const MapView = () => {
       try {
         const token = localStorage.getItem("token");
         console.log("this is the token" +token);
-        const response = await axios.get("http://localhost:8080/api/pets/locations", {
+        const response = await axios.get(buildApiUrl("/api/pets/locations"), {
           headers: { Authorization: `Bearer ${token}` },
         });
 

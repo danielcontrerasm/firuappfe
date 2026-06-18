@@ -28,6 +28,7 @@ import AddIcon from "@mui/icons-material/Add";
 import GroupAddIcon from "@mui/icons-material/GroupAdd";
 import PersonAddAltIcon from "@mui/icons-material/PersonAddAlt";
 import SearchIcon from "@mui/icons-material/Search";
+import { buildApiUrl } from "../../config/runtime";
 
 type VolunteerMemberDto = {
   userId: number;
@@ -136,8 +137,6 @@ const mockGroups: SearchGroupDto[] = [
   },
 ];
 
-const API_BASE_URL = "http://localhost:8080";
-
 const statusColor = (status: string) => {
   if (status.toLowerCase() === "active") return "success";
   if (status.toLowerCase() === "closed") return "default";
@@ -209,8 +208,8 @@ const VolunteerGroupsPage: React.FC = () => {
         const token = localStorage.getItem("token");
         const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
         const [groupsResponse, petsResponse] = await Promise.allSettled([
-          axios.get(`${API_BASE_URL}/api/search-groups`, { headers }),
-          axios.get(`${API_BASE_URL}/api/pets`, { headers }),
+          axios.get(buildApiUrl("/api/search-groups"), { headers }),
+          axios.get(buildApiUrl("/api/pets"), { headers }),
         ]);
 
         if (!cancelled && groupsResponse.status === "fulfilled") {
@@ -283,7 +282,7 @@ const VolunteerGroupsPage: React.FC = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.post(
-        `${API_BASE_URL}/api/search-groups/${groupId}/join`,
+        buildApiUrl(`/api/search-groups/${groupId}/join`),
         {},
         {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
@@ -384,7 +383,7 @@ const VolunteerGroupsPage: React.FC = () => {
       const token = localStorage.getItem("token");
       const decodedToken = token ? jwtDecode<Record<string, any>>(token) : null;
       console.log("Creating search group:", {
-        endpoint: `${API_BASE_URL}/api/search-groups`,
+        endpoint: buildApiUrl("/api/search-groups"),
         hasToken: Boolean(token),
         tokenLength: token?.length ?? 0,
         tokenPreview: token ? `${token.slice(0, 18)}...${token.slice(-10)}` : null,
@@ -393,7 +392,7 @@ const VolunteerGroupsPage: React.FC = () => {
         tokenRole: decodedToken?.role ?? decodedToken?.roles ?? decodedToken?.authorities,
         payload,
       });
-      const response = await axios.post(`${API_BASE_URL}/api/search-groups`, payload, {
+      const response = await axios.post(buildApiUrl("/api/search-groups"), payload, {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
 

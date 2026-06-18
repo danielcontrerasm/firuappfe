@@ -10,6 +10,7 @@ import PolylineIcon from "@mui/icons-material/Polyline";
 import RadarIcon from "@mui/icons-material/Radar";
 import { firuColors, Pet } from "./FiruappStyles.ts";
 import { loadPetImage } from "../../../services/usePetImage.ts";
+import { buildApiUrl } from "../../../config/runtime";
 
 interface PetLocation {
   id: string | number;
@@ -200,7 +201,7 @@ const mockPetLocations: PetLocation[] = [
 ];
 
 const FiruappMapView: React.FC<MapViewProps> = ({
-  apiUrl = "http://localhost:8080/api/pets/locations",
+  apiUrl = buildApiUrl("/api/pets/locations"),
   selectedPet,
   pets = [],
   petDataMode = "mixed",
@@ -318,7 +319,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
         const responses = await Promise.all(
           petsForGeofences.map(async (pet) => {
             try {
-              const response = await axios.get(`http://localhost:8080/api/geofences/${pet.id}`, {
+              const response = await axios.get(buildApiUrl(`/api/geofences/${pet.id}`), {
                 headers: token ? { Authorization: `Bearer ${token}` } : undefined,
               });
               return normalizeGeofences(response.data, pet);

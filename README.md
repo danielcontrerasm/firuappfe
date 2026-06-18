@@ -8,11 +8,15 @@ In the project directory, you can run:
 
 ### `npm start`
 
-Runs the app in the development mode.\
+Serves the production build locally.\
 Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Build the app first with `npm run build`.
+
+### `npm run dev`
+
+Runs the app in development mode with the Create React App dev server.\
+The page will reload when you make changes.
 
 ### `npm test`
 
@@ -28,6 +32,28 @@ The build is minified and the filenames include the hashes.\
 Your app is ready to be deployed!
 
 See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+
+## Railway deployment
+
+This repo root is a React web app. The `mobile/` Expo app is separate and is not what Railway will serve.
+
+Use these settings for the root app:
+
+- Build command: `npm run build`
+- Start command: `npm start`
+
+Required environment for a separate backend service:
+
+- `REACT_APP_API_URL=https://your-backend-service.up.railway.app`
+
+Optional if SockJS is hosted somewhere else:
+
+- `REACT_APP_WS_URL=https://your-backend-service.up.railway.app`
+
+Notes:
+
+- `npm start` now serves the compiled `build/` output and falls back to `index.html` for React Router routes.
+- If your frontend and backend are behind the same Railway domain, you can leave `REACT_APP_API_URL` unset and use same-origin `/api/...` requests in production.
 
 ### `npm run eject`
 

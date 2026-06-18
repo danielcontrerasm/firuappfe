@@ -4,6 +4,7 @@ import L from "leaflet";
 import axios from "axios";
 import { CenterRouteMap, normalizeRouteLocations } from "./routeMapUtils";
 import "./routeMapStyles.css";
+import { buildApiUrl } from "../../config/runtime";
 
 const mapStyles = {
   clean: {
@@ -42,7 +43,7 @@ const MapViewRoute = ({ petId = 1 }) => {
       try {
         const token = localStorage.getItem("token");
         const response = await axios.get(
-          `http://localhost:8080/api/pets/${petId}/route`,
+          buildApiUrl(`/api/pets/${petId}/route`),
           {
             headers: { Authorization: `Bearer ${token}` },
           }

@@ -5,6 +5,7 @@ import axios from "axios";
 import { CenterRouteMap, normalizeRouteLocations } from "./routeMapUtils";
 import FiruappPetsList from "../Dashboard/ui/FiruappPetList.tsx";
 import "./routeMapStyles.css";
+import { buildApiUrl } from "../../config/runtime";
 
 const mapStyles = {
   clean: {
@@ -39,7 +40,7 @@ const createPetIcon = () =>
     popupAnchor: [0, -30],
   });
 
-const MultiPetRouteView = ({ apiBaseUrl = "http://localhost:8080/api/pets" }) => {
+const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
   const [routePoints, setRoutePoints] = useState([]);
   const [selectedPetId, setSelectedPetId] = useState(null);
   const [mapStyle, setMapStyle] = useState("natural");

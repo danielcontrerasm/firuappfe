@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
+import { buildApiUrl } from "../config/runtime";
 
-const API_BASE_URL = "http://localhost:8080";
 const blobUrlCache = new Map<string, string>();
 const pendingRequests = new Map<string, Promise<string | undefined>>();
 
 export const petImageEndpoint = (petId?: string | number) =>
-  petId ? `${API_BASE_URL}/api/pets/${petId}/image` : undefined;
+  petId ? buildApiUrl(`/api/pets/${petId}/image`) : undefined;
 
 const shouldUseProtectedImage = (petId?: string | number) =>
   Boolean(petId && !String(petId).startsWith("mock-"));

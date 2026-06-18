@@ -14,6 +14,7 @@ import "leaflet/dist/leaflet.css";
 import axios from "axios";
 import { useSearchParams } from "react-router-dom";
 import "./routeMapStyles.css";
+import { buildApiUrl } from "../../config/runtime";
 
 const defaultGeofenceNames = ["Home", "Park", "Parents House", "Family", "Farm"];
 const mapStyles = {
@@ -196,7 +197,7 @@ const CustomGeofence = () => {
     const fetchPets = async () => {
       setLoadingPets(true);
       try {
-        const response = await axios.get("http://localhost:8080/api/pets", {
+        const response = await axios.get(buildApiUrl("/api/pets"), {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         });
         const petDtos = extractPetDtos(response.data);
@@ -257,7 +258,7 @@ const CustomGeofence = () => {
           const responses = await Promise.all(
             pets.map(async (pet) => {
               try {
-                const response = await axios.get(`http://localhost:8080/api/geofences/${pet.id}`, {
+                const response = await axios.get(buildApiUrl(`/api/geofences/${pet.id}`), {
                   headers: token ? { Authorization: `Bearer ${token}` } : undefined,
                 });
 
@@ -272,7 +273,7 @@ const CustomGeofence = () => {
           setStoredGeofences(responses.flat());
         } else {
           const response = await axios.get(
-            `http://localhost:8080/api/geofences/${activePetId}`,
+            buildApiUrl(`/api/geofences/${activePetId}`),
             {
               headers: token ? { Authorization: `Bearer ${token}` } : undefined,
             }
@@ -330,7 +331,7 @@ const CustomGeofence = () => {
       const isCircle = drawMode === "circle";
       const payloadPetId = Number.isFinite(activePetIdNumber) ? activePetIdNumber : activePetId;
       const response = await axios.post(
-        `http://localhost:8080/api/geofences/${isCircle ? "circle" : "polygon"}/${activePetId}`,
+        buildApiUrl(`/api/geofences/${isCircle ? "circle" : "polygon"}/${activePetId}`),
         isCircle
           ? {
               petId: payloadPetId,
@@ -368,7 +369,7 @@ const CustomGeofence = () => {
     if (!confirmed) return;
 
     try {
-      await axios.delete(`http://localhost:8080/api/geofences/${deletePetId}`, {
+      await axios.delete(buildApiUrl(`/api/geofences/${deletePetId}`), {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
       setStoredGeofences((current) => current.filter((item) => String(item.petId) !== String(deletePetId)));

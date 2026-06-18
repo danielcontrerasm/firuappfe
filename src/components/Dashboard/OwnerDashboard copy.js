@@ -5,6 +5,7 @@ import MapView from "../Pets/MapView"; // your existing map component
 import { Fab } from "@mui/material";
 import PetsIcon from "@mui/icons-material/Pets";
 import { Menu, MenuItem} from "@mui/material";
+import { buildApiUrl } from "../../config/runtime";
 const OwnerDashboard = () => {
   const [pets, setPets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,7 +18,7 @@ const OwnerDashboard = () => {
     const fetchPets = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get("http://localhost:8080/api/pets/locations", {
+        const response = await axios.get(buildApiUrl("/api/pets/locations"), {
           headers: { Authorization: `Bearer ${token}` },
         });
         setPets(response.data);

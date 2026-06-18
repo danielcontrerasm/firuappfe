@@ -14,6 +14,7 @@ import {
 } from "@mui/material";
 import EntityListPage, { Column } from "./EntityListPage.tsx";
 import { petImageEndpoint, usePetImage } from "../../services/usePetImage.ts";
+import { buildApiUrl, buildAssetUrl } from "../../config/runtime";
 
 type PetStatus = "active" | "lost" | "offline";
 
@@ -43,13 +44,10 @@ const emptyPetDraft: PetRow = {
   lastSeen: "New pet",
 };
 
-const API_BASE_URL = "http://localhost:8080";
-
 const normalizeImageUrl = (imageUrl?: string) => {
   const cleanedUrl = imageUrl?.trim().replaceAll("\\", "/");
   if (!cleanedUrl) return undefined;
-  if (cleanedUrl.startsWith("http") || cleanedUrl.startsWith("data:")) return cleanedUrl;
-  return encodeURI(`${API_BASE_URL}${cleanedUrl.startsWith("/") ? "" : "/"}${cleanedUrl}`);
+  return buildAssetUrl(cleanedUrl);
 };
 
 const getPetImageUrl = (dto: any) =>
@@ -177,7 +175,7 @@ const PetsListPage: React.FC = () => {
       setLoadingPets(true);
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get(`${API_BASE_URL}/api/pets`, {
+        const response = await axios.get(buildApiUrl("/api/pets"), {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         });
         const petDtos = Array.isArray(response.data)
@@ -228,7 +226,7 @@ const PetsListPage: React.FC = () => {
       const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
       const response = editPetImage
         ? await axios.put(
-            `http://localhost:8080/api/pets/${editingPet.id}`,
+            buildApiUrl(`/api/pets/${editingPet.id}`),
             (() => {
               const formData = new FormData();
               formData.append(
@@ -241,7 +239,7 @@ const PetsListPage: React.FC = () => {
             { headers }
           )
         : await axios.put(
-            `http://localhost:8080/api/pets/${editingPet.id}`,
+            buildApiUrl(`/api/pets/${editingPet.id}`),
             payload,
             { headers }
           );
@@ -310,7 +308,7 @@ const PetsListPage: React.FC = () => {
         formData.append("image", newPetImage);
       }
 
-      const response = await axios.post("http://localhost:8080/api/pets", formData, {
+      const response = await axios.post(buildApiUrl("/api/pets"), formData, {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
       const createdPet = mapDtoToPetRow(response.data, {
