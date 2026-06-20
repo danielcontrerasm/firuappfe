@@ -416,11 +416,40 @@ const FiruappMapView: React.FC<MapViewProps> = ({
   // const routeLine: LatLngExpression[] = displayMarkers.map((pet) => [pet.latitude, pet.longitude]);
 
   return (
-    <Box sx={{ position: "relative", height: { xs: 520, md: "calc(100vh - 230px)" }, minHeight: 560 }}>
+    <Box
+      sx={{
+        position: "relative",
+        height: { xs: "calc(100vh - 170px)", md: "calc(100vh - 230px)" },
+        minHeight: { xs: 440, md: 560 },
+      }}
+    >
+      <Box
+        sx={{
+          display: { xs: "flex", md: "none" },
+          position: "absolute",
+          top: 14,
+          right: 12,
+          zIndex: 1000,
+          px: 1.25,
+          py: 0.7,
+          borderRadius: 999,
+          bgcolor: "rgba(255,255,255,0.94)",
+          border: "1px solid rgba(226,232,240,0.95)",
+          boxShadow: "0 12px 26px rgba(15,23,42,0.12)",
+          alignItems: "center",
+          gap: 0.75,
+        }}
+      >
+        <GpsFixedIcon sx={{ fontSize: 15, color: isLiveLocationData ? firuColors.green : firuColors.orange }} />
+        <Typography variant="caption" sx={{ color: firuColors.dark, fontWeight: 900 }}>
+          {displayMarkers.length} active
+        </Typography>
+      </Box>
+
       <Box
         sx={{
           height: "100%",
-          borderRadius: 5,
+          borderRadius: { xs: 4, md: 5 },
           overflow: "hidden",
           border: "1px solid rgba(203,213,225,0.9)",
           boxShadow: "0 20px 45px rgba(15,23,42,0.10)",
@@ -599,15 +628,17 @@ const FiruappMapView: React.FC<MapViewProps> = ({
         spacing={1}
         sx={{
           position: "absolute",
-          right: 24,
-          top: 24,
+          right: { xs: 12, md: 24 },
+          top: { xs: 68, md: 24 },
           zIndex: 1000,
           bgcolor: "rgba(255,255,255,0.92)",
           border: "1px solid rgba(226,232,240,0.95)",
           boxShadow: "0 14px 30px rgba(15,23,42,0.10)",
           backdropFilter: "blur(16px)",
           borderRadius: 999,
-          p: 0.75,
+          p: { xs: 0.5, md: 0.75 },
+          maxWidth: { xs: "calc(100% - 24px)", md: "none" },
+          overflowX: "auto",
         }}
       >
         {[
@@ -621,7 +652,13 @@ const FiruappMapView: React.FC<MapViewProps> = ({
               key={item.label}
               icon={<Icon sx={{ fontSize: 17 }} />}
               label={item.label}
-              sx={{ bgcolor: "#f8fafc", color: firuColors.dark, fontWeight: 800, "& .MuiChip-icon": { color: firuColors.cyan } }}
+              sx={{
+                display: { xs: "none", md: "inline-flex" },
+                bgcolor: "#f8fafc",
+                color: firuColors.dark,
+                fontWeight: 800,
+                "& .MuiChip-icon": { color: firuColors.cyan },
+              }}
             />
           );
         })}
@@ -633,6 +670,8 @@ const FiruappMapView: React.FC<MapViewProps> = ({
             color: isLiveLocationData ? "#15803d" : "#c2410c",
             border: `1px solid ${isLiveLocationData ? "#bbf7d0" : "#fed7aa"}`,
             fontWeight: 800,
+            height: { xs: 28, md: 32 },
+            "& .MuiChip-label": { px: { xs: 1, md: 1.5 }, fontSize: { xs: 11, md: 13 } },
             "& .MuiChip-icon": { color: isLiveLocationData ? "#16a34a" : "#f97316" },
           }}
         />
@@ -645,6 +684,8 @@ const FiruappMapView: React.FC<MapViewProps> = ({
             border: "1px solid #e2e8f0",
             fontWeight: 800,
             cursor: "pointer",
+            height: { xs: 28, md: 32 },
+            "& .MuiChip-label": { px: { xs: 1, md: 1.5 }, fontSize: { xs: 11, md: 13 } },
           }}
         />
         <Chip
@@ -656,6 +697,8 @@ const FiruappMapView: React.FC<MapViewProps> = ({
             color: showGeofences ? "white" : firuColors.dark,
             fontWeight: 800,
             cursor: "pointer",
+            height: { xs: 28, md: 32 },
+            "& .MuiChip-label": { px: { xs: 1, md: 1.5 }, fontSize: { xs: 11, md: 13 } },
             "& .MuiChip-icon": { color: showGeofences ? "white" : firuColors.cyan },
           }}
         />
@@ -664,25 +707,26 @@ const FiruappMapView: React.FC<MapViewProps> = ({
       <Box
         sx={{
           position: "absolute",
-          left: 24,
-          bottom: 24,
+          left: { xs: 12, md: 24 },
+          bottom: { xs: 12, md: 24 },
           zIndex: 1000,
           display: "flex",
-          gap: 1,
+          gap: 0.75,
           flexWrap: "wrap",
+          maxWidth: { xs: "calc(100% - 24px)", md: "none" },
         }}
       >
         {[
           { label: "GPS LOCK", color: firuColors.cyan },
           { label: "LIVE", color: firuColors.green },
           { label: geofencesLoaded ? `${showGeofences ? petGeofences.length : 0} GEOFENCES SHOWN` : "LOADING GEOFENCES", color: firuColors.violet },
-        ].map((item) => (
+        ].map((item, index) => (
           <Box
             key={item.label}
             sx={{
+              display: { xs: index > 1 ? "none" : "flex", md: "flex" },
               px: 1.5,
-              py: 0.8,
-              display: "flex",
+              py: { xs: 0.65, md: 0.8 },
               alignItems: "center",
               gap: 0.8,
               borderRadius: 999,
@@ -690,7 +734,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
               bgcolor: "rgba(255,255,255,0.92)",
               border: "1px solid rgba(226,232,240,0.95)",
               boxShadow: "0 12px 28px rgba(15,23,42,0.10)",
-              fontSize: 12,
+              fontSize: { xs: 11, md: 12 },
               fontWeight: 900,
             }}
           >
@@ -712,6 +756,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
           bgcolor: "rgba(15,23,42,0.92)",
           color: "white",
           boxShadow: "0 18px 45px rgba(15,23,42,0.25)",
+          display: { xs: "none", md: "block" },
         }}
       >
         <Typography variant="caption" sx={{ color: "#94a3b8", fontWeight: 900, letterSpacing: 1 }}>

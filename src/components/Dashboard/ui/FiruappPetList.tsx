@@ -125,11 +125,11 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
       sx={{
         ...compactPanel,
         position: "absolute",
-        top: 24,
-        left: 24,
+        top: { xs: 68, sm: 24 },
+        left: { xs: 12, sm: 24 },
         zIndex: 1000,
-        width: { xs: "calc(100% - 48px)", sm: 300 },
-        maxHeight: { xs: 290, md: 360 },
+        width: { xs: "calc(100% - 24px)", sm: 300 },
+        maxHeight: { xs: 230, md: 360 },
         overflow: "hidden",
       }}
     >
@@ -145,7 +145,7 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
         <Chip label={`${pets.length} online`} size="small" sx={{ bgcolor: "#dcfce7", color: "#15803d", fontWeight: 800 }} />
       </Box>
 
-      <List sx={{ p: 1.25, pt: 0, overflowY: "auto", maxHeight: { xs: 210, md: 280 } }}>
+      <List sx={{ p: 1.25, pt: 0, overflowY: "auto", maxHeight: { xs: 150, md: 280 } }}>
         {pets.map((pet) => {
           const petStatus = pet.status.toLowerCase();
           const isSelected = pet.id === selectedId;
