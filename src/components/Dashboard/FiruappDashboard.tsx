@@ -403,25 +403,25 @@ const FiruappDashboard: React.FC = () => {
           sx={{
             ...glassPanel,
             borderRadius: 5,
-            px: 1.25,
-            py: 1,
+            px: 1,
+            py: 0.75,
             display: "flex",
             alignItems: "center",
-            gap: 1,
-            flexWrap: { xs: "wrap", xl: "nowrap" },
+            gap: 0.75,
+            flexWrap: "nowrap",
             overflowX: "auto",
           }}
         >
           <Chip
             label="Owner mode · Medellín"
             sx={{
-              height: 34,
+              height: 30,
               flexShrink: 0,
               bgcolor: "#ecfeff",
               color: "#0e7490",
               fontWeight: 900,
               border: "1px solid #a5f3fc",
-              "& .MuiChip-label": { px: 1.25 },
+              "& .MuiChip-label": { px: 1, fontSize: 12 },
             }}
           />
           <Autocomplete
@@ -430,8 +430,8 @@ const FiruappDashboard: React.FC = () => {
             inputValue={petFilters.city}
             onInputChange={(_, value) => setPetFilters((current) => ({ ...current, city: value }))}
             sx={{
-              width: { xs: "100%", sm: 150 },
-              minWidth: { sm: 150 },
+              width: 120,
+              minWidth: 120,
               flexShrink: 0,
             }}
             renderInput={(params) => (
@@ -441,9 +441,9 @@ const FiruappDashboard: React.FC = () => {
                 label="City"
                 placeholder="Medellin"
                 sx={{
-                  "& .MuiOutlinedInput-root": { borderRadius: 3, bgcolor: "#ffffff", height: 38 },
-                  "& .MuiInputBase-input": { fontSize: 13, py: 1 },
-                  "& .MuiInputLabel-root": { fontSize: 13 },
+                  "& .MuiOutlinedInput-root": { borderRadius: 2.5, bgcolor: "#ffffff", height: 34 },
+                  "& .MuiInputBase-input": { fontSize: 12, py: 0.75 },
+                  "& .MuiInputLabel-root": { fontSize: 12 },
                 }}
               />
             )}
@@ -454,8 +454,8 @@ const FiruappDashboard: React.FC = () => {
             inputValue={petFilters.neighborhood}
             onInputChange={(_, value) => setPetFilters((current) => ({ ...current, neighborhood: value }))}
             sx={{
-              width: { xs: "100%", sm: 190 },
-              minWidth: { sm: 190 },
+              width: 150,
+              minWidth: 150,
               flexShrink: 0,
             }}
             renderInput={(params) => (
@@ -465,9 +465,9 @@ const FiruappDashboard: React.FC = () => {
                 label="Neighborhood"
                 placeholder="Medellin neighborhoods"
                 sx={{
-                  "& .MuiOutlinedInput-root": { borderRadius: 3, bgcolor: "#ffffff", height: 38 },
-                  "& .MuiInputBase-input": { fontSize: 13, py: 1 },
-                  "& .MuiInputLabel-root": { fontSize: 13 },
+                  "& .MuiOutlinedInput-root": { borderRadius: 2.5, bgcolor: "#ffffff", height: 34 },
+                  "& .MuiInputBase-input": { fontSize: 12, py: 0.75 },
+                  "& .MuiInputLabel-root": { fontSize: 12 },
                 }}
               />
             )}
@@ -478,8 +478,8 @@ const FiruappDashboard: React.FC = () => {
             inputValue={petFilters.ownerName}
             onInputChange={(_, value) => setPetFilters((current) => ({ ...current, ownerName: value }))}
             sx={{
-              width: { xs: "100%", sm: 160 },
-              minWidth: { sm: 160 },
+              width: 140,
+              minWidth: 140,
               flexShrink: 0,
             }}
             renderInput={(params) => (
@@ -489,9 +489,9 @@ const FiruappDashboard: React.FC = () => {
                 label="Owner"
                 placeholder="Search owner name"
                 sx={{
-                  "& .MuiOutlinedInput-root": { borderRadius: 3, bgcolor: "#ffffff", height: 38 },
-                  "& .MuiInputBase-input": { fontSize: 13, py: 1 },
-                  "& .MuiInputLabel-root": { fontSize: 13 },
+                  "& .MuiOutlinedInput-root": { borderRadius: 2.5, bgcolor: "#ffffff", height: 34 },
+                  "& .MuiInputBase-input": { fontSize: 12, py: 0.75 },
+                  "& .MuiInputLabel-root": { fontSize: 12 },
                 }}
               />
             )}
@@ -502,8 +502,8 @@ const FiruappDashboard: React.FC = () => {
             inputValue={petFilters.petName}
             onInputChange={(_, value) => setPetFilters((current) => ({ ...current, petName: value }))}
             sx={{
-              width: { xs: "100%", sm: 150 },
-              minWidth: { sm: 150 },
+              width: 130,
+              minWidth: 130,
               flexShrink: 0,
             }}
             renderInput={(params) => (
@@ -513,9 +513,9 @@ const FiruappDashboard: React.FC = () => {
                 label="Pet"
                 placeholder="Search pet name"
                 sx={{
-                  "& .MuiOutlinedInput-root": { borderRadius: 3, bgcolor: "#ffffff", height: 38 },
-                  "& .MuiInputBase-input": { fontSize: 13, py: 1 },
-                  "& .MuiInputLabel-root": { fontSize: 13 },
+                  "& .MuiOutlinedInput-root": { borderRadius: 2.5, bgcolor: "#ffffff", height: 34 },
+                  "& .MuiInputBase-input": { fontSize: 12, py: 0.75 },
+                  "& .MuiInputLabel-root": { fontSize: 12 },
                 }}
               />
             )}
