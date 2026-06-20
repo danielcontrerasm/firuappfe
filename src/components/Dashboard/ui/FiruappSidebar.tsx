@@ -11,6 +11,7 @@ import SensorsIcon from "@mui/icons-material/Sensors";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import GroupIcon from "@mui/icons-material/Group";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
+import ContentPasteSearchIcon from "@mui/icons-material/ContentPasteSearch";
 import { firuColors } from "./FiruappStyles.ts";
 
 interface SidebarProps {
@@ -26,6 +27,7 @@ const navItems = [
   { label: "Users", icon: PersonIcon, to: "/users" },
   { label: "GPS Sensors", icon: SensorsIcon, to: "/sensors" },
   { label: "Volunteer Groups", icon: GroupIcon, to: "/volunteers" },
+  { label: "Lost Pets Wall", icon: ContentPasteSearchIcon, to: "/lost-pets" },
   { label: "Alerts", icon: NotificationsActiveIcon, to: "/alerts" },
 ];
 

@@ -6,6 +6,7 @@ import CustomGeofence from "./components/Pets/CustomGeofence";
 import DashboardLayout from "./components/Dashboard/DashboardLayout";
 import MultiPetRouteView from "./components/Pets/MultiPetRouteView";
 import FiruappDashboard from "./components/Dashboard/FiruappDashboard.tsx";/* Second version glass colors list on map  */
+import LostPetsWallPage from "./components/Dashboard/LostPetsWallPage.tsx";
 import UsersListPage from "./components/Users/UsersListPage.tsx";
 import SensorsListPage from "./components/Users/SensorsListPage.tsx";
 import PetsListPage from "./components/Users/PetsListPage.tsx";
@@ -35,6 +36,7 @@ function App() {
         <Route path="/pets" element={<PetsListPage />} />
         <Route path="/sensors" element={<SensorsListPage />} />
         <Route path="/volunteers" element={<VolunteerGroupsPage />} />
+        <Route path="/lost-pets" element={<LostPetsWallPage />} />
       </Route>
 
       {/* Catch-all */}
