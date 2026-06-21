@@ -45,13 +45,14 @@ const FiruappPetAvatar: React.FC<{ pet: Pet; petStatus: string }> = ({ pet, petS
     <Avatar
       src={resolvedSrc}
       sx={{
-        width: 38,
-        height: 38,
+        width: { xs: 32, sm: 38 },
+        height: { xs: 32, sm: 38 },
         bgcolor: petStatus === "lost" ? "#fed7aa" : "#bbf7d0",
         color: petStatus === "lost" ? "#c2410c" : "#15803d",
-        border: "3px solid white",
+        border: { xs: "2px solid white", sm: "3px solid white" },
         boxShadow: "0 8px 18px rgba(15,23,42,0.12)",
         fontWeight: 900,
+        fontSize: { xs: 13, sm: 15 },
       }}
     >
       {pet.name.charAt(0)}
@@ -125,27 +126,61 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
       sx={{
         ...compactPanel,
         position: "absolute",
-        top: { xs: 68, sm: 24 },
-        left: { xs: 12, sm: 24 },
+        top: { xs: 64, sm: 24 },
+        left: { xs: 10, sm: 24 },
         zIndex: 1000,
-        width: { xs: "calc(100% - 24px)", sm: 300 },
-        maxHeight: { xs: 230, md: 360 },
+        width: { xs: "min(252px, calc(100% - 20px))", sm: 300 },
+        maxHeight: { xs: 192, md: 360 },
         overflow: "hidden",
       }}
     >
-      <Box sx={{ px: 2, pt: 2, pb: 1.25, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <Box
+        sx={{
+          px: { xs: 1.25, sm: 2 },
+          pt: { xs: 1.25, sm: 2 },
+          pb: { xs: 0.75, sm: 1.25 },
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 1,
+        }}
+      >
         <Box>
-          <Typography variant="overline" sx={{ color: firuColors.muted, fontWeight: 900, letterSpacing: 1.5 }}>
+          <Typography
+            variant="overline"
+            sx={{ color: firuColors.muted, fontWeight: 900, letterSpacing: 1.1, fontSize: { xs: 10, sm: 12 } }}
+          >
             Live pets
           </Typography>
-          <Typography variant="h6" sx={{ fontWeight: 900, color: firuColors.dark, lineHeight: 1.1 }}>
+          <Typography
+            variant="h6"
+            sx={{ fontWeight: 900, color: firuColors.dark, lineHeight: 1.1, fontSize: { xs: 16, sm: 20 } }}
+          >
             My Pets
           </Typography>
         </Box>
-        <Chip label={`${pets.length} online`} size="small" sx={{ bgcolor: "#dcfce7", color: "#15803d", fontWeight: 800 }} />
+        <Chip
+          label={`${pets.length} online`}
+          size="small"
+          sx={{
+            height: { xs: 22, sm: 24 },
+            bgcolor: "#dcfce7",
+            color: "#15803d",
+            fontWeight: 800,
+            fontSize: { xs: 10, sm: 11 },
+            "& .MuiChip-label": { px: { xs: 0.75, sm: 1 } },
+          }}
+        />
       </Box>
 
-      <List sx={{ p: 1.25, pt: 0, overflowY: "auto", maxHeight: { xs: 150, md: 280 } }}>
+      <List
+        sx={{
+          p: { xs: 0.75, sm: 1.25 },
+          pt: 0,
+          overflowY: "auto",
+          maxHeight: { xs: 122, md: 280 },
+        }}
+      >
         {pets.map((pet) => {
           const petStatus = pet.status.toLowerCase();
           const isSelected = pet.id === selectedId;
@@ -158,17 +193,17 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
               onClick={() => onSelect?.(pet.id)}
               onContextMenu={(e) => handleRightClick(e, pet)}
               sx={{
-                borderRadius: 3,
-                mb: 1,
-                px: 1.25,
-                py: 1,
+                borderRadius: { xs: 2.25, sm: 3 },
+                mb: { xs: 0.75, sm: 1 },
+                px: { xs: 0.875, sm: 1.25 },
+                py: { xs: 0.625, sm: 1 },
                 border: isSelected ? `1px solid ${firuColors.cyan}` : "1px solid transparent",
                 background: isSelected ? "linear-gradient(135deg, #ecfeff, #f0fdf4)" : "#ffffff",
                 boxShadow: isSelected ? "0 14px 24px rgba(6,182,212,0.12)" : "none",
                 "&:hover": { background: "#f8fafc" },
               }}
             >
-              <ListItemAvatar sx={{ minWidth: 46 }}>
+              <ListItemAvatar sx={{ minWidth: { xs: 38, sm: 46 } }}>
                 <FiruappPetAvatar pet={pet} petStatus={petStatus} />
               </ListItemAvatar>
               <ListItemText
@@ -180,6 +215,7 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
                         fontWeight: 900,
                         color: firuColors.dark,
                         lineHeight: 1.15,
+                        fontSize: { xs: 12.5, sm: 14 },
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
@@ -196,26 +232,30 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
                       }
                       size="small"
                       sx={{
-                        height: 20,
+                        height: { xs: 18, sm: 20 },
                         bgcolor: statusColor,
                         color: "white",
-                        fontSize: 10,
+                        fontSize: { xs: 9, sm: 10 },
                         fontWeight: 900,
                         textTransform: "uppercase",
-                        "& .MuiChip-label": { px: 0.75 },
+                        "& .MuiChip-label": { px: { xs: 0.55, sm: 0.75 } },
                       }}
                     />
                   </Box>
                 }
                 secondary={
-                  <Box sx={{ mt: 0.45 }}>
+                  <Box sx={{ mt: { xs: 0.25, sm: 0.45 } }}>
                     <Typography
                       variant="caption"
                       sx={{
                         color: firuColors.muted,
                         fontWeight: 700,
                         lineHeight: 1.2,
+                        fontSize: { xs: 10, sm: 12 },
                         display: "block",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
                       }}
                     >
                       {details || "Breed · Age · Weight"}
@@ -223,7 +263,7 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
                   </Box>
                 }
               />
-              <MoreVertIcon sx={{ color: firuColors.muted, fontSize: 18 }} />
+              <MoreVertIcon sx={{ color: firuColors.muted, fontSize: { xs: 16, sm: 18 } }} />
             </ListItemButton>
           );
         })}
