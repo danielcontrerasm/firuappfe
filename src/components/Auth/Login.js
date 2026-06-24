@@ -118,6 +118,20 @@ const Login = () => {
             </Typography>
           </Box>
 
+          <Box
+            sx={{
+              mb: 2.5,
+              p: 1.5,
+              borderRadius: 3,
+              backgroundColor: "#f8fafc",
+              border: "1px solid #cbd5e1",
+            }}
+          >
+            <Typography variant="body2" sx={{ color: "#334155", textAlign: "center" }}>
+              Demo user: <strong>demo</strong> | Password: <strong>demo</strong>
+            </Typography>
+          </Box>
+
           <form onSubmit={handleSubmit}>
             <TextField
               fullWidth
