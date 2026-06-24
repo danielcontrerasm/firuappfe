@@ -29,6 +29,7 @@ const Login = () => {
         password,
       });
       localStorage.setItem("token", res.data.token);
+      sessionStorage.setItem("firuapp-guide-pending", "true");
       alert("Login successful!");
       window.location.href = "/owner-dashboard";
     } catch (error) {

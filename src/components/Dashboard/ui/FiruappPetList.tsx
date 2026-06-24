@@ -31,6 +31,7 @@ interface PetsListProps {
   selectedId?: string;
   onSelect?: (id: string) => void;
   onStatusChange?: (id: string, status: Pet["status"]) => void;
+  containerRef?: React.Ref<HTMLDivElement>;
 }
 
 const statusColorMap: Record<string, string> = {
@@ -60,7 +61,7 @@ const FiruappPetAvatar: React.FC<{ pet: Pet; petStatus: string }> = ({ pet, petS
   );
 };
 
-const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, onStatusChange }) => {
+const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, onStatusChange, containerRef }) => {
   const [menuAnchor, setMenuAnchor] = useState<{ mouseX: number; mouseY: number } | null>(null);
   const [menuPet, setMenuPet] = useState<Pet | null>(null);
   const navigate = useNavigate();
@@ -123,6 +124,7 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
 
   return (
     <Box
+      ref={containerRef}
       sx={{
         ...compactPanel,
         position: "absolute",

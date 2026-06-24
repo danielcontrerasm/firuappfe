@@ -1,5 +1,5 @@
 // pages/FiruappDashboard.tsx
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
@@ -42,6 +42,14 @@ const mockPets: Pet[] = [
 ];
 
 const ALERT_USER_ID = 1;
+const GUIDE_PENDING_KEY = "firuapp-guide-pending";
+
+type GuideTargetRect = {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+};
 
 interface DashboardAlert {
   id: string;
@@ -160,6 +168,150 @@ const SelectedPetAvatar: React.FC<{ pet: Pet }> = ({ pet }) => {
   );
 };
 
+const measureGuideTarget = (element: HTMLElement | null): GuideTargetRect | null => {
+  if (!element) return null;
+  const rect = element.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) return null;
+
+  const padding = 10;
+  const top = Math.max(rect.top - padding, 8);
+  const left = Math.max(rect.left - padding, 8);
+  const right = Math.min(rect.right + padding, window.innerWidth - 8);
+  const bottom = Math.min(rect.bottom + padding, window.innerHeight - 8);
+
+  return {
+    top,
+    left,
+    width: Math.max(right - left, 0),
+    height: Math.max(bottom - top, 0),
+  };
+};
+
+const DashboardGuideOverlay = ({
+  open,
+  title,
+  description,
+  stepIndex,
+  totalSteps,
+  spotlightRect,
+  onBack,
+  onNext,
+  onClose,
+}: {
+  open: boolean;
+  title: string;
+  description: string;
+  stepIndex: number;
+  totalSteps: number;
+  spotlightRect: GuideTargetRect | null;
+  onBack: () => void;
+  onNext: () => void;
+  onClose: () => void;
+}) => {
+  if (!open) return null;
+
+  const isIntro = !spotlightRect;
+  const isLastStep = stepIndex === totalSteps - 1;
+
+  return (
+    <Box sx={{ position: "fixed", inset: 0, zIndex: 1600 }}>
+      {spotlightRect ? (
+        <>
+          <Box sx={{ position: "fixed", top: 0, left: 0, right: 0, height: spotlightRect.top, bgcolor: "rgba(15,23,42,0.62)" }} />
+          <Box sx={{ position: "fixed", top: spotlightRect.top, left: 0, width: spotlightRect.left, height: spotlightRect.height, bgcolor: "rgba(15,23,42,0.62)" }} />
+          <Box
+            sx={{
+              position: "fixed",
+              top: spotlightRect.top,
+              left: spotlightRect.left + spotlightRect.width,
+              right: 0,
+              height: spotlightRect.height,
+              bgcolor: "rgba(15,23,42,0.62)",
+            }}
+          />
+          <Box
+            sx={{
+              position: "fixed",
+              top: spotlightRect.top + spotlightRect.height,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              bgcolor: "rgba(15,23,42,0.62)",
+            }}
+          />
+          <Box
+            sx={{
+              position: "fixed",
+              top: spotlightRect.top,
+              left: spotlightRect.left,
+              width: spotlightRect.width,
+              height: spotlightRect.height,
+              borderRadius: 4,
+              border: "2px solid rgba(103,232,249,0.95)",
+              boxShadow: "0 0 0 9999px rgba(15,23,42,0.02), 0 0 0 6px rgba(103,232,249,0.18)",
+              pointerEvents: "none",
+            }}
+          />
+        </>
+      ) : (
+        <Box sx={{ position: "fixed", inset: 0, bgcolor: "rgba(15,23,42,0.68)" }} />
+      )}
+
+      <Paper
+        elevation={0}
+        sx={{
+          position: "fixed",
+          left: "50%",
+          bottom: isIntro ? "50%" : 24,
+          transform: isIntro ? "translate(-50%, 50%)" : "translateX(-50%)",
+          width: "min(380px, calc(100vw - 32px))",
+          p: 2.25,
+          borderRadius: 4,
+          bgcolor: "rgba(255,255,255,0.98)",
+          border: "1px solid rgba(226,232,240,0.95)",
+          boxShadow: "0 22px 56px rgba(15,23,42,0.28)",
+        }}
+      >
+        <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1} sx={{ mb: 1.25 }}>
+          <Chip
+            size="small"
+            label={`Guide ${stepIndex + 1}/${totalSteps}`}
+            sx={{ bgcolor: "#ecfeff", color: "#0e7490", fontWeight: 900 }}
+          />
+          <Button onClick={onClose} size="small" sx={{ minWidth: "auto", color: "#64748b", fontWeight: 800, textTransform: "none" }}>
+            Skip
+          </Button>
+        </Stack>
+
+        <Typography variant="h6" sx={{ color: firuColors.dark, fontWeight: 950 }}>
+          {title}
+        </Typography>
+        <Typography variant="body2" sx={{ mt: 1, color: firuColors.muted, lineHeight: 1.7 }}>
+          {description}
+        </Typography>
+
+        <Stack direction="row" justifyContent="space-between" spacing={1.25} sx={{ mt: 2.25 }}>
+          <Button
+            onClick={onBack}
+            variant="outlined"
+            disabled={stepIndex === 0}
+            sx={{ borderRadius: 3, textTransform: "none", fontWeight: 900 }}
+          >
+            Back
+          </Button>
+          <Button
+            onClick={onNext}
+            variant="contained"
+            sx={{ bgcolor: firuColors.dark, borderRadius: 3, textTransform: "none", fontWeight: 900, "&:hover": { bgcolor: "#111827" } }}
+          >
+            {isLastStep ? "Finish" : "Next"}
+          </Button>
+        </Stack>
+      </Paper>
+    </Box>
+  );
+};
+
 const FiruappDashboard: React.FC = () => {
   const [dashboardPets, setDashboardPets] = useState<Pet[]>(mockPets);
   const [databasePets, setDatabasePets] = useState<Pet[]>([]);
@@ -175,6 +327,13 @@ const FiruappDashboard: React.FC = () => {
   const [dbPetsLoaded, setDbPetsLoaded] = useState(false);
   const [alertMessages, setAlertMessages] = useState<DashboardAlert[]>([]);
   const [alertsConnected, setAlertsConnected] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [guideStepIndex, setGuideStepIndex] = useState(0);
+  const [guideSpotlightRect, setGuideSpotlightRect] = useState<GuideTargetRect | null>(null);
+  const searchBarRef = useRef<HTMLDivElement | null>(null);
+  const filterBarRef = useRef<HTMLDivElement | null>(null);
+  const mapPanelRef = useRef<HTMLDivElement | null>(null);
+  const petListRef = useRef<HTMLDivElement | null>(null);
 
   const fetchDatabasePets = useCallback(async () => {
     const token = localStorage.getItem("token");
@@ -304,12 +463,97 @@ const FiruappDashboard: React.FC = () => {
     setAlertMessages((currentAlerts) => currentAlerts.filter((alert) => alert.id !== alertId));
   };
 
+  const guideSteps = [
+    {
+      title: "Welcome to the dashboard",
+      description:
+        "This guide points out the controls you will use most often. The left navigation moves between dashboard views, routes, safe zones, pets, users, and alerts.",
+    },
+    {
+      title: "Search bar",
+      description:
+        "Use this search bar to quickly look for pets, places, or geofences before you narrow the view with the detailed filters below.",
+      targetRef: searchBarRef,
+    },
+    {
+      title: "Quick filters",
+      description:
+        "These filters let you focus the dashboard by city, neighborhood, owner, or pet name so the map and list only show the records you need.",
+      targetRef: filterBarRef,
+    },
+    {
+      title: "Live map",
+      description:
+        "The map shows live pet locations and safe zones. Select a marker to focus a pet and open the detail panel on the right.",
+      targetRef: mapPanelRef,
+    },
+    {
+      title: "Pet list",
+      description:
+        "This floating list shows the pets currently visible on the dashboard. Click one to center your attention on that pet and review its status.",
+      targetRef: petListRef,
+    },
+  ];
+
+  const currentGuideStep = guideSteps[guideStepIndex];
+
+  const refreshGuideSpotlight = useCallback(() => {
+    const target = currentGuideStep?.targetRef?.current ?? null;
+    setGuideSpotlightRect(measureGuideTarget(target));
+  }, [currentGuideStep]);
+
+  const closeGuide = useCallback(() => {
+    setGuideOpen(false);
+    setGuideStepIndex(0);
+    setGuideSpotlightRect(null);
+  }, []);
+
+  const goToNextGuideStep = useCallback(() => {
+    setGuideStepIndex((current) => {
+      if (current >= guideSteps.length - 1) {
+        setGuideOpen(false);
+        setGuideSpotlightRect(null);
+        return 0;
+      }
+      return current + 1;
+    });
+  }, [guideSteps.length]);
+
+  useEffect(() => {
+    if (sessionStorage.getItem(GUIDE_PENDING_KEY) === "true") {
+      sessionStorage.removeItem(GUIDE_PENDING_KEY);
+      setGuideOpen(true);
+      setGuideStepIndex(0);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!guideOpen) return undefined;
+
+    const target = currentGuideStep?.targetRef?.current ?? null;
+    if (target) {
+      target.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
+    }
+
+    const frame = window.requestAnimationFrame(refreshGuideSpotlight);
+    const handleLayout = () => refreshGuideSpotlight();
+    window.addEventListener("resize", handleLayout);
+    window.addEventListener("scroll", handleLayout, true);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", handleLayout);
+      window.removeEventListener("scroll", handleLayout, true);
+    };
+  }, [currentGuideStep, guideOpen, refreshGuideSpotlight]);
+
   return (
     <Box sx={{ minHeight: "100vh", display: "flex", bgcolor: firuColors.bg, color: firuColors.text }}>
       <FiruappSidebar current={section} onChange={setSection} />
 
       <Box sx={{ flexGrow: 1, minWidth: 0, p: { xs: 2, md: 3 }, display: "flex", flexDirection: "column", gap: 2.5 }}>
         <Paper
+          ref={searchBarRef}
           elevation={0}
           sx={{
             ...glassPanel,
@@ -399,6 +643,7 @@ const FiruappDashboard: React.FC = () => {
         </Box>
 
         <Paper
+          ref={filterBarRef}
           elevation={0}
           sx={{
             ...glassPanel,
@@ -614,12 +859,14 @@ const FiruappDashboard: React.FC = () => {
 
             <Paper elevation={0} sx={{ ...glassPanel, borderRadius: 5, p: 1.5, position: "relative", overflow: "hidden" }}>
               <FiruappMapView
+                containerRef={mapPanelRef}
                 selectedPet={selectedPet}
                 pets={filteredDashboardPets}
                 petDataMode={petDataMode}
                 onSelectPet={setSelectedPetId}
               />
               <FiruappPetsList
+                containerRef={petListRef}
                 pets={filteredDashboardPets}
                 selectedId={selectedPetId}
                 onSelect={setSelectedPetId}
@@ -744,6 +991,18 @@ const FiruappDashboard: React.FC = () => {
           )}
         </Box>
       </Box>
+
+      <DashboardGuideOverlay
+        open={guideOpen}
+        title={currentGuideStep.title}
+        description={currentGuideStep.description}
+        stepIndex={guideStepIndex}
+        totalSteps={guideSteps.length}
+        spotlightRect={guideSpotlightRect}
+        onBack={() => setGuideStepIndex((current) => Math.max(current - 1, 0))}
+        onNext={goToNextGuideStep}
+        onClose={closeGuide}
+      />
     </Box>
   );
 };

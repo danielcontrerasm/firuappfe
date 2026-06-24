@@ -40,6 +40,7 @@ interface MapViewProps {
   pets?: Pet[];
   petDataMode?: "mock" | "database" | "mixed";
   onSelectPet?: (id: string) => void;
+  containerRef?: React.Ref<HTMLDivElement>;
 }
 
 const fallbackCenter: LatLngExpression = [6.2442, -75.5812];
@@ -206,6 +207,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
   pets = [],
   petDataMode = "mixed",
   onSelectPet,
+  containerRef,
 }) => {
   const [petLocations, setPetLocations] = useState<PetLocation[]>([]);
   const [petGeofences, setPetGeofences] = useState<PetGeofence[]>([]);
@@ -417,6 +419,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
 
   return (
     <Box
+      ref={containerRef}
       sx={{
         position: "relative",
         height: { xs: "calc(100vh - 170px)", md: "calc(100vh - 230px)" },
