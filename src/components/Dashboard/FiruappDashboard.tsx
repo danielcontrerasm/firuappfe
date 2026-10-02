@@ -33,6 +33,14 @@ import WifiIcon from "@mui/icons-material/Wifi";
 import SpeedIcon from "@mui/icons-material/Speed";
 import PlaceIcon from "@mui/icons-material/Place";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
+import MyLocationIcon from "@mui/icons-material/MyLocation";
+import NavigationIcon from "@mui/icons-material/Navigation";
+import PetsIcon from "@mui/icons-material/Pets";
+import SecurityIcon from "@mui/icons-material/Security";
+import PersonIcon from "@mui/icons-material/Person";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import { usePetImage } from "../../services/usePetImage.ts";
 import { buildApiUrl, buildWsUrl } from "../../config/runtime";
 
@@ -136,17 +144,67 @@ const matchesPetFilters = (pet: Pet, filters: DashboardPetFilters) => {
   return matchesCity && matchesNeighborhood && matchesOwner && matchesPet;
 };
 
-const MetricCard = ({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string; color: string }) => (
-  <Box sx={{ p: 1.5, borderRadius: 3, bgcolor: "#f8fafc", border: "1px solid #e2e8f0" }}>
-    <Stack direction="row" spacing={1} alignItems="center">
-      <Box sx={{ color, display: "grid", placeItems: "center" }}>{icon}</Box>
-      <Typography variant="caption" sx={{ color: firuColors.muted, fontWeight: 800 }}>
-        {label}
-      </Typography>
+const SummaryCard = ({ icon, label, value, color, bg }: { icon: React.ReactNode; label: string; value: string | number; color: string; bg: string }) => (
+  <Paper
+    elevation={0}
+    sx={{
+      minHeight: 88,
+      px: 1.7,
+      py: 1.4,
+      borderRadius: 2,
+      bgcolor: "#ffffff",
+      border: "1px solid rgba(226,232,240,0.95)",
+      boxShadow: "0 16px 38px rgba(15,23,42,0.06)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 1.25,
+    }}
+  >
+    <Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
+      <Box
+        sx={{
+          width: 52,
+          height: 52,
+          borderRadius: "50%",
+          bgcolor: bg,
+          color,
+          display: "grid",
+          placeItems: "center",
+          flexShrink: 0,
+        }}
+      >
+        {icon}
+      </Box>
+      <Box sx={{ minWidth: 0 }}>
+        <Typography variant="h5" sx={{ fontWeight: 950, color: "#071735", lineHeight: 1 }}>
+          {value}
+        </Typography>
+        <Typography variant="caption" sx={{ display: "block", mt: 0.45, color: "#64748b", fontWeight: 800 }}>
+          {label}
+        </Typography>
+      </Box>
     </Stack>
-    <Typography variant="body1" sx={{ mt: 0.8, fontWeight: 900, color: firuColors.dark }}>
-      {value}
-    </Typography>
+    <KeyboardArrowRightIcon sx={{ color: "#7990ad", fontSize: 22 }} />
+  </Paper>
+);
+
+const MetricCard = ({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string; color: string }) => (
+  <Box sx={{ p: 1.25, borderRadius: 2, bgcolor: "#ffffff", border: "1px solid #dbe7f3" }}>
+    <Stack direction="row" spacing={1.15} alignItems="center">
+      <Box sx={{ color, display: "grid", placeItems: "center", width: 28 }}>{icon}</Box>
+      <Box sx={{ minWidth: 0 }}>
+        <Typography variant="caption" sx={{ color: firuColors.muted, fontWeight: 800, lineHeight: 1.1 }}>
+          {label}
+        </Typography>
+        <Typography variant="body1" sx={{ fontWeight: 950, color: firuColors.dark, lineHeight: 1.15 }}>
+          {value}
+        </Typography>
+      </Box>
+    </Stack>
+    <Box sx={{ mt: 1, height: 6, borderRadius: 999, bgcolor: "#e8eef6", overflow: "hidden" }}>
+      <Box sx={{ width: label === "Battery" ? value : "42%", height: "100%", bgcolor: color, borderRadius: 999 }} />
+    </Box>
   </Box>
 );
 
@@ -457,8 +515,35 @@ const FiruappDashboard: React.FC = () => {
     );
   }, [filteredDashboardPets]);
 
-  const selectedPet = useMemo(() => filteredDashboardPets.find((pet) => pet.id === selectedPetId), [filteredDashboardPets, selectedPetId]);
+  const selectedPet = useMemo(
+    () =>
+      filteredDashboardPets.find((pet) => pet.id === selectedPetId) ||
+      filteredDashboardPets.find((pet) => pet.status === "lost") ||
+      filteredDashboardPets[0],
+    [filteredDashboardPets, selectedPetId]
+  );
   const lostPets = useMemo(() => filteredDashboardPets.filter((pet) => pet.status === "lost"), [filteredDashboardPets]);
+  const activePets = useMemo(() => filteredDashboardPets.filter((pet) => pet.status === "active"), [filteredDashboardPets]);
+  const recentAlertItems = useMemo(() => {
+    const liveAlerts = alertMessages.map((alert) => ({
+      id: alert.id,
+      title: alert.message,
+      time: alert.receivedAt,
+      severity: "critical" as const,
+    }));
+    const petAlerts = lostPets.map((pet, index) => ({
+      id: `lost-${pet.id}`,
+      title: `${pet.name} has been marked as LOST`,
+      time: index === 0 ? "Just now" : "12 min ago",
+      severity: "critical" as const,
+    }));
+    const fallbackAlerts = [
+      { id: "mock-rocky-lost", title: "Rocky has been marked as LOST", time: "Just now", severity: "critical" as const },
+      { id: "mock-bella-zone", title: "Bella left Home Safe Zone", time: "12 min ago", severity: "warning" as const },
+    ];
+
+    return [...liveAlerts, ...petAlerts, ...fallbackAlerts].slice(0, 2);
+  }, [alertMessages, lostPets]);
   const dismissAlert = (alertId: string) => {
     setAlertMessages((currentAlerts) => currentAlerts.filter((alert) => alert.id !== alertId));
   };

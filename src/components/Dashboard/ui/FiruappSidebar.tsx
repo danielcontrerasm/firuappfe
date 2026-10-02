@@ -25,10 +25,10 @@ const navItems = [
   { label: "Recent Routes", icon: AssessmentIcon, to: "/routes/recent" },
   { label: "Geofences", icon: RadarIcon, to: "/geofence", section: "geofence" as const },
   { label: "My Pets", icon: PetsIcon, to: "/pets" },
-  { label: "Users", icon: PersonIcon, to: "/users" },
-  { label: "GPS Sensors", icon: SensorsIcon, to: "/sensors" },
   { label: "Volunteer Groups", icon: GroupIcon, to: "/volunteers" },
   { label: "Lost Pets Wall", icon: ContentPasteSearchIcon, to: "/lost-pets" },
+  { label: "GPS Sensors", icon: SensorsIcon, to: "/sensors" },
+  { label: "Users", icon: PersonIcon, to: "/users" },
   { label: "Alerts", icon: NotificationsActiveIcon, to: "/alerts" },
 ];
 
@@ -51,10 +51,10 @@ const FiruappSidebar: React.FC<SidebarProps> = ({ onChange }) => {
   const navContent = (
     <Box
       sx={{
-        width: { xs: 284, md: 180 },
+        width: { xs: 284, md: 214 },
         minHeight: "100vh",
-        py: 2.5,
-        px: 1.5,
+        py: 3,
+        px: 1.75,
         display: "flex",
         flexDirection: "column",
         alignItems: "stretch",
@@ -67,9 +67,9 @@ const FiruappSidebar: React.FC<SidebarProps> = ({ onChange }) => {
       }}
     >
       <Avatar
-        sx={{
-          width: 136,
-          height: 136,
+      sx={{
+          width: 138,
+          height: 116,
           mx: "auto",
           borderRadius: 0,
           bgcolor: "transparent",
@@ -89,7 +89,7 @@ const FiruappSidebar: React.FC<SidebarProps> = ({ onChange }) => {
       </Avatar>
 
 
-      <Box sx={{ display: "grid", gap: 1, width: "100%", mt: 1 }}>
+      <Box sx={{ display: "grid", gap: 0.85, width: "100%", mt: 1 }}>
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = location.pathname === item.to;
@@ -102,14 +102,14 @@ const FiruappSidebar: React.FC<SidebarProps> = ({ onChange }) => {
               startIcon={<Icon />}
               onClick={() => handleNavigate(item.section)}
               sx={{
-                minHeight: 48,
+                minHeight: 55,
                 justifyContent: "flex-start",
-                px: 1.5,
-                borderRadius: 3,
+                px: 1.75,
+                borderRadius: 2,
                 color: active ? "#ffffff" : "#64748b",
-                background: active ? firuColors.dark : "transparent",
+                background: active ? "#062346" : "transparent",
                 border: active ? "1px solid rgba(15,23,42,0.1)" : "1px solid transparent",
-                boxShadow: active ? "0 14px 24px rgba(15,23,42,0.18)" : "none",
+                boxShadow: active ? "0 14px 28px rgba(6,35,70,0.22)" : "none",
                 fontSize: 14,
                 fontWeight: 800,
                 lineHeight: 1.2,
@@ -117,7 +117,7 @@ const FiruappSidebar: React.FC<SidebarProps> = ({ onChange }) => {
                 textTransform: "none",
                 whiteSpace: "nowrap",
                 "& .MuiButton-startIcon": {
-                  mr: 1,
+                  mr: 1.25,
                   color: "inherit",
                 },
                 "& .MuiButton-icon": {
@@ -125,7 +125,7 @@ const FiruappSidebar: React.FC<SidebarProps> = ({ onChange }) => {
                 },
                 "&:hover": {
                   color: active ? "#ffffff" : firuColors.dark,
-                  background: active ? firuColors.dark : "#eef7fb",
+                  background: active ? "#062346" : "#eef7fb",
                 },
               }}
             >
@@ -144,7 +144,7 @@ const FiruappSidebar: React.FC<SidebarProps> = ({ onChange }) => {
           minHeight: 48,
           justifyContent: "flex-start",
           px: 1.5,
-          borderRadius: 3,
+          borderRadius: 2,
           color: "#ef4444",
           background: "#fff1f2",
           fontSize: 14,

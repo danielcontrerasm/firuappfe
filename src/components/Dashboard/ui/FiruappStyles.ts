@@ -22,7 +22,7 @@ export interface Pet {
 }
 
 export const firuColors = {
-  bg: "#f4f8fb",
+  bg: "#f5faff",
   dark: "#0f172a",
   text: "#102033",
   muted: "#64748b",
