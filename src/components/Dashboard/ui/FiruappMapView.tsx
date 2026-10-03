@@ -17,6 +17,7 @@ interface PetLocation {
   longitude: number;
   petName?: string;
   timestamp?: string;
+  address?: string;
   imageUrl?: string;
   avatarUrl?: string;
   status?: string;
@@ -37,6 +38,7 @@ interface MapViewProps {
   pets?: Pet[];
   petDataMode?: "mock" | "database" | "mixed";
   onSelectPet?: (id: string) => void;
+  onLocationsChange?: (locations: PetLocation[]) => void;
   containerRef?: React.Ref<HTMLDivElement>;
 }
 
@@ -223,6 +225,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
   pets = [],
   petDataMode = "database",
   onSelectPet,
+  onLocationsChange,
   containerRef,
 }) => {
   const [petLocations, setPetLocations] = useState<PetLocation[]>([]);
@@ -297,6 +300,12 @@ const FiruappMapView: React.FC<MapViewProps> = ({
                 longitude,
                 petName,
                 timestamp: loc.timestamp ?? loc.updatedAt ?? loc.createdAt,
+                address:
+                  loc.address ??
+                  loc.formattedAddress ??
+                  loc.locationName ??
+                  loc.placeName ??
+                  loc.description,
                 imageUrl,
                 avatarUrl: normalizeImageUrl(loc.avatarUrl ?? loc.pet?.avatarUrl),
                 status: loc.status ?? loc.pet?.status,
@@ -305,6 +314,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
             .filter(Boolean) as PetLocation[];
 
           setPetLocations(normalized);
+          onLocationsChange?.(normalized);
         }
       } catch (error) {
         console.error("Error fetching pet locations:", error);
@@ -312,9 +322,9 @@ const FiruappMapView: React.FC<MapViewProps> = ({
     };
 
     fetchPetLocations();
-    const interval = window.setInterval(fetchPetLocations, 8000);
+    const interval = window.setInterval(fetchPetLocations, 30000);
     return () => window.clearInterval(interval);
-  }, [apiUrl]);
+  }, [apiUrl, onLocationsChange]);
 
   useEffect(() => {
     const fetchPetGeofences = async () => {

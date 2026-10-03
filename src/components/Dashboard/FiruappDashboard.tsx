@@ -63,6 +63,27 @@ type DashboardPetFilters = {
   petName: string;
 };
 
+type DashboardPetLocation = {
+  id: string | number;
+  petId?: string | number;
+  latitude: number;
+  longitude: number;
+  petName?: string;
+  timestamp?: string;
+  address?: string;
+};
+
+const formatLocationTimestamp = (timestamp?: string) => {
+  if (!timestamp) return "Unknown";
+  const date = new Date(timestamp);
+  return Number.isNaN(date.getTime()) ? timestamp : date.toLocaleString();
+};
+
+const formatCoordinates = (location?: DashboardPetLocation) => {
+  if (!location) return "Unknown";
+  return `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
+};
+
 const normalizeMedellinCity = (dto: any) => {
   const city = dto.city || dto.owner?.city || dto.address?.city || "";
   const neighborhood = dto.neighborhood || dto.owner?.neighborhood || dto.address?.neighborhood || dto.zone || "";
@@ -344,6 +365,7 @@ const DashboardGuideOverlay = ({
 const FiruappDashboard: React.FC = () => {
   const [dashboardPets, setDashboardPets] = useState<Pet[]>([]);
   const [databasePets, setDatabasePets] = useState<Pet[]>([]);
+  const [petLocations, setPetLocations] = useState<DashboardPetLocation[]>([]);
   const petDataMode: PetDataMode = "database";
   const [petFilters, setPetFilters] = useState<DashboardPetFilters>({
     city: "",
@@ -465,8 +487,22 @@ const FiruappDashboard: React.FC = () => {
       filteredDashboardPets[0],
     [filteredDashboardPets, selectedPetId]
   );
+  const selectedPetLocation = useMemo(() => {
+    if (!selectedPet) return undefined;
+    const selectedIds = new Set([selectedPet.apiId, selectedPet.id].filter(Boolean).map(String));
+    return petLocations.find((location) => location.petId != null && selectedIds.has(String(location.petId)));
+  }, [petLocations, selectedPet]);
+  const selectedPetLastSeen = selectedPetLocation?.timestamp
+    ? formatLocationTimestamp(selectedPetLocation.timestamp)
+    : selectedPet?.lastSeen || "Unknown";
+  const selectedPetLocationLabel =
+    selectedPetLocation?.address || (selectedPetLocation ? "Location from GPS coordinates" : "No live location available");
+  const selectedPetCoordinates = formatCoordinates(selectedPetLocation);
   const lostPets = useMemo(() => filteredDashboardPets.filter((pet) => pet.status === "lost"), [filteredDashboardPets]);
   const activePets = useMemo(() => filteredDashboardPets.filter((pet) => pet.status === "active"), [filteredDashboardPets]);
+  const handleLocationsChange = useCallback((locations: DashboardPetLocation[]) => {
+    setPetLocations(locations);
+  }, []);
   const recentAlertItems = useMemo(() => {
     const liveAlerts = alertMessages.map((alert) => ({
       id: alert.id,
@@ -683,6 +719,7 @@ const FiruappDashboard: React.FC = () => {
                 pets={filteredDashboardPets}
                 petDataMode={petDataMode}
                 onSelectPet={setSelectedPetId}
+                onLocationsChange={handleLocationsChange}
               />
               <FiruappPetsList
                 containerRef={petListRef}
@@ -779,10 +816,10 @@ const FiruappDashboard: React.FC = () => {
                         Last seen
                       </Typography>
                       <Typography variant="body2" sx={{ color: "#cf1421", fontWeight: 900 }}>
-                        Jun 26, 2024 at 4:32 PM
+                        {selectedPetLastSeen}
                       </Typography>
                       <Typography variant="caption" sx={{ color: "#61728f", fontWeight: 700 }}>
-                        Near Calle 51, Laureles, Medellín
+                        {selectedPetLocationLabel}
                       </Typography>
                     </Box>
                     <KeyboardArrowRightIcon sx={{ color: "#ff3444" }} />
@@ -793,8 +830,8 @@ const FiruappDashboard: React.FC = () => {
                     <MetricCard icon={<WifiIcon fontSize="small" />} label="Signal" value={selectedPet.signal || "Weak"} color="#1685ff" />
                     <MetricCard icon={<SpeedIcon fontSize="small" />} label="Speed" value={selectedPet.speed || "0.6 km/h"} color="#8b5cf6" />
                     <MetricCard icon={<MyLocationIcon fontSize="small" />} label="GPS accuracy" value="6 meters" color="#1685ff" />
-                    <MetricCard icon={<AccessTimeIcon fontSize="small" />} label="Last update" value={selectedPet.lastSeen || "Just now"} color="#64748b" />
-                    <MetricCard icon={<PlaceIcon fontSize="small" />} label="Coordinates" value="6.217903, -75.572110" color="#1685ff" />
+                    <MetricCard icon={<AccessTimeIcon fontSize="small" />} label="Last update" value={selectedPetLastSeen} color="#64748b" />
+                    <MetricCard icon={<PlaceIcon fontSize="small" />} label="Coordinates" value={selectedPetCoordinates} color="#1685ff" />
                   </Box>
 
                   <Button
