@@ -5,8 +5,6 @@ import axios from "axios";
 import { Circle, MapContainer, Marker, Polygon, Popup, TileLayer, useMap } from "react-leaflet";
 import L, { LatLngExpression } from "leaflet";
 import GpsFixedIcon from "@mui/icons-material/GpsFixed";
-import DrawIcon from "@mui/icons-material/Draw";
-import PolylineIcon from "@mui/icons-material/Polyline";
 import RadarIcon from "@mui/icons-material/Radar";
 import { firuColors, Pet } from "./FiruappStyles.ts";
 import { loadPetImage } from "../../../services/usePetImage.ts";
@@ -36,7 +34,6 @@ interface PetGeofence {
 
 interface MapViewProps {
   apiUrl?: string;
-  selectedPet?: Pet;
   pets?: Pet[];
   petDataMode?: "mock" | "database" | "mixed";
   onSelectPet?: (id: string) => void;
@@ -73,6 +70,13 @@ const mapStyles = {
 
 const normalizePetName = (name?: string) => name?.trim().toLowerCase();
 const normalizeStatus = (status?: string) => status?.trim().toLowerCase().replace(/[\s-]+/g, "_");
+const escapeHtml = (value?: string) =>
+  (value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 const isAlertStatus = (status?: string) => {
   const normalized = normalizeStatus(status);
   return normalized === "lost" || normalized === "out_of_geofence" || normalized === "outside_geofence" || normalized === "outside_safe_zone";
@@ -163,20 +167,33 @@ const CenterMap: React.FC<{ markers: PetLocation[] }> = ({ markers }) => {
   return null;
 };
 
-const createPetIcon = (imageUrl?: string, status?: string) =>
+const createPetIcon = (imageUrl?: string, status?: string, name?: string) => {
+  const alert = isAlertStatus(status);
+  const safeLabel = alert ? "Lost" : "Live";
+  const safeName = escapeHtml(name || "Pet");
+  const markerImage = imageUrl ? `<img src="${imageUrl}" alt="" />` : "🐾";
+
+  return (
   L.divIcon({
     className: "firu-pet-marker-wrapper",
     html: `
-      <div class="firu-pet-marker-shell ${isAlertStatus(status) ? "alert" : ""}">
-        <div class="firu-pet-marker ${isAlertStatus(status) ? "alert" : ""}">
-          ${imageUrl ? `<img src="${imageUrl}" alt="" />` : "🐾"}
+      <div class="firu-pet-marker-shell ${alert ? "alert" : ""}">
+        <div class="firu-pet-marker ${alert ? "alert" : ""}">
+          ${markerImage}
+        </div>
+        <div class="firu-pet-dot ${alert ? "alert" : ""}"></div>
+        <div class="firu-pet-label ${alert ? "alert" : ""}">
+          <strong>${safeName}</strong>
+          <span>${safeLabel}</span>
         </div>
       </div>
     `,
-    iconSize: [58, 58],
+    iconSize: [148, 66],
     iconAnchor: [29, 58],
     popupAnchor: [0, -58],
-  });
+  })
+  );
+};
 
 const mockPetLocations: PetLocation[] = [
   {
@@ -203,7 +220,6 @@ const mockPetLocations: PetLocation[] = [
 
 const FiruappMapView: React.FC<MapViewProps> = ({
   apiUrl = buildApiUrl("/api/pets/locations"),
-  selectedPet,
   pets = [],
   petDataMode = "mixed",
   onSelectPet,
@@ -211,7 +227,6 @@ const FiruappMapView: React.FC<MapViewProps> = ({
 }) => {
   const [petLocations, setPetLocations] = useState<PetLocation[]>([]);
   const [petGeofences, setPetGeofences] = useState<PetGeofence[]>([]);
-  const [geofencesLoaded, setGeofencesLoaded] = useState(false);
   const [showGeofences, setShowGeofences] = useState(true);
   const [mapStyle, setMapStyle] = useState<"clean" | "natural">("natural");
   const [petImageBlobUrls, setPetImageBlobUrls] = useState<Record<string, string>>({});
@@ -312,30 +327,25 @@ const FiruappMapView: React.FC<MapViewProps> = ({
 
       if (!petsForGeofences.length) {
         setPetGeofences([]);
-        setGeofencesLoaded(true);
         return;
       }
 
-      try {
-        const token = localStorage.getItem("token");
-        const responses = await Promise.all(
-          petsForGeofences.map(async (pet) => {
-            try {
-              const response = await axios.get(buildApiUrl(`/api/geofences/${pet.id}`), {
-                headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-              });
-              return normalizeGeofences(response.data, pet);
-            } catch (error) {
-              console.error(`Error fetching geofences for ${pet.name}:`, error);
-              return [];
-            }
-          })
-        );
+      const token = localStorage.getItem("token");
+      const responses = await Promise.all(
+        petsForGeofences.map(async (pet) => {
+          try {
+            const response = await axios.get(buildApiUrl(`/api/geofences/${pet.id}`), {
+              headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+            });
+            return normalizeGeofences(response.data, pet);
+          } catch (error) {
+            console.error(`Error fetching geofences for ${pet.name}:`, error);
+            return [];
+          }
+        })
+      );
 
-        setPetGeofences(responses.flat());
-      } finally {
-        setGeofencesLoaded(true);
-      }
+      setPetGeofences(responses.flat());
     };
 
     fetchPetGeofences();
@@ -422,8 +432,8 @@ const FiruappMapView: React.FC<MapViewProps> = ({
       ref={containerRef}
       sx={{
         position: "relative",
-        height: { xs: "calc(100vh - 170px)", md: "calc(100vh - 230px)" },
-        minHeight: { xs: 440, md: 560 },
+        height: { xs: "calc(100vh - 190px)", md: "calc(100vh - 365px)", xl: "calc(100vh - 330px)" },
+        minHeight: { xs: 520, md: 610 },
       }}
     >
       <Box
@@ -504,6 +514,50 @@ const FiruappMapView: React.FC<MapViewProps> = ({
           "& .firu-pet-marker-wrapper:has(.firu-pet-marker-shell.alert)": {
             filter: "drop-shadow(0 0 12px rgba(239,68,68,.55))",
           },
+          "& .firu-pet-dot": {
+            position: "absolute",
+            left: 24,
+            top: 45,
+            width: 16,
+            height: 16,
+            borderRadius: "50%",
+            bgcolor: "#17c964",
+            border: "3px solid #ffffff",
+            boxShadow: "0 6px 16px rgba(15,23,42,.18)",
+            zIndex: 3,
+          },
+          "& .firu-pet-dot.alert": {
+            bgcolor: "#ff2534",
+          },
+          "& .firu-pet-label": {
+            position: "absolute",
+            left: 54,
+            top: 10,
+            minWidth: 86,
+            padding: "7px 10px",
+            display: "grid",
+            gap: 0.15,
+            borderRadius: 2,
+            background: "rgba(255,255,255,0.96)",
+            border: "1px solid rgba(226,232,240,0.9)",
+            boxShadow: "0 12px 28px rgba(15,23,42,.18)",
+            fontFamily: "inherit",
+            color: "#071735",
+          },
+          "& .firu-pet-label strong": {
+            fontSize: 14,
+            lineHeight: 1.05,
+            fontWeight: 950,
+          },
+          "& .firu-pet-label span": {
+            fontSize: 13,
+            lineHeight: 1.05,
+            fontWeight: 950,
+            color: "#17c964",
+          },
+          "& .firu-pet-label.alert span": {
+            color: "#ff2534",
+          },
           "& .firu-pet-marker img": {
             width: "100%",
             height: "100%",
@@ -564,6 +618,20 @@ const FiruappMapView: React.FC<MapViewProps> = ({
           {routeLine.length > 1 && <Polyline positions={routeLine} pathOptions={{ color: firuColors.violet, weight: 4, opacity: 0.65, dashArray: "8 8" }} />}
           */}
 
+          {showGeofences && displayMarkers
+            .filter((pet) => String(pet.petId ?? pet.id).startsWith("mock-"))
+            .map((pet) => {
+              const color = isAlertStatus(pet.status) ? firuColors.red : firuColors.green;
+              return (
+                <Circle
+                  key={`mock-zone-${pet.id}`}
+                  center={[pet.latitude, pet.longitude]}
+                  radius={isAlertStatus(pet.status) ? 520 : 620}
+                  pathOptions={{ color, fillColor: color, fillOpacity: 0.13, weight: 3, dashArray: isAlertStatus(pet.status) ? "8 8" : undefined }}
+                />
+              );
+            })}
+
           {showGeofences && petGeofences.map((geofence, index) => {
             const isAlertGeofence = alertPetIds.has(String(geofence.petId));
             const color = isAlertGeofence ? firuColors.red : geofenceColors[index % geofenceColors.length];
@@ -608,7 +676,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
               <Marker
                 key={`${pet.id}-${markerState}-${markerImage || pet.imageUrl || pet.avatarUrl || "no-image"}`}
                 position={[pet.latitude, pet.longitude]}
-                icon={createPetIcon(markerImage || pet.imageUrl || pet.avatarUrl, markerStatus)}
+                icon={createPetIcon(markerImage || pet.imageUrl || pet.avatarUrl, markerStatus, pet.petName)}
                 eventHandlers={{
                   click: () => {
                     if (dashboardPetId) onSelectPet?.(dashboardPetId);
@@ -626,125 +694,101 @@ const FiruappMapView: React.FC<MapViewProps> = ({
         </MapContainer>
       </Box>
 
-      <Stack
-        direction="row"
-        spacing={1}
+      <Box
         sx={{
           position: "absolute",
-          right: { xs: 12, md: 24 },
-          top: { xs: 68, md: 24 },
+          left: { xs: 12, md: 16 },
+          right: { xs: 12, md: 16 },
+          top: { xs: 76, md: 16 },
           zIndex: 1000,
-          bgcolor: "rgba(255,255,255,0.92)",
-          border: "1px solid rgba(226,232,240,0.95)",
-          boxShadow: "0 14px 30px rgba(15,23,42,0.10)",
-          backdropFilter: "blur(16px)",
-          borderRadius: 999,
-          p: { xs: 0.5, md: 0.75 },
-          maxWidth: { xs: "calc(100% - 24px)", md: "none" },
-          overflowX: "auto",
+          display: "flex",
+          justifyContent: "space-between",
+          gap: 1,
+          pointerEvents: "none",
         }}
       >
-        {[
-          { label: "Draw", icon: DrawIcon },
-          { label: "Circle", icon: RadarIcon },
-          { label: "Route", icon: PolylineIcon },
-        ].map((item) => {
-          const Icon = item.icon;
-          return (
-            <Chip
-              key={item.label}
-              icon={<Icon sx={{ fontSize: 17 }} />}
-              label={item.label}
-              sx={{
-                display: { xs: "none", md: "inline-flex" },
-                bgcolor: "#f8fafc",
-                color: firuColors.dark,
-                fontWeight: 800,
-                "& .MuiChip-icon": { color: firuColors.cyan },
-              }}
-            />
-          );
-        })}
+        <Stack direction="row" spacing={1} sx={{ pointerEvents: "auto", minWidth: 0 }}>
+          <Chip
+            icon={<GpsFixedIcon sx={{ fontSize: 19 }} />}
+            label="Medellín"
+            sx={{ height: 46, borderRadius: 2, bgcolor: "#ffffff", border: "1px solid #dbe7f3", color: "#0f1b34", fontWeight: 900, boxShadow: "0 12px 26px rgba(15,23,42,0.12)" }}
+          />
+          <Chip
+            label="All pets"
+            onClick={() => setShowGeofences((current) => !current)}
+            sx={{ height: 46, borderRadius: 2, bgcolor: "#ffffff", border: "1px solid #dbe7f3", color: "#0f1b34", fontWeight: 900, cursor: "pointer", boxShadow: "0 12px 26px rgba(15,23,42,0.12)" }}
+          />
+        </Stack>
         <Chip
-          icon={<GpsFixedIcon sx={{ fontSize: 17 }} />}
-          label={isLiveLocationData ? "Live location data" : "Mock location data"}
+          icon={<GpsFixedIcon sx={{ fontSize: 18 }} />}
+          label={`${displayMarkers.length || 2} pets online`}
           sx={{
-            bgcolor: isLiveLocationData ? "#dcfce7" : "#fff7ed",
-            color: isLiveLocationData ? "#15803d" : "#c2410c",
-            border: `1px solid ${isLiveLocationData ? "#bbf7d0" : "#fed7aa"}`,
-            fontWeight: 800,
-            height: { xs: 28, md: 32 },
-            "& .MuiChip-label": { px: { xs: 1, md: 1.5 }, fontSize: { xs: 11, md: 13 } },
-            "& .MuiChip-icon": { color: isLiveLocationData ? "#16a34a" : "#f97316" },
+            pointerEvents: "auto",
+            height: 42,
+            borderRadius: 2,
+            bgcolor: "#ffffff",
+            border: "1px solid #dbe7f3",
+            color: "#0f1b34",
+            fontWeight: 950,
+            boxShadow: "0 12px 26px rgba(15,23,42,0.12)",
+            "& .MuiChip-icon": { color: isLiveLocationData ? "#17c964" : "#17c964" },
           }}
         />
-        <Chip
-          label={activeMapStyle.label}
-          onClick={() => setMapStyle((current) => current === "natural" ? "clean" : "natural")}
-          sx={{
-            bgcolor: "#f8fafc",
-            color: firuColors.dark,
-            border: "1px solid #e2e8f0",
-            fontWeight: 800,
-            cursor: "pointer",
-            height: { xs: 28, md: 32 },
-            "& .MuiChip-label": { px: { xs: 1, md: 1.5 }, fontSize: { xs: 11, md: 13 } },
-          }}
-        />
-        <Chip
-          icon={<RadarIcon sx={{ fontSize: 17 }} />}
-          label={showGeofences ? "Hide geofences" : "Show geofences"}
-          onClick={() => setShowGeofences((current) => !current)}
-          sx={{
-            bgcolor: showGeofences ? firuColors.dark : "#f8fafc",
-            color: showGeofences ? "white" : firuColors.dark,
-            fontWeight: 800,
-            cursor: "pointer",
-            height: { xs: 28, md: 32 },
-            "& .MuiChip-label": { px: { xs: 1, md: 1.5 }, fontSize: { xs: 11, md: 13 } },
-            "& .MuiChip-icon": { color: showGeofences ? "white" : firuColors.cyan },
-          }}
-        />
-      </Stack>
+      </Box>
 
       <Box
         sx={{
           position: "absolute",
-          left: { xs: 12, md: 24 },
-          bottom: { xs: 12, md: 24 },
+          left: { xs: 12, md: 16 },
+          bottom: { xs: 102, md: 112 },
           zIndex: 1000,
           display: "flex",
-          gap: 0.75,
-          flexWrap: "wrap",
+          gap: 0,
           maxWidth: { xs: "calc(100% - 24px)", md: "none" },
+          bgcolor: "#ffffff",
+          border: "1px solid #dbe7f3",
+          borderRadius: 2,
+          boxShadow: "0 12px 26px rgba(15,23,42,0.16)",
+          overflow: "hidden",
         }}
       >
-        {[
-          { label: "GPS LOCK", color: firuColors.cyan },
-          { label: "LIVE", color: firuColors.green },
-          { label: geofencesLoaded ? `${showGeofences ? petGeofences.length : 0} GEOFENCES SHOWN` : "LOADING GEOFENCES", color: firuColors.violet },
-        ].map((item, index) => (
-          <Box
-            key={item.label}
-            sx={{
-              display: { xs: index > 1 ? "none" : "flex", md: "flex" },
-              px: 1.5,
-              py: { xs: 0.65, md: 0.8 },
-              alignItems: "center",
-              gap: 0.8,
-              borderRadius: 999,
-              color: firuColors.dark,
-              bgcolor: "rgba(255,255,255,0.92)",
-              border: "1px solid rgba(226,232,240,0.95)",
-              boxShadow: "0 12px 28px rgba(15,23,42,0.10)",
-              fontSize: { xs: 11, md: 12 },
-              fontWeight: 900,
-            }}
-          >
-            <GpsFixedIcon sx={{ fontSize: 15, color: item.color }} />
-            {item.label}
-          </Box>
-        ))}
+        <Box
+          onClick={() => setMapStyle("natural")}
+          sx={{
+            px: 2,
+            height: 46,
+            display: "flex",
+            alignItems: "center",
+            gap: 0.9,
+            bgcolor: mapStyle === "natural" ? "#062346" : "#ffffff",
+            color: mapStyle === "natural" ? "#ffffff" : "#33445e",
+            fontSize: 14,
+            fontWeight: 950,
+            cursor: "pointer",
+          }}
+        >
+          <GpsFixedIcon sx={{ fontSize: 18 }} />
+          Map
+        </Box>
+        <Box
+          onClick={() => setMapStyle("clean")}
+          sx={{
+            px: 2,
+            height: 46,
+            display: "flex",
+            alignItems: "center",
+            gap: 0.9,
+            bgcolor: mapStyle === "clean" ? "#062346" : "#ffffff",
+            color: mapStyle === "clean" ? "#ffffff" : "#33445e",
+            borderLeft: "1px solid #e6eef7",
+            fontSize: 14,
+            fontWeight: 950,
+            cursor: "pointer",
+          }}
+        >
+          <RadarIcon sx={{ fontSize: 18 }} />
+          Satellite
+        </Box>
       </Box>
 
       <Box
@@ -759,7 +803,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
           bgcolor: "rgba(15,23,42,0.92)",
           color: "white",
           boxShadow: "0 18px 45px rgba(15,23,42,0.25)",
-          display: { xs: "none", md: "block" },
+          display: "none",
         }}
       >
         <Typography variant="caption" sx={{ color: "#94a3b8", fontWeight: 900, letterSpacing: 1 }}>

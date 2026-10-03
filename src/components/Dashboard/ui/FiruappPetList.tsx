@@ -36,7 +36,7 @@ interface PetsListProps {
 
 const statusColorMap: Record<string, string> = {
   active: firuColors.green,
-  lost: firuColors.orange,
+  lost: firuColors.red,
 };
 
 const FiruappPetAvatar: React.FC<{ pet: Pet; petStatus: string }> = ({ pet, petStatus }) => {
@@ -46,14 +46,14 @@ const FiruappPetAvatar: React.FC<{ pet: Pet; petStatus: string }> = ({ pet, petS
     <Avatar
       src={resolvedSrc}
       sx={{
-        width: { xs: 32, sm: 38 },
-        height: { xs: 32, sm: 38 },
+        width: { xs: 44, sm: 52 },
+        height: { xs: 44, sm: 52 },
         bgcolor: petStatus === "lost" ? "#fed7aa" : "#bbf7d0",
         color: petStatus === "lost" ? "#c2410c" : "#15803d",
         border: { xs: "2px solid white", sm: "3px solid white" },
         boxShadow: "0 8px 18px rgba(15,23,42,0.12)",
         fontWeight: 900,
-        fontSize: { xs: 13, sm: 15 },
+        fontSize: { xs: 15, sm: 18 },
       }}
     >
       {pet.name.charAt(0)}
@@ -128,12 +128,16 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
       sx={{
         ...compactPanel,
         position: "absolute",
-        top: { xs: 64, sm: 24 },
-        left: { xs: 10, sm: 24 },
+        left: { xs: 10, sm: 16 },
+        right: { xs: 10, sm: 16 },
+        bottom: { xs: 12, sm: 16 },
         zIndex: 1000,
-        width: { xs: "min(252px, calc(100% - 20px))", sm: 300 },
-        maxHeight: { xs: 192, md: 360 },
-        overflow: "hidden",
+        width: "auto",
+        maxHeight: "none",
+        overflow: "visible",
+        background: "transparent",
+        border: "none",
+        boxShadow: "none",
       }}
     >
       <Box
@@ -141,10 +145,10 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
           px: { xs: 1.25, sm: 2 },
           pt: { xs: 1.25, sm: 2 },
           pb: { xs: 0.75, sm: 1.25 },
-          display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           gap: 1,
+          display: "none",
         }}
       >
         <Box>
@@ -177,10 +181,15 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
 
       <List
         sx={{
-          p: { xs: 0.75, sm: 1.25 },
+          p: 0,
           pt: 0,
-          overflowY: "auto",
-          maxHeight: { xs: 122, md: 280 },
+          display: "grid",
+          gridAutoFlow: { xs: "column", md: "initial" },
+          gridTemplateColumns: { xs: `repeat(${Math.max(pets.length, 1)}, minmax(250px, 1fr))`, md: "repeat(2, minmax(0, 1fr))" },
+          gap: 1.2,
+          overflowX: "auto",
+          overflowY: "hidden",
+          pb: 0.25,
         }}
       >
         {pets.map((pet) => {
@@ -195,17 +204,20 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
               onClick={() => onSelect?.(pet.id)}
               onContextMenu={(e) => handleRightClick(e, pet)}
               sx={{
-                borderRadius: { xs: 2.25, sm: 3 },
-                mb: { xs: 0.75, sm: 1 },
-                px: { xs: 0.875, sm: 1.25 },
-                py: { xs: 0.625, sm: 1 },
-                border: isSelected ? `1px solid ${firuColors.cyan}` : "1px solid transparent",
-                background: isSelected ? "linear-gradient(135deg, #ecfeff, #f0fdf4)" : "#ffffff",
-                boxShadow: isSelected ? "0 14px 24px rgba(6,182,212,0.12)" : "none",
-                "&:hover": { background: "#f8fafc" },
+                minHeight: 92,
+                borderRadius: 2,
+                mb: 0,
+                px: { xs: 1.25, sm: 1.6 },
+                py: { xs: 1, sm: 1.15 },
+                border: isSelected
+                  ? `1.5px solid ${petStatus === "lost" ? "#ff7780" : "#dbe7f3"}`
+                  : `1px solid ${petStatus === "lost" ? "#ffb9bd" : "#dbe7f3"}`,
+                background: petStatus === "lost" ? "rgba(255,255,255,0.94)" : "#ffffff",
+                boxShadow: isSelected ? "0 14px 28px rgba(15,23,42,0.14)" : "0 10px 24px rgba(15,23,42,0.10)",
+                "&:hover": { background: "#ffffff", boxShadow: "0 16px 32px rgba(15,23,42,0.16)" },
               }}
             >
-              <ListItemAvatar sx={{ minWidth: { xs: 38, sm: 46 } }}>
+              <ListItemAvatar sx={{ minWidth: { xs: 54, sm: 62 } }}>
                 <FiruappPetAvatar pet={pet} petStatus={petStatus} />
               </ListItemAvatar>
               <ListItemText
@@ -226,20 +238,14 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
                       {pet.name}
                     </Typography>
                     <Chip
-                      label={
-                        <Box component="span" sx={{ display: "flex", alignItems: "center", gap: 0.55 }}>
-                          <Box component="span" sx={{ width: 5, height: 5, borderRadius: "50%", bgcolor: "white" }} />
-                          {pet.status === "active" ? "live" : "lost"}
-                        </Box>
-                      }
+                      label={pet.status === "active" ? "LIVE" : "LOST"}
                       size="small"
                       sx={{
-                        height: { xs: 18, sm: 20 },
+                        height: { xs: 22, sm: 24 },
                         bgcolor: statusColor,
                         color: "white",
-                        fontSize: { xs: 9, sm: 10 },
+                        fontSize: { xs: 9.5, sm: 10.5 },
                         fontWeight: 900,
-                        textTransform: "uppercase",
                         "& .MuiChip-label": { px: { xs: 0.55, sm: 0.75 } },
                       }}
                     />
@@ -265,7 +271,7 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
                   </Box>
                 }
               />
-              <MoreVertIcon sx={{ color: firuColors.muted, fontSize: { xs: 16, sm: 18 } }} />
+              <MoreVertIcon sx={{ color: petStatus === "lost" ? "#ff3444" : "#6b7c95", fontSize: { xs: 20, sm: 22 } }} />
             </ListItemButton>
           );
         })}
