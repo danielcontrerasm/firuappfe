@@ -39,11 +39,6 @@ import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import { usePetImage } from "../../services/usePetImage.ts";
 import { buildApiUrl, buildWsUrl } from "../../config/runtime";
 
-const mockPets: Pet[] = [
-  { id: "mock-2", apiId: "2", name: "Bella", status: "active", ownerName: "Daniel Contreras", city: "Medellin", neighborhood: "Laureles", breed: "Beagle", age: "2 years", weight: "11 kg", battery: 74, signal: "Good", speed: "1.8 km/h", lastSeen: "1 min ago", imageUrl: "/german.png" },
-  { id: "mock-3", apiId: "3", name: "Rocky", status: "lost", ownerName: "Laura Perez", city: "Medellin", neighborhood: "El Poblado", breed: "Mixed Breed", age: "6 years", weight: "22 kg", battery: 28, signal: "Weak", speed: "0.6 km/h", lastSeen: "Just now", imageUrl: "/labrador.png" },
-];
-
 const ALERT_USER_ID = 1;
 const GUIDE_PENDING_KEY = "firuapp-guide-pending";
 
@@ -347,9 +342,9 @@ const DashboardGuideOverlay = ({
 };
 
 const FiruappDashboard: React.FC = () => {
-  const [dashboardPets, setDashboardPets] = useState<Pet[]>(mockPets);
+  const [dashboardPets, setDashboardPets] = useState<Pet[]>([]);
   const [databasePets, setDatabasePets] = useState<Pet[]>([]);
-  const [petDataMode] = useState<PetDataMode>("mixed");
+  const petDataMode: PetDataMode = "database";
   const [petFilters, setPetFilters] = useState<DashboardPetFilters>({
     city: "",
     neighborhood: "",
@@ -407,20 +402,14 @@ const FiruappDashboard: React.FC = () => {
   }, [fetchDatabasePets]);
 
   useEffect(() => {
-    const filteredMockPets = mockPets.filter((pet) => matchesPetFilters(pet, petFilters));
-    const nextPets =
-      petDataMode === "mock"
-        ? filteredMockPets
-        : petDataMode === "database"
-          ? databasePets
-          : [...filteredMockPets, ...databasePets];
+    const nextPets = databasePets;
     setDashboardPets(nextPets);
     setSelectedPetId((currentSelectedId) =>
       nextPets.some((pet) => pet.id === currentSelectedId)
         ? currentSelectedId
         : undefined
     );
-  }, [databasePets, petDataMode, petFilters]);
+  }, [databasePets]);
 
   const filteredDashboardPets = useMemo(() => {
     return dashboardPets.filter((pet) => matchesPetFilters(pet, petFilters));
@@ -491,12 +480,7 @@ const FiruappDashboard: React.FC = () => {
       time: index === 0 ? "Just now" : "12 min ago",
       severity: "critical" as const,
     }));
-    const fallbackAlerts = [
-      { id: "mock-rocky-lost", title: "Rocky has been marked as LOST", time: "Just now", severity: "critical" as const },
-      { id: "mock-bella-zone", title: "Bella left Home Safe Zone", time: "12 min ago", severity: "warning" as const },
-    ];
-
-    return [...liveAlerts, ...petAlerts, ...fallbackAlerts].slice(0, 2);
+    return [...liveAlerts, ...petAlerts].slice(0, 2);
   }, [alertMessages, lostPets]);
   const guideSteps = [
     {
@@ -678,11 +662,11 @@ const FiruappDashboard: React.FC = () => {
               gap: 1.6,
             }}
           >
-            <SummaryCard icon={<PetsIcon />} label="Pets" value={filteredDashboardPets.length || 2} color="#0284c7" bg="#e0f2fe" />
-            <SummaryCard icon={<WifiIcon />} label="GPS Online" value={activePets.length || 1} color="#16a34a" bg="#d9fbe8" />
+            <SummaryCard icon={<PetsIcon />} label="Pets" value={filteredDashboardPets.length} color="#0284c7" bg="#e0f2fe" />
+            <SummaryCard icon={<WifiIcon />} label="GPS Online" value={activePets.length} color="#16a34a" bg="#d9fbe8" />
             <SummaryCard icon={<SecurityIcon />} label="Safe Zones" value={3} color="#0284c7" bg="#e0f2fe" />
-            <SummaryCard icon={<WarningAmberIcon />} label="Alerts" value={Math.max(recentAlertItems.length, 2)} color="#f97316" bg="#fff2dc" />
-            <SummaryCard icon={<WarningAmberIcon />} label="Lost Pets" value={lostPets.length || 1} color="#ef4444" bg="#ffe4e8" />
+            <SummaryCard icon={<WarningAmberIcon />} label="Alerts" value={recentAlertItems.length} color="#f97316" bg="#fff2dc" />
+            <SummaryCard icon={<WarningAmberIcon />} label="Lost Pets" value={lostPets.length} color="#ef4444" bg="#ffe4e8" />
           </Box>
 
           <Box

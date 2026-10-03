@@ -221,7 +221,7 @@ const mockPetLocations: PetLocation[] = [
 const FiruappMapView: React.FC<MapViewProps> = ({
   apiUrl = buildApiUrl("/api/pets/locations"),
   pets = [],
-  petDataMode = "mixed",
+  petDataMode = "database",
   onSelectPet,
   containerRef,
 }) => {
@@ -721,7 +721,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
         </Stack>
         <Chip
           icon={<GpsFixedIcon sx={{ fontSize: 18 }} />}
-          label={`${displayMarkers.length || 2} pets online`}
+          label={`${displayMarkers.length} pets online`}
           sx={{
             pointerEvents: "auto",
             height: 42,
