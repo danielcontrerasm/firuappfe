@@ -26,6 +26,8 @@ export interface PetRow {
   race: string;
   weight: string;
   age: string;
+  imei: string;
+  terminalId: string;
   imageUrl?: string;
   status: PetStatus;
   lastSeen: string;
@@ -39,6 +41,8 @@ const emptyPetDraft: PetRow = {
   race: "",
   weight: "",
   age: "",
+  imei: "",
+  terminalId: "",
   imageUrl: "",
   status: "active",
   lastSeen: "New pet",
@@ -67,6 +71,8 @@ const mapDtoToPetRow = (dto: any, fallback: PetRow = emptyPetDraft): PetRow => (
   race: dto.race ?? fallback.race,
   weight: dto.weight != null ? `${dto.weight} kg` : fallback.weight,
   age: dto.age != null ? `${dto.age} years` : fallback.age,
+  imei: dto.imei ?? dto.IMEI ?? fallback.imei,
+  terminalId: dto.terminalId ?? dto.terminal_id ?? dto.terminalID ?? fallback.terminalId,
   status: (dto.status ?? fallback.status) as PetStatus,
   imageUrl: normalizeImageUrl(getPetImageUrl(dto)) ?? petImageEndpoint(dto.id) ?? fallback.imageUrl,
   lastSeen: dto.createdAt ? new Date(dto.createdAt).toLocaleDateString() : fallback.lastSeen,
@@ -220,6 +226,8 @@ const PetsListPage: React.FC = () => {
         weight: parseNumber(editingPet.weight),
         status: editingPet.status,
         ownerName: editingPet.ownerName,
+        imei: editingPet.imei.trim(),
+        terminalId: editingPet.terminalId.trim(),
         imageUrl: editingPet.imageUrl,
       };
 
@@ -298,6 +306,8 @@ const PetsListPage: React.FC = () => {
         age: parseNumber(creatingPet.age),
         weight: parseNumber(creatingPet.weight),
         status: creatingPet.status,
+        imei: creatingPet.imei.trim(),
+        terminalId: creatingPet.terminalId.trim(),
       };
       const formData = new FormData();
       formData.append(
@@ -444,6 +454,20 @@ const PetsListPage: React.FC = () => {
               fullWidth
             />
           </Box>
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
+            <TextField
+              label="IMEI"
+              value={creatingPet?.imei ?? ""}
+              onChange={(event) => handleCreateChange("imei", event.target.value)}
+              fullWidth
+            />
+            <TextField
+              label="Terminal ID"
+              value={creatingPet?.terminalId ?? ""}
+              onChange={(event) => handleCreateChange("terminalId", event.target.value)}
+              fullWidth
+            />
+          </Box>
           <TextField
             select
             label="Status"
@@ -576,6 +600,20 @@ const PetsListPage: React.FC = () => {
               label="Age"
               value={editingPet?.age ?? ""}
               onChange={(event) => handleEditChange("age", event.target.value)}
+              fullWidth
+            />
+          </Box>
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
+            <TextField
+              label="IMEI"
+              value={editingPet?.imei ?? ""}
+              onChange={(event) => handleEditChange("imei", event.target.value)}
+              fullWidth
+            />
+            <TextField
+              label="Terminal ID"
+              value={editingPet?.terminalId ?? ""}
+              onChange={(event) => handleEditChange("terminalId", event.target.value)}
               fullWidth
             />
           </Box>

@@ -21,10 +21,31 @@ const mapStyles = {
   },
 };
 
-const petsWithoutPositions = [
-  { id: "2", name: "Bella", status: "active", breed: "Beagle", age: "2 years", weight: "11 kg", imageUrl: "/german.png" },
-  { id: "3", name: "Rocky", status: "lost", breed: "Mixed Breed", age: "6 years", weight: "22 kg", imageUrl: "/labrador.png" },
-];
+const extractPetDtos = (data) => {
+  if (Array.isArray(data)) return data;
+  return data?.content || data?.items || data?.pets || data?.data || data?.results || data?.rows || data?.payload || [];
+};
+
+const normalizePetStatus = (status) => (String(status || "active").toLowerCase() === "lost" ? "lost" : "active");
+
+const mapDtoToRoutePet = (dto) => {
+  const id = String(dto.id);
+  return {
+    id,
+    apiId: id,
+    name: dto.name || "Unnamed pet",
+    status: normalizePetStatus(dto.status),
+    ownerName: dto.ownerName || dto.owner?.name || "",
+    breed: dto.race || dto.type || "Tracked pet",
+    race: dto.race,
+    age: dto.age != null ? `${dto.age} years` : undefined,
+    weight: dto.weight != null ? `${dto.weight} kg` : undefined,
+    imageUrl: dto.imageUrl || dto.avatarUrl || dto.photoUrl || dto.petImageUrl || dto.image || dto.imagePath,
+    battery: dto.batteryPercent ?? dto.batteryPercentage ?? dto.battery,
+    signal: "Good",
+    speed: "0.0 km/h",
+  };
+};
 
 const createPetIcon = () =>
   L.divIcon({
@@ -41,17 +62,59 @@ const createPetIcon = () =>
   });
 
 const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
+  const [routePets, setRoutePets] = useState([]);
   const [routePoints, setRoutePoints] = useState([]);
   const [selectedPetId, setSelectedPetId] = useState(null);
   const [mapStyle, setMapStyle] = useState("natural");
+  const [loadingPets, setLoadingPets] = useState(true);
 
-  const routePets = useMemo(() => petsWithoutPositions, []);
   const activeMapStyle = mapStyles[mapStyle];
 
   const selectedPet = useMemo(
     () => routePets.find((pet) => pet.id === selectedPetId),
     [routePets, selectedPetId]
   );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchPets = async () => {
+      setLoadingPets(true);
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get(apiBaseUrl, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+        const petDtos = extractPetDtos(response.data);
+        const databasePets = Array.isArray(petDtos) ? petDtos.map(mapDtoToRoutePet) : [];
+
+        if (!cancelled) {
+          setRoutePets(databasePets);
+        }
+      } catch (error) {
+        console.error("Error fetching route pets:", error);
+        if (!cancelled) {
+          setRoutePets([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingPets(false);
+        }
+      }
+    };
+
+    fetchPets();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [apiBaseUrl]);
+
+  useEffect(() => {
+    setSelectedPetId((currentSelectedId) =>
+      routePets.some((pet) => pet.id === currentSelectedId) ? currentSelectedId : null
+    );
+  }, [routePets]);
 
   useEffect(() => {
     if (!selectedPetId) {
@@ -110,7 +173,7 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
       <div className="firu-route-header">
         <h2>Movement trail · Last 3 hours</h2>
         <p>
-          Select a pet to draw its recent route positions on the map.
+          {loadingPets ? "Loading pets from the database." : "Select a database pet to draw its recent route positions on the map."}
         </p>
       </div>
 
@@ -180,14 +243,14 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
         <div className="firu-route-status">
           <span className="firu-route-pill"><span className="firu-route-dot" /> GPS LOCK</span>
           <span className="firu-route-pill"><span className="firu-route-dot" /> HISTORY</span>
-          <span className="firu-route-pill"><span className="firu-route-dot" /> {selectedRoute ? selectedRoute.petName : "SELECT PET"}</span>
+          <span className="firu-route-pill"><span className="firu-route-dot" /> {selectedRoute ? selectedRoute.petName : loadingPets ? "LOADING PETS" : "SELECT PET"}</span>
         </div>
 
         <div className="firu-route-card">
           <div className="firu-route-card-label">ROUTE POINTS</div>
           <div className="firu-route-card-value">{selectedRoute ? selectedRoute.points.length : 0}</div>
           <div className="firu-route-card-copy">
-            {selectedRoute ? `${selectedRoute.petName}'s last 3 hours` : "Select a pet to show its trail"}
+            {selectedRoute ? `${selectedRoute.petName}'s last 3 hours` : loadingPets ? "Loading database pets" : "Select a pet to show its trail"}
           </div>
         </div>
       </div>
