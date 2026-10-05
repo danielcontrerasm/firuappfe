@@ -71,6 +71,7 @@ type DashboardPetLocation = {
   petName?: string;
   timestamp?: string;
   address?: string;
+  batteryPercent?: number;
 };
 
 const formatLocationTimestamp = (timestamp?: string) => {
@@ -83,6 +84,8 @@ const formatCoordinates = (location?: DashboardPetLocation) => {
   if (!location) return "Unknown";
   return `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
 };
+
+const formatBatteryPercent = (battery?: number) => (battery == null ? "Unknown" : `${battery}%`);
 
 const normalizeMedellinCity = (dto: any) => {
   const city = dto.city || dto.owner?.city || dto.address?.city || "";
@@ -181,7 +184,9 @@ const SummaryCard = ({ icon, label, value, color, bg }: { icon: React.ReactNode;
   </Paper>
 );
 
-const MetricCard = ({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string; color: string }) => (
+const MetricCard = ({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string; color: string }) => {
+  const progressWidth = label === "Battery" && /^\d+%$/.test(value) ? value : "42%";
+  return (
   <Box sx={{ p: 1.25, borderRadius: 2, bgcolor: "#ffffff", border: "1px solid #dbe7f3" }}>
     <Stack direction="row" spacing={1.15} alignItems="center">
       <Box sx={{ color, display: "grid", placeItems: "center", width: 28 }}>{icon}</Box>
@@ -195,10 +200,11 @@ const MetricCard = ({ icon, label, value, color }: { icon: React.ReactNode; labe
       </Box>
     </Stack>
     <Box sx={{ mt: 1, height: 6, borderRadius: 999, bgcolor: "#e8eef6", overflow: "hidden" }}>
-      <Box sx={{ width: label === "Battery" ? value : "42%", height: "100%", bgcolor: color, borderRadius: 999 }} />
+      <Box sx={{ width: progressWidth, height: "100%", bgcolor: color, borderRadius: 999 }} />
     </Box>
   </Box>
-);
+  );
+};
 
 const SelectedPetAvatar: React.FC<{ pet: Pet }> = ({ pet }) => {
   const resolvedSrc = usePetImage(pet.apiId || pet.id, pet.imageUrl || pet.avatarUrl);
@@ -433,9 +439,22 @@ const FiruappDashboard: React.FC = () => {
     );
   }, [databasePets]);
 
+  const liveBatteryByPetId = useMemo(() => {
+    return Object.fromEntries(
+      petLocations
+        .filter((location) => location.petId != null && location.batteryPercent != null)
+        .map((location) => [String(location.petId), location.batteryPercent] as const)
+    );
+  }, [petLocations]);
+
   const filteredDashboardPets = useMemo(() => {
-    return dashboardPets.filter((pet) => matchesPetFilters(pet, petFilters));
-  }, [dashboardPets, petFilters]);
+    return dashboardPets
+      .filter((pet) => matchesPetFilters(pet, petFilters))
+      .map((pet) => {
+        const liveBattery = liveBatteryByPetId[String(pet.apiId || pet.id)] ?? liveBatteryByPetId[String(pet.id)];
+        return liveBattery == null ? pet : { ...pet, battery: liveBattery };
+      });
+  }, [dashboardPets, liveBatteryByPetId, petFilters]);
   useEffect(() => {
     const client = new Client({
       webSocketFactory: () => new SockJS(buildWsUrl("/ws")),
@@ -498,6 +517,8 @@ const FiruappDashboard: React.FC = () => {
   const selectedPetLocationLabel =
     selectedPetLocation?.address || (selectedPetLocation ? "Location from GPS coordinates" : "No live location available");
   const selectedPetCoordinates = formatCoordinates(selectedPetLocation);
+  const selectedPetBattery = selectedPetLocation?.batteryPercent ?? selectedPet?.battery;
+  const selectedPetBatteryColor = selectedPetBattery != null && selectedPetBattery <= 20 ? "#ef4444" : firuColors.green;
   const lostPets = useMemo(() => filteredDashboardPets.filter((pet) => pet.status === "lost"), [filteredDashboardPets]);
   const activePets = useMemo(() => filteredDashboardPets.filter((pet) => pet.status === "active"), [filteredDashboardPets]);
   const handleLocationsChange = useCallback((locations: DashboardPetLocation[]) => {
@@ -826,7 +847,7 @@ const FiruappDashboard: React.FC = () => {
                   </Box>
 
                   <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.2, mt: 1.4 }}>
-                    <MetricCard icon={<BatteryChargingFullIcon fontSize="small" />} label="Battery" value={`${selectedPet.battery ?? 28}%`} color={selectedPet.status === "lost" ? "#ef4444" : firuColors.green} />
+                    <MetricCard icon={<BatteryChargingFullIcon fontSize="small" />} label="Battery" value={formatBatteryPercent(selectedPetBattery)} color={selectedPetBatteryColor} />
                     <MetricCard icon={<WifiIcon fontSize="small" />} label="Signal" value={selectedPet.signal || "Weak"} color="#1685ff" />
                     <MetricCard icon={<SpeedIcon fontSize="small" />} label="Speed" value={selectedPet.speed || "0.6 km/h"} color="#8b5cf6" />
                     <MetricCard icon={<MyLocationIcon fontSize="small" />} label="GPS accuracy" value="6 meters" color="#1685ff" />

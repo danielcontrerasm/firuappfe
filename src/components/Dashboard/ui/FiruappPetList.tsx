@@ -21,6 +21,7 @@ import GroupsIcon from "@mui/icons-material/Groups";
 import ReportProblemIcon from "@mui/icons-material/ReportProblem";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
+import BatteryChargingFullIcon from "@mui/icons-material/BatteryChargingFull";
 import { useNavigate } from "react-router-dom";
 import { compactPanel, firuColors, Pet } from "./FiruappStyles.ts";
 import { usePetImage } from "../../../services/usePetImage.ts";
@@ -37,6 +38,13 @@ interface PetsListProps {
 const statusColorMap: Record<string, string> = {
   active: firuColors.green,
   lost: firuColors.red,
+};
+
+const getBatteryColor = (battery?: number) => {
+  if (battery == null) return firuColors.muted;
+  if (battery <= 20) return firuColors.red;
+  if (battery <= 50) return firuColors.orange;
+  return firuColors.green;
 };
 
 const FiruappPetAvatar: React.FC<{ pet: Pet; petStatus: string }> = ({ pet, petStatus }) => {
@@ -221,6 +229,7 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
                 <FiruappPetAvatar pet={pet} petStatus={petStatus} />
               </ListItemAvatar>
               <ListItemText
+                sx={{ minWidth: 0, mr: 1 }}
                 primary={
                   <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, minWidth: 0 }}>
                     <Typography
@@ -270,6 +279,24 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
                     </Typography>
                   </Box>
                 }
+              />
+              <Chip
+                icon={<BatteryChargingFullIcon sx={{ fontSize: { xs: 14, sm: 15 } }} />}
+                label={pet.battery == null ? "--%" : `${pet.battery}%`}
+                size="small"
+                sx={{
+                  height: { xs: 24, sm: 26 },
+                  alignSelf: "center",
+                  borderRadius: 999,
+                  bgcolor: "#f8fbff",
+                  border: `1px solid ${getBatteryColor(pet.battery)}`,
+                  color: getBatteryColor(pet.battery),
+                  fontSize: { xs: 10, sm: 11 },
+                  fontWeight: 950,
+                  flexShrink: 0,
+                  "& .MuiChip-icon": { color: "inherit", ml: 0.65 },
+                  "& .MuiChip-label": { px: { xs: 0.55, sm: 0.75 } },
+                }}
               />
               <MoreVertIcon sx={{ color: petStatus === "lost" ? "#ff3444" : "#6b7c95", fontSize: { xs: 20, sm: 22 } }} />
             </ListItemButton>

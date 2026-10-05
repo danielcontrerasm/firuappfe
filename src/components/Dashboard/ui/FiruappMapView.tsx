@@ -21,6 +21,7 @@ interface PetLocation {
   imageUrl?: string;
   avatarUrl?: string;
   status?: string;
+  batteryPercent?: number;
 }
 
 interface PetGeofence {
@@ -88,6 +89,16 @@ const normalizeImageUrl = (url?: string) => {
   if (!url) return undefined;
   if (/^(https?:)?\/\//.test(url) || url.startsWith("/")) return url;
   return `/${url}`;
+};
+
+const normalizeBatteryPercent = (...values: unknown[]) => {
+  for (const value of values) {
+    const numberValue = Number(value);
+    if (!Number.isFinite(numberValue)) continue;
+    const percent = numberValue > 0 && numberValue <= 1 ? numberValue * 100 : numberValue;
+    return Math.max(0, Math.min(100, Math.round(percent)));
+  }
+  return undefined;
 };
 
 const normalizeCoordinate = (coordinate: any): LatLngExpression | null => {
@@ -207,6 +218,7 @@ const mockPetLocations: PetLocation[] = [
     timestamp: new Date().toISOString(),
     imageUrl: "/german.png",
     status: "active",
+    batteryPercent: 82,
   },
   {
     id: "mock-location-2",
@@ -217,6 +229,7 @@ const mockPetLocations: PetLocation[] = [
     timestamp: new Date().toISOString(),
     imageUrl: "/labrador.png",
     status: "lost",
+    batteryPercent: 18,
   },
 ];
 
@@ -309,6 +322,18 @@ const FiruappMapView: React.FC<MapViewProps> = ({
                 imageUrl,
                 avatarUrl: normalizeImageUrl(loc.avatarUrl ?? loc.pet?.avatarUrl),
                 status: loc.status ?? loc.pet?.status,
+                batteryPercent: normalizeBatteryPercent(
+                  loc.batteryPercent,
+                  loc.batteryPercentage,
+                  loc.battery_percent,
+                  loc.battery,
+                  loc.batteryLevel,
+                  loc.pet?.batteryPercent,
+                  loc.pet?.batteryPercentage,
+                  loc.pet?.battery_percent,
+                  loc.pet?.battery,
+                  loc.pet?.batteryLevel
+                ),
               } satisfies PetLocation;
             })
             .filter(Boolean) as PetLocation[];
