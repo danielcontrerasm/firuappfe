@@ -15,8 +15,11 @@ import {
   Chip,
   IconButton,
   InputBase,
+  MenuItem,
   Paper,
+  Select,
   Stack,
+  TextField,
   Typography,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
@@ -34,13 +37,45 @@ import MyLocationIcon from "@mui/icons-material/MyLocation";
 import NavigationIcon from "@mui/icons-material/Navigation";
 import PetsIcon from "@mui/icons-material/Pets";
 import SecurityIcon from "@mui/icons-material/Security";
-import PersonIcon from "@mui/icons-material/Person";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import { usePetImage } from "../../services/usePetImage.ts";
 import { buildApiUrl, buildWsUrl } from "../../config/runtime";
 
 const ALERT_USER_ID = 1;
 const GUIDE_PENDING_KEY = "firuapp-guide-pending";
+
+const colombiaCities = [
+  "Arauca",
+  "Armenia",
+  "Barranquilla",
+  "Bogotá",
+  "Bucaramanga",
+  "Cali",
+  "Cartagena",
+  "Cúcuta",
+  "Florencia",
+  "Ibagué",
+  "Leticia",
+  "Manizales",
+  "Medellín",
+  "Mitú",
+  "Mocoa",
+  "Montería",
+  "Neiva",
+  "Pasto",
+  "Pereira",
+  "Popayán",
+  "Puerto Carreño",
+  "Quibdó",
+  "Riohacha",
+  "San Andrés",
+  "Santa Marta",
+  "Sincelejo",
+  "Tunja",
+  "Valledupar",
+  "Villavicencio",
+  "Yopal",
+];
 
 type GuideTargetRect = {
   top: number;
@@ -69,9 +104,11 @@ type DashboardPetLocation = {
   latitude: number;
   longitude: number;
   petName?: string;
+  ownerName?: string;
   timestamp?: string;
   address?: string;
   city?: string;
+  neighborhood?: string;
   batteryPercent?: number;
 };
 
@@ -87,6 +124,13 @@ const formatCoordinates = (location?: DashboardPetLocation) => {
 };
 
 const formatBatteryPercent = (battery?: number) => (battery == null ? "Unknown" : `${battery}%`);
+
+const normalizeCityName = (city?: string) =>
+  (city || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
 
 const locationCacheKey = (location: DashboardPetLocation) =>
   `${location.latitude.toFixed(4)},${location.longitude.toFixed(4)}`;
@@ -399,6 +443,7 @@ const FiruappDashboard: React.FC = () => {
   const [alertMessages, setAlertMessages] = useState<DashboardAlert[]>([]);
   const [alertsConnected, setAlertsConnected] = useState(false);
   const [cityByLocationKey, setCityByLocationKey] = useState<Record<string, string>>({});
+  const [selectedCityOption, setSelectedCityOption] = useState("");
   const [guideOpen, setGuideOpen] = useState(false);
   const [guideStepIndex, setGuideStepIndex] = useState(0);
   const [guideSpotlightRect, setGuideSpotlightRect] = useState<GuideTargetRect | null>(null);
@@ -455,22 +500,39 @@ const FiruappDashboard: React.FC = () => {
     );
   }, [databasePets]);
 
-  const liveBatteryByPetId = useMemo(() => {
+  const livePetDetailsByPetId = useMemo(() => {
     return Object.fromEntries(
       petLocations
-        .filter((location) => location.petId != null && location.batteryPercent != null)
-        .map((location) => [String(location.petId), location.batteryPercent] as const)
+        .filter((location) => location.petId != null)
+        .map((location) => [
+          String(location.petId),
+          {
+            name: location.petName,
+            ownerName: location.ownerName,
+            city: location.city,
+            neighborhood: location.neighborhood,
+            battery: location.batteryPercent,
+          },
+        ] as const)
     );
   }, [petLocations]);
 
   const filteredDashboardPets = useMemo(() => {
     return dashboardPets
-      .filter((pet) => matchesPetFilters(pet, petFilters))
       .map((pet) => {
-        const liveBattery = liveBatteryByPetId[String(pet.apiId || pet.id)] ?? liveBatteryByPetId[String(pet.id)];
-        return liveBattery == null ? pet : { ...pet, battery: liveBattery };
-      });
-  }, [dashboardPets, liveBatteryByPetId, petFilters]);
+        const liveDetails = livePetDetailsByPetId[String(pet.apiId || pet.id)] ?? livePetDetailsByPetId[String(pet.id)];
+        if (!liveDetails) return pet;
+        return {
+          ...pet,
+          name: liveDetails.name || pet.name,
+          ownerName: liveDetails.ownerName || pet.ownerName,
+          city: liveDetails.city || pet.city,
+          neighborhood: liveDetails.neighborhood || pet.neighborhood,
+          battery: liveDetails.battery ?? pet.battery,
+        };
+      })
+      .filter((pet) => matchesPetFilters(pet, petFilters))
+  }, [dashboardPets, livePetDetailsByPetId, petFilters]);
   useEffect(() => {
     const client = new Client({
       webSocketFactory: () => new SockJS(buildWsUrl("/ws")),
@@ -537,6 +599,11 @@ const FiruappDashboard: React.FC = () => {
   const selectedPetCity =
     selectedPetGpsCity ||
     selectedPet?.city;
+  const cityOptions = useMemo(() => {
+    if (!selectedPetGpsCity) return colombiaCities;
+    const hasGpsCity = colombiaCities.some((city) => normalizeCityName(city) === normalizeCityName(selectedPetGpsCity));
+    return hasGpsCity ? colombiaCities : [selectedPetGpsCity, ...colombiaCities];
+  }, [selectedPetGpsCity]);
   const selectedPetLocationLabel =
     selectedPetLocation
       ? [selectedPetCity, selectedPetLocation.address || "GPS coordinates"].filter(Boolean).join(" · ")
@@ -550,6 +617,15 @@ const FiruappDashboard: React.FC = () => {
   const handleLocationsChange = useCallback((locations: DashboardPetLocation[]) => {
     setPetLocations(locations);
   }, []);
+
+  useEffect(() => {
+    if (!selectedPetGpsCity) return;
+    const matchedCity = cityOptions.find((city) => normalizeCityName(city) === normalizeCityName(selectedPetGpsCity));
+    if (matchedCity) {
+      setSelectedCityOption(matchedCity);
+      setPetFilters((current) => ({ ...current, city: matchedCity }));
+    }
+  }, [cityOptions, selectedPetGpsCity]);
 
   useEffect(() => {
     if (!selectedPetLocation || selectedPetLocation.city) return undefined;
@@ -762,22 +838,88 @@ const FiruappDashboard: React.FC = () => {
             </Box>
 
             <Stack ref={filterBarRef} direction="row" spacing={1.25} flexWrap="wrap" useFlexGap>
-              <Button
-                startIcon={<PlaceIcon />}
-                endIcon={<KeyboardArrowDownIcon />}
-                variant="outlined"
-                sx={{ minWidth: 190, height: 46, borderRadius: 2, bgcolor: "#ffffff", borderColor: "#dbe7f3", color: "#0f1b34", textTransform: "none", fontWeight: 850 }}
+              <Box
+                sx={{
+                  minWidth: 220,
+                  height: 46,
+                  px: 1.35,
+                  borderRadius: 2,
+                  bgcolor: "#ffffff",
+                  border: "1px solid #dbe7f3",
+                  color: "#0f1b34",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                }}
               >
-                {selectedPetGpsCity || "GPS city"}
-              </Button>
-              <Button
-                startIcon={<PersonIcon />}
-                endIcon={<KeyboardArrowDownIcon />}
-                variant="outlined"
-                sx={{ minWidth: 220, height: 46, borderRadius: 2, bgcolor: "#ffffff", borderColor: "#dbe7f3", color: "#0f1b34", textTransform: "none", fontWeight: 850 }}
-              >
-                Owner mode
-              </Button>
+                <PlaceIcon sx={{ color: "#607491", fontSize: 21 }} />
+                <Select
+                  value={selectedCityOption}
+                  onChange={(event) => {
+                    const city = event.target.value;
+                    setSelectedCityOption(city);
+                    setPetFilters((current) => ({ ...current, city }));
+                  }}
+                  displayEmpty
+                  variant="standard"
+                  disableUnderline
+                  IconComponent={KeyboardArrowDownIcon}
+                  sx={{
+                    flex: 1,
+                    minWidth: 0,
+                    color: "#0f1b34",
+                    fontSize: 14,
+                    fontWeight: 850,
+                    "& .MuiSelect-select": { py: 0 },
+                    "& .MuiSelect-icon": { color: "#3d516e" },
+                  }}
+                  renderValue={(value) => value || "All cities"}
+                >
+                  <MenuItem value="">All cities</MenuItem>
+                  {cityOptions.map((city) => {
+                    const isGpsCity = selectedPetGpsCity && normalizeCityName(city) === normalizeCityName(selectedPetGpsCity);
+                    return (
+                      <MenuItem key={city} value={city}>
+                        {city}{isGpsCity ? " (GPS)" : ""}
+                      </MenuItem>
+                    );
+                  })}
+                </Select>
+              </Box>
+              <TextField
+                placeholder="Search by neighborhood"
+                value={petFilters.neighborhood}
+                onChange={(event) => setPetFilters((current) => ({ ...current, neighborhood: event.target.value }))}
+                size="small"
+                sx={{
+                  minWidth: { xs: "100%", sm: 220 },
+                  "& .MuiOutlinedInput-root": {
+                    height: 46,
+                    borderRadius: 2,
+                    bgcolor: "#ffffff",
+                    color: "#0f1b34",
+                    fontWeight: 800,
+                    "& fieldset": { borderColor: "#dbe7f3" },
+                  },
+                }}
+              />
+              <TextField
+                placeholder="Search by owner name"
+                value={petFilters.ownerName}
+                onChange={(event) => setPetFilters((current) => ({ ...current, ownerName: event.target.value }))}
+                size="small"
+                sx={{
+                  minWidth: { xs: "100%", sm: 220 },
+                  "& .MuiOutlinedInput-root": {
+                    height: 46,
+                    borderRadius: 2,
+                    bgcolor: "#ffffff",
+                    color: "#0f1b34",
+                    fontWeight: 800,
+                    "& fieldset": { borderColor: "#dbe7f3" },
+                  },
+                }}
+              />
             </Stack>
           </Box>
 

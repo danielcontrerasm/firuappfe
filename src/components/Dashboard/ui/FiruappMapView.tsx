@@ -16,9 +16,11 @@ interface PetLocation {
   latitude: number;
   longitude: number;
   petName?: string;
+  ownerName?: string;
   timestamp?: string;
   address?: string;
   city?: string;
+  neighborhood?: string;
   imageUrl?: string;
   avatarUrl?: string;
   status?: string;
@@ -105,6 +107,24 @@ const normalizeLocationCity = (loc: any) =>
   loc.address?.county ??
   loc.pet?.city ??
   loc.pet?.owner?.city;
+
+const normalizeLocationNeighborhood = (loc: any) =>
+  loc.neighborhood ??
+  loc.zone ??
+  loc.address?.neighborhood ??
+  loc.address?.suburb ??
+  loc.address?.quarter ??
+  loc.address?.cityDistrict ??
+  loc.pet?.neighborhood ??
+  loc.pet?.zone ??
+  loc.pet?.owner?.neighborhood ??
+  loc.pet?.address?.neighborhood;
+
+const normalizeLocationOwnerName = (loc: any) =>
+  loc.ownerName ??
+  loc.owner?.name ??
+  loc.pet?.ownerName ??
+  loc.pet?.owner?.name;
 
 const normalizeLocationAddress = (loc: any) => {
   if (typeof loc.address === "string") return loc.address;
@@ -342,9 +362,11 @@ const FiruappMapView: React.FC<MapViewProps> = ({
                 latitude,
                 longitude,
                 petName,
+                ownerName: normalizeLocationOwnerName(loc),
                 timestamp: loc.timestamp ?? loc.updatedAt ?? loc.createdAt,
                 address: normalizeLocationAddress(loc),
                 city: normalizeLocationCity(loc),
+                neighborhood: normalizeLocationNeighborhood(loc),
                 imageUrl,
                 avatarUrl: normalizeImageUrl(loc.avatarUrl ?? loc.pet?.avatarUrl),
                 status: loc.status ?? loc.pet?.status,

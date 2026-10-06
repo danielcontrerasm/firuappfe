@@ -145,6 +145,7 @@ const CustomGeofence = () => {
   const activePetId = searchParams.get("petId") || "all";
   const activePetIdNumber = Number(activePetId);
   const [drawMode, setDrawMode] = useState("polygon");
+  const [isCreatingGeofence, setIsCreatingGeofence] = useState(false);
   const [polygon, setPolygon] = useState([]);
   const [circleCenter, setCircleCenter] = useState(null);
   const [circleRadius, setCircleRadius] = useState(500);
@@ -166,6 +167,7 @@ const CustomGeofence = () => {
   const selectedPet = pets.find((pet) => pet.id === String(activePetId));
   const selectedPetLabel = activePetId === "all" ? "All pets" : selectedPet?.name || "Selected pet";
   const handlePetSelection = useCallback((nextPetId) => {
+    setIsCreatingGeofence(false);
     setPolygon([]);
     setCircleCenter(null);
 
@@ -296,7 +298,26 @@ const CustomGeofence = () => {
     handlePetSelection(event.target.value);
   };
 
+  const handleDrawModeChange = (nextMode) => {
+    setDrawMode(nextMode);
+    setPolygon([]);
+    setCircleCenter(null);
+  };
+
+  const handleStartGeofence = () => {
+    if (activePetId === "all") {
+      alert("Select one pet before creating a new geofence.");
+      return;
+    }
+
+    setPolygon([]);
+    setCircleCenter(null);
+    setIsCreatingGeofence(true);
+  };
+
   const handleMapClick = (e) => {
+    if (!isCreatingGeofence) return;
+
     const { lat, lng } = e.latlng;
     if (drawMode === "circle") {
       setCircleCenter([lat, lng]);
@@ -309,11 +330,17 @@ const CustomGeofence = () => {
   const handleClearPolygon = () => {
     setPolygon([]);
     setCircleCenter(null);
+    setIsCreatingGeofence(false);
   };
 
   const handleSaveGeofence = async () => {
     if (activePetId === "all") {
       alert("Select one pet before saving a new geofence.");
+      return;
+    }
+
+    if (!isCreatingGeofence) {
+      alert("Click Create before drawing a new geofence.");
       return;
     }
 
@@ -354,6 +381,7 @@ const CustomGeofence = () => {
       setStoredGeofences((prev) => [...prev, ...saved]);
       setPolygon([]);
       setCircleCenter(null);
+      setIsCreatingGeofence(false);
       alert("Geofence saved successfully!");
     } catch (error) {
       console.error("Error saving geofence:", error);
@@ -386,7 +414,9 @@ const CustomGeofence = () => {
         <p>
           {activePetId === "all"
             ? "Viewing saved safe zones for all pets. Select one pet to draw and save a new geofence."
-            : `Click the map to draw a safe zone, then save it for ${selectedPetLabel}.`}
+            : isCreatingGeofence
+              ? `Click the map to draw a safe zone, then save it for ${selectedPetLabel}.`
+              : `Click Create to start a new safe zone for ${selectedPetLabel}.`}
         </p>
       </div>
 
@@ -569,14 +599,21 @@ const CustomGeofence = () => {
             ))}
           </select>
           <button
+            className={`firu-route-tool firu-geofence-button ${isCreatingGeofence ? "active" : ""}`}
+            onClick={handleStartGeofence}
+            disabled={activePetId === "all"}
+          >
+            Create
+          </button>
+          <button
             className={`firu-route-tool firu-geofence-button ${drawMode === "polygon" ? "active" : ""}`}
-            onClick={() => setDrawMode("polygon")}
+            onClick={() => handleDrawModeChange("polygon")}
           >
             Polygon
           </button>
           <button
             className={`firu-route-tool firu-geofence-button ${drawMode === "circle" ? "active" : ""}`}
-            onClick={() => setDrawMode("circle")}
+            onClick={() => handleDrawModeChange("circle")}
           >
             Circle
           </button>
@@ -597,7 +634,11 @@ const CustomGeofence = () => {
               onChange={(event) => setCircleRadius(Number(event.target.value))}
             />
           )}
-          <button className="firu-route-tool firu-geofence-button" onClick={handleSaveGeofence}>
+          <button
+            className="firu-route-tool firu-geofence-button"
+            onClick={handleSaveGeofence}
+            disabled={!isCreatingGeofence || (drawMode === "circle" ? !circleCenter : polygon.length < 3)}
+          >
             Save
           </button>
           <button
@@ -610,6 +651,7 @@ const CustomGeofence = () => {
         </div>
 
         <div className="firu-route-status">
+          <span className="firu-route-pill"><span className="firu-route-dot" /> {isCreatingGeofence ? "CREATING" : "VIEWING"}</span>
           <span className="firu-route-pill"><span className="firu-route-dot" /> {drawMode.toUpperCase()} MODE</span>
           <span className="firu-route-pill"><span className="firu-route-dot" /> {selectedPetLabel.toUpperCase()}</span>
           <span className="firu-route-pill"><span className="firu-route-dot" /> {drawMode === "circle" ? `${circleRadius} M` : `${polygon.length} POINTS`}</span>
@@ -644,6 +686,8 @@ const CustomGeofence = () => {
           <div className="firu-route-card-copy">
             {loading
               ? "Loading saved safe zones"
+              : !isCreatingGeofence
+                ? "Click Create to start drawing"
               : drawMode === "circle" && circleCenter
                 ? `${circleRadius} meter circle ready`
                 : polygon.length > 0
