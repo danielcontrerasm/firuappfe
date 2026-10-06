@@ -21,6 +21,98 @@ const mapStyles = {
   },
 };
 
+const weekDays = [
+  { key: "monday", label: "Monday" },
+  { key: "tuesday", label: "Tuesday" },
+  { key: "wednesday", label: "Wednesday" },
+  { key: "thursday", label: "Thursday" },
+  { key: "friday", label: "Friday" },
+  { key: "saturday", label: "Saturday" },
+  { key: "sunday", label: "Sunday" },
+];
+
+const weekdayAliases = {
+  0: "sunday",
+  1: "monday",
+  2: "tuesday",
+  3: "wednesday",
+  4: "thursday",
+  5: "friday",
+  6: "saturday",
+  7: "sunday",
+  mon: "monday",
+  monday: "monday",
+  lunes: "monday",
+  tue: "tuesday",
+  tues: "tuesday",
+  tuesday: "tuesday",
+  martes: "tuesday",
+  wed: "wednesday",
+  wednesday: "wednesday",
+  miercoles: "wednesday",
+  miércoles: "wednesday",
+  thu: "thursday",
+  thur: "thursday",
+  thurs: "thursday",
+  thursday: "thursday",
+  jueves: "thursday",
+  fri: "friday",
+  friday: "friday",
+  viernes: "friday",
+  sat: "saturday",
+  saturday: "saturday",
+  sabado: "saturday",
+  sábado: "saturday",
+  sun: "sunday",
+  sunday: "sunday",
+  domingo: "sunday",
+};
+
+const normalizeWeekdayKey = (value) => {
+  if (value == null) return "";
+  const normalized = String(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+  return weekdayAliases[normalized] || "";
+};
+
+const normalizeDistanceKm = (item) => {
+  const kmValue = Number(item.distanceKm ?? item.totalKm ?? item.km ?? item.walkDistanceKm);
+  if (Number.isFinite(kmValue)) return kmValue;
+
+  const meterValue = Number(item.distanceMeters ?? item.totalMeters ?? item.meters ?? item.walkDistanceMeters);
+  if (Number.isFinite(meterValue)) return meterValue / 1000;
+
+  const ambiguousDistance = Number(item.distance ?? item.totalDistance ?? item.walkDistance);
+  if (!Number.isFinite(ambiguousDistance)) return 0;
+  return ambiguousDistance > 100 ? ambiguousDistance / 1000 : ambiguousDistance;
+};
+
+const normalizeWalkDistanceWeek = (data) => {
+  const raw = data?.walkDistance || data?.distances || data?.week || data?.days || data?.data || data?.items || data?.results || data || [];
+  const entries = Array.isArray(raw)
+    ? raw
+    : Object.entries(raw).map(([day, value]) =>
+        typeof value === "object" && value !== null ? { day, ...value } : { day, distanceKm: value }
+      );
+
+  const distancesByDay = Object.fromEntries(weekDays.map((day) => [day.key, 0]));
+  entries.forEach((item) => {
+    const dayKey = normalizeWeekdayKey(item.day ?? item.dayOfWeek ?? item.weekday ?? item.name ?? item.date);
+    if (!dayKey) return;
+    distancesByDay[dayKey] = normalizeDistanceKm(item);
+  });
+
+  return weekDays.map((day) => ({
+    ...day,
+    distanceKm: distancesByDay[day.key] || 0,
+  }));
+};
+
+const formatDistanceKm = (distanceKm) => `${distanceKm.toFixed(distanceKm >= 10 ? 1 : 2)} km`;
+
 const toRouteRangeParam = (value) => {
   if (!value) return "";
   const date = new Date(value);
@@ -74,8 +166,10 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
   const [mapStyle, setMapStyle] = useState("natural");
   const [loadingPets, setLoadingPets] = useState(true);
   const [loadingRoute, setLoadingRoute] = useState(false);
+  const [loadingWalkDistance, setLoadingWalkDistance] = useState(false);
   const [routeRange, setRouteRange] = useState({ from: "", to: "" });
   const [appliedRouteRange, setAppliedRouteRange] = useState(null);
+  const [walkDistanceWeek, setWalkDistanceWeek] = useState(() => normalizeWalkDistanceWeek([]));
 
   const activeMapStyle = mapStyles[mapStyle];
 
@@ -129,6 +223,7 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
     if (!selectedPetId) {
       setRoutePoints([]);
       setAppliedRouteRange(null);
+      setWalkDistanceWeek(normalizeWalkDistanceWeek([]));
       return;
     }
 
@@ -167,6 +262,49 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
 
     fetchPetRoute();
   }, [apiBaseUrl, appliedRouteRange, selectedPet?.name, selectedPetId]);
+
+  useEffect(() => {
+    if (!selectedPetId) {
+      setWalkDistanceWeek(normalizeWalkDistanceWeek([]));
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchWalkDistanceWeek = async () => {
+      setLoadingWalkDistance(true);
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get(`${apiBaseUrl}/${selectedPetId}/walk-distance/week`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+
+        if (!cancelled) {
+          setWalkDistanceWeek(normalizeWalkDistanceWeek(response.data));
+        }
+      } catch (error) {
+        console.error("Error fetching weekly walk distance:", error);
+        if (!cancelled) {
+          setWalkDistanceWeek(normalizeWalkDistanceWeek([]));
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingWalkDistance(false);
+        }
+      }
+    };
+
+    fetchWalkDistanceWeek();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [apiBaseUrl, selectedPetId]);
+
+  const weeklyWalkDistanceTotal = useMemo(
+    () => walkDistanceWeek.reduce((total, day) => total + day.distanceKm, 0),
+    [walkDistanceWeek]
+  );
 
   const handleApplyRouteRange = () => {
     if (!selectedPetId) {
@@ -317,6 +455,26 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
           <span className="firu-route-pill"><span className="firu-route-dot" /> GPS LOCK</span>
           <span className="firu-route-pill"><span className="firu-route-dot" /> {appliedRouteRange ? "RANGE" : "HISTORY"}</span>
           <span className="firu-route-pill"><span className="firu-route-dot" /> {selectedRoute ? selectedRoute.petName : loadingPets ? "LOADING PETS" : "SELECT PET"}</span>
+        </div>
+
+        <div className="firu-walk-distance-table">
+          <div className="firu-walk-distance-header">
+            <div>
+              <strong>Walk distance</strong>
+              <span>{selectedPet?.name || "Select pet"}</span>
+            </div>
+            <span>{loadingWalkDistance ? "..." : formatDistanceKm(weeklyWalkDistanceTotal)}</span>
+          </div>
+          <table>
+            <tbody>
+              {walkDistanceWeek.map((day) => (
+                <tr key={day.key}>
+                  <th>{day.label}</th>
+                  <td>{loadingWalkDistance ? "..." : formatDistanceKm(day.distanceKm)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
         <div className="firu-route-card">
