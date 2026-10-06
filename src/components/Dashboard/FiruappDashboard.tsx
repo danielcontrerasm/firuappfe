@@ -104,11 +104,9 @@ const extractReverseGeocodeCity = (data: any) => {
   );
 };
 
-const normalizeMedellinCity = (dto: any) => {
+const normalizePetCity = (dto: any) => {
   const city = dto.city || dto.owner?.city || dto.address?.city || "";
-  const neighborhood = dto.neighborhood || dto.owner?.neighborhood || dto.address?.neighborhood || dto.zone || "";
-  if (city) return city;
-  return neighborhood ? "Medellin" : "";
+  return city;
 };
 
 const mapPetDtoToDashboardPet = (dto: any): Pet => ({
@@ -117,7 +115,7 @@ const mapPetDtoToDashboardPet = (dto: any): Pet => ({
   name: dto.name || "Unnamed pet",
   status: String(dto.status || "active").toLowerCase() === "lost" ? "lost" : "active",
   ownerName: dto.ownerName || dto.owner?.name || "",
-  city: normalizeMedellinCity(dto),
+  city: normalizePetCity(dto),
   neighborhood: dto.neighborhood || dto.owner?.neighborhood || dto.address?.neighborhood || dto.zone || "",
   breed: dto.race || dto.type || "Tracked pet",
   race: dto.race,
@@ -533,9 +531,11 @@ const FiruappDashboard: React.FC = () => {
     ? formatLocationTimestamp(selectedPetLocation.timestamp)
     : selectedPet?.lastSeen || "Unknown";
   const selectedPetLocationKey = selectedPetLocation ? locationCacheKey(selectedPetLocation) : undefined;
-  const selectedPetCity =
+  const selectedPetGpsCity =
     selectedPetLocation?.city ||
-    (selectedPetLocationKey ? cityByLocationKey[selectedPetLocationKey] : undefined) ||
+    (selectedPetLocationKey ? cityByLocationKey[selectedPetLocationKey] : undefined);
+  const selectedPetCity =
+    selectedPetGpsCity ||
     selectedPet?.city;
   const selectedPetLocationLabel =
     selectedPetLocation
@@ -768,7 +768,7 @@ const FiruappDashboard: React.FC = () => {
                 variant="outlined"
                 sx={{ minWidth: 190, height: 46, borderRadius: 2, bgcolor: "#ffffff", borderColor: "#dbe7f3", color: "#0f1b34", textTransform: "none", fontWeight: 850 }}
               >
-                Medellín
+                {selectedPetGpsCity || "GPS city"}
               </Button>
               <Button
                 startIcon={<PersonIcon />}
@@ -808,6 +808,7 @@ const FiruappDashboard: React.FC = () => {
                 containerRef={mapPanelRef}
                 pets={filteredDashboardPets}
                 petDataMode={petDataMode}
+                locationCity={selectedPetGpsCity}
                 onSelectPet={setSelectedPetId}
                 onLocationsChange={handleLocationsChange}
               />

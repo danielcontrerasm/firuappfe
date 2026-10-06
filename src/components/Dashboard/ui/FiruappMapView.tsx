@@ -39,6 +39,7 @@ interface MapViewProps {
   apiUrl?: string;
   pets?: Pet[];
   petDataMode?: "mock" | "database" | "mixed";
+  locationCity?: string;
   onSelectPet?: (id: string) => void;
   onLocationsChange?: (locations: PetLocation[]) => void;
   containerRef?: React.Ref<HTMLDivElement>;
@@ -265,6 +266,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
   apiUrl = buildApiUrl("/api/pets/locations"),
   pets = [],
   petDataMode = "database",
+  locationCity,
   onSelectPet,
   onLocationsChange,
   containerRef,
@@ -482,6 +484,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
 
   const isLiveLocationData = petLocations.length > 0;
   const activeMapStyle = mapStyles[mapStyle];
+  const mapCityLabel = locationCity || displayMarkers.find((marker) => marker.city)?.city || "GPS city";
 
   // const mainMarker = displayMarkers[0];
   // const routeLine: LatLngExpression[] = displayMarkers.map((pet) => [pet.latitude, pet.longitude]);
@@ -769,7 +772,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
         <Stack direction="row" spacing={1} sx={{ pointerEvents: "auto", minWidth: 0 }}>
           <Chip
             icon={<GpsFixedIcon sx={{ fontSize: 19 }} />}
-            label="Medellín"
+            label={mapCityLabel}
             sx={{ height: 46, borderRadius: 2, bgcolor: "#ffffff", border: "1px solid #dbe7f3", color: "#0f1b34", fontWeight: 900, boxShadow: "0 12px 26px rgba(15,23,42,0.12)" }}
           />
           <Chip
