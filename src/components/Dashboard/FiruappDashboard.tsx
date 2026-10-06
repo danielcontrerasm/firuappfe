@@ -71,6 +71,7 @@ type DashboardPetLocation = {
   petName?: string;
   timestamp?: string;
   address?: string;
+  city?: string;
   batteryPercent?: number;
 };
 
@@ -86,6 +87,22 @@ const formatCoordinates = (location?: DashboardPetLocation) => {
 };
 
 const formatBatteryPercent = (battery?: number) => (battery == null ? "Unknown" : `${battery}%`);
+
+const locationCacheKey = (location: DashboardPetLocation) =>
+  `${location.latitude.toFixed(4)},${location.longitude.toFixed(4)}`;
+
+const extractReverseGeocodeCity = (data: any) => {
+  const address = data?.address || {};
+  return (
+    address.city ||
+    address.town ||
+    address.village ||
+    address.municipality ||
+    address.county ||
+    data?.name ||
+    ""
+  );
+};
 
 const normalizeMedellinCity = (dto: any) => {
   const city = dto.city || dto.owner?.city || dto.address?.city || "";
@@ -383,6 +400,7 @@ const FiruappDashboard: React.FC = () => {
   const [section, setSection] = useState<"all" | "geofence" | "route">("all");
   const [alertMessages, setAlertMessages] = useState<DashboardAlert[]>([]);
   const [alertsConnected, setAlertsConnected] = useState(false);
+  const [cityByLocationKey, setCityByLocationKey] = useState<Record<string, string>>({});
   const [guideOpen, setGuideOpen] = useState(false);
   const [guideStepIndex, setGuideStepIndex] = useState(0);
   const [guideSpotlightRect, setGuideSpotlightRect] = useState<GuideTargetRect | null>(null);
@@ -514,16 +532,67 @@ const FiruappDashboard: React.FC = () => {
   const selectedPetLastSeen = selectedPetLocation?.timestamp
     ? formatLocationTimestamp(selectedPetLocation.timestamp)
     : selectedPet?.lastSeen || "Unknown";
+  const selectedPetLocationKey = selectedPetLocation ? locationCacheKey(selectedPetLocation) : undefined;
+  const selectedPetCity =
+    selectedPetLocation?.city ||
+    (selectedPetLocationKey ? cityByLocationKey[selectedPetLocationKey] : undefined) ||
+    selectedPet?.city;
   const selectedPetLocationLabel =
-    selectedPetLocation?.address || (selectedPetLocation ? "Location from GPS coordinates" : "No live location available");
+    selectedPetLocation
+      ? [selectedPetCity, selectedPetLocation.address || "GPS coordinates"].filter(Boolean).join(" · ")
+      : "No live location available";
   const selectedPetCoordinates = formatCoordinates(selectedPetLocation);
   const selectedPetBattery = selectedPetLocation?.batteryPercent ?? selectedPet?.battery;
   const selectedPetBatteryColor = selectedPetBattery != null && selectedPetBattery <= 20 ? "#ef4444" : firuColors.green;
+  const selectedPetIsLost = selectedPet?.status === "lost";
   const lostPets = useMemo(() => filteredDashboardPets.filter((pet) => pet.status === "lost"), [filteredDashboardPets]);
   const activePets = useMemo(() => filteredDashboardPets.filter((pet) => pet.status === "active"), [filteredDashboardPets]);
   const handleLocationsChange = useCallback((locations: DashboardPetLocation[]) => {
     setPetLocations(locations);
   }, []);
+
+  useEffect(() => {
+    if (!selectedPetLocation || selectedPetLocation.city) return undefined;
+
+    const cacheKey = locationCacheKey(selectedPetLocation);
+    if (cityByLocationKey[cacheKey]) return undefined;
+
+    let cancelled = false;
+    const controller = new AbortController();
+
+    const fetchCityName = async () => {
+      try {
+        const params = new URLSearchParams({
+          format: "jsonv2",
+          lat: String(selectedPetLocation.latitude),
+          lon: String(selectedPetLocation.longitude),
+          zoom: "10",
+          addressdetails: "1",
+        });
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?${params.toString()}`, {
+          headers: { Accept: "application/json" },
+          signal: controller.signal,
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        const city = extractReverseGeocodeCity(data);
+        if (!cancelled && city) {
+          setCityByLocationKey((current) => ({ ...current, [cacheKey]: city }));
+        }
+      } catch (error: any) {
+        if (error?.name !== "AbortError") {
+          console.error("Error reverse geocoding pet city:", error);
+        }
+      }
+    };
+
+    fetchCityName();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [cityByLocationKey, selectedPetLocation]);
   const recentAlertItems = useMemo(() => {
     const liveAlerts = alertMessages.map((alert) => ({
       id: alert.id,
@@ -830,20 +899,35 @@ const FiruappDashboard: React.FC = () => {
                     </IconButton>
                   </Stack>
 
-                  <Box sx={{ mt: 2, p: 1.65, borderRadius: 2, bgcolor: "#fff7f7", border: "1px solid #ffb9bd", display: "flex", alignItems: "center", gap: 1.4 }}>
-                    <WarningAmberIcon sx={{ color: "#ff3444", fontSize: 34 }} />
+                  <Box
+                    sx={{
+                      mt: 2,
+                      p: 1.65,
+                      borderRadius: 2,
+                      bgcolor: selectedPetIsLost ? "#fff7f7" : "#f0fdf4",
+                      border: selectedPetIsLost ? "1px solid #ffb9bd" : "1px solid #bbf7d0",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1.4,
+                    }}
+                  >
+                    {selectedPetIsLost ? (
+                      <WarningAmberIcon sx={{ color: "#ff3444", fontSize: 34 }} />
+                    ) : (
+                      <MyLocationIcon sx={{ color: firuColors.green, fontSize: 34 }} />
+                    )}
                     <Box sx={{ minWidth: 0, flex: 1 }}>
-                      <Typography variant="subtitle2" sx={{ color: "#cf1421", fontWeight: 950 }}>
+                      <Typography variant="subtitle2" sx={{ color: selectedPetIsLost ? "#cf1421" : "#15803d", fontWeight: 950 }}>
                         Last seen
                       </Typography>
-                      <Typography variant="body2" sx={{ color: "#cf1421", fontWeight: 900 }}>
+                      <Typography variant="body2" sx={{ color: selectedPetIsLost ? "#cf1421" : "#15803d", fontWeight: 900 }}>
                         {selectedPetLastSeen}
                       </Typography>
                       <Typography variant="caption" sx={{ color: "#61728f", fontWeight: 700 }}>
                         {selectedPetLocationLabel}
                       </Typography>
                     </Box>
-                    <KeyboardArrowRightIcon sx={{ color: "#ff3444" }} />
+                    <KeyboardArrowRightIcon sx={{ color: selectedPetIsLost ? "#ff3444" : firuColors.green }} />
                   </Box>
 
                   <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.2, mt: 1.4 }}>

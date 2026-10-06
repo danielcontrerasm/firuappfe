@@ -18,6 +18,7 @@ interface PetLocation {
   petName?: string;
   timestamp?: string;
   address?: string;
+  city?: string;
   imageUrl?: string;
   avatarUrl?: string;
   status?: string;
@@ -89,6 +90,33 @@ const normalizeImageUrl = (url?: string) => {
   if (!url) return undefined;
   if (/^(https?:)?\/\//.test(url) || url.startsWith("/")) return url;
   return `/${url}`;
+};
+
+const normalizeLocationCity = (loc: any) =>
+  loc.city ??
+  loc.town ??
+  loc.village ??
+  loc.municipality ??
+  loc.address?.city ??
+  loc.address?.town ??
+  loc.address?.village ??
+  loc.address?.municipality ??
+  loc.address?.county ??
+  loc.pet?.city ??
+  loc.pet?.owner?.city;
+
+const normalizeLocationAddress = (loc: any) => {
+  if (typeof loc.address === "string") return loc.address;
+  return (
+    loc.formattedAddress ??
+    loc.locationName ??
+    loc.placeName ??
+    loc.description ??
+    loc.address?.formattedAddress ??
+    loc.address?.displayName ??
+    loc.address?.label ??
+    loc.address?.name
+  );
 };
 
 const normalizeBatteryPercent = (...values: unknown[]) => {
@@ -313,12 +341,8 @@ const FiruappMapView: React.FC<MapViewProps> = ({
                 longitude,
                 petName,
                 timestamp: loc.timestamp ?? loc.updatedAt ?? loc.createdAt,
-                address:
-                  loc.address ??
-                  loc.formattedAddress ??
-                  loc.locationName ??
-                  loc.placeName ??
-                  loc.description,
+                address: normalizeLocationAddress(loc),
+                city: normalizeLocationCity(loc),
                 imageUrl,
                 avatarUrl: normalizeImageUrl(loc.avatarUrl ?? loc.pet?.avatarUrl),
                 status: loc.status ?? loc.pet?.status,
