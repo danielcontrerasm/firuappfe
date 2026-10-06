@@ -21,6 +21,12 @@ const mapStyles = {
   },
 };
 
+const toRouteRangeParam = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString();
+};
+
 const extractPetDtos = (data) => {
   if (Array.isArray(data)) return data;
   return data?.content || data?.items || data?.pets || data?.data || data?.results || data?.rows || data?.payload || [];
@@ -67,6 +73,9 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
   const [selectedPetId, setSelectedPetId] = useState(null);
   const [mapStyle, setMapStyle] = useState("natural");
   const [loadingPets, setLoadingPets] = useState(true);
+  const [loadingRoute, setLoadingRoute] = useState(false);
+  const [routeRange, setRouteRange] = useState({ from: "", to: "" });
+  const [appliedRouteRange, setAppliedRouteRange] = useState(null);
 
   const activeMapStyle = mapStyles[mapStyle];
 
@@ -119,13 +128,25 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
   useEffect(() => {
     if (!selectedPetId) {
       setRoutePoints([]);
+      setAppliedRouteRange(null);
       return;
     }
 
     const fetchPetRoute = async () => {
+      setLoadingRoute(true);
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get(`${apiBaseUrl}/${selectedPetId}/route`, {
+        const params =
+          appliedRouteRange?.from && appliedRouteRange?.to
+            ? new URLSearchParams({
+                from: toRouteRangeParam(appliedRouteRange.from),
+                to: toRouteRangeParam(appliedRouteRange.to),
+              })
+            : null;
+        const endpoint = params
+          ? `${apiBaseUrl}/${selectedPetId}/route/range?${params.toString()}`
+          : `${apiBaseUrl}/${selectedPetId}/route`;
+        const response = await axios.get(endpoint, {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         });
 
@@ -139,11 +160,37 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
       } catch (error) {
         console.error("Error fetching pet route:", error);
         setRoutePoints([]);
+      } finally {
+        setLoadingRoute(false);
       }
     };
 
     fetchPetRoute();
-  }, [apiBaseUrl, selectedPet?.name, selectedPetId]);
+  }, [apiBaseUrl, appliedRouteRange, selectedPet?.name, selectedPetId]);
+
+  const handleApplyRouteRange = () => {
+    if (!selectedPetId) {
+      alert("Select a pet before searching route positions.");
+      return;
+    }
+
+    if (!routeRange.from || !routeRange.to) {
+      alert("Select both From and To times.");
+      return;
+    }
+
+    if (new Date(routeRange.from).getTime() > new Date(routeRange.to).getTime()) {
+      alert("From must be before To.");
+      return;
+    }
+
+    setAppliedRouteRange(routeRange);
+  };
+
+  const handleClearRouteRange = () => {
+    setRouteRange({ from: "", to: "" });
+    setAppliedRouteRange(null);
+  };
 
   const routeCoords = useMemo(
     () => routePoints.map((point) => [point.latitude, point.longitude]),
@@ -173,7 +220,7 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
       <div className="firu-route-header">
         <h2>Movement trail · Last 3 hours</h2>
         <p>
-          {loadingPets ? "Loading pets from the database." : "Select a database pet to draw its recent route positions on the map."}
+          {loadingPets ? "Loading pets from the database." : "Select a database pet and optionally search positions by time range."}
         </p>
       </div>
 
@@ -230,8 +277,34 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
 
         <div className="firu-route-tools">
           <span className="firu-route-tool">Route</span>
-          <span className="firu-route-tool">Timeline</span>
-          <span className="firu-route-tool">GPS</span>
+          <input
+            className="firu-route-time-input"
+            type="datetime-local"
+            value={routeRange.from}
+            onChange={(event) => setRouteRange((current) => ({ ...current, from: event.target.value }))}
+            aria-label="Route range from"
+          />
+          <input
+            className="firu-route-time-input"
+            type="datetime-local"
+            value={routeRange.to}
+            onChange={(event) => setRouteRange((current) => ({ ...current, to: event.target.value }))}
+            aria-label="Route range to"
+          />
+          <button
+            className="firu-route-tool firu-geofence-button"
+            onClick={handleApplyRouteRange}
+            disabled={!selectedPetId || loadingRoute}
+          >
+            Search
+          </button>
+          <button
+            className="firu-route-tool firu-geofence-button"
+            onClick={handleClearRouteRange}
+            disabled={loadingRoute && !appliedRouteRange}
+          >
+            Clear
+          </button>
           <button
             className="firu-route-tool firu-geofence-button"
             onClick={() => setMapStyle((current) => current === "natural" ? "clean" : "natural")}
@@ -242,15 +315,23 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
 
         <div className="firu-route-status">
           <span className="firu-route-pill"><span className="firu-route-dot" /> GPS LOCK</span>
-          <span className="firu-route-pill"><span className="firu-route-dot" /> HISTORY</span>
+          <span className="firu-route-pill"><span className="firu-route-dot" /> {appliedRouteRange ? "RANGE" : "HISTORY"}</span>
           <span className="firu-route-pill"><span className="firu-route-dot" /> {selectedRoute ? selectedRoute.petName : loadingPets ? "LOADING PETS" : "SELECT PET"}</span>
         </div>
 
         <div className="firu-route-card">
           <div className="firu-route-card-label">ROUTE POINTS</div>
-          <div className="firu-route-card-value">{selectedRoute ? selectedRoute.points.length : 0}</div>
+          <div className="firu-route-card-value">{loadingRoute ? "..." : selectedRoute ? selectedRoute.points.length : 0}</div>
           <div className="firu-route-card-copy">
-            {selectedRoute ? `${selectedRoute.petName}'s last 3 hours` : loadingPets ? "Loading database pets" : "Select a pet to show its trail"}
+            {loadingRoute
+              ? "Loading route positions"
+              : selectedRoute
+                ? appliedRouteRange
+                  ? `${selectedRoute.petName}'s selected range`
+                  : `${selectedRoute.petName}'s last 3 hours`
+                : loadingPets
+                  ? "Loading database pets"
+                  : "Select a pet to show its trail"}
           </div>
         </div>
       </div>
