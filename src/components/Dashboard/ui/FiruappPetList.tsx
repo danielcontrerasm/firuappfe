@@ -130,6 +130,17 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
     handleCloseMenu();
   };
 
+  const handleCreateSearchGroup = () => {
+    if (menuPet) {
+      const searchParams = new URLSearchParams({
+        create: "true",
+        petId: String(menuPet.apiId || menuPet.id),
+      });
+      navigate(`/volunteers?${searchParams.toString()}`);
+    }
+    handleCloseMenu();
+  };
+
   return (
     <Box
       ref={containerRef}
@@ -327,7 +338,7 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
           <ListItemIcon><AssessmentIcon fontSize="small" /></ListItemIcon>
           View Daily Report
         </MenuItem>
-        <MenuItem onClick={handleViewReport}>
+        <MenuItem onClick={handleCreateSearchGroup}>
           <ListItemIcon><GroupsIcon fontSize="small" /></ListItemIcon>
           Create Search Group
         </MenuItem>

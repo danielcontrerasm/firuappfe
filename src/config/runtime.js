@@ -40,3 +40,17 @@ export const buildWsUrl = (path = "/ws") => {
   const baseUrl = configuredWsOrigin || API_ORIGIN;
   return new URL(path.startsWith("/") ? path : `/${path}`, `${baseUrl}/`).toString();
 };
+
+export const searchGroupEndpoints = Object.freeze({
+  list: "/api/search-groups",
+  create: "/api/search-groups",
+  byPet: (petId) => `/api/search-groups/pet/${petId}`,
+  mine: "/api/search-groups/my",
+  volunteers: (searchGroupId) => `/api/search-groups/${searchGroupId}/volunteers`,
+  join: (searchGroupId) => `/api/search-groups/${searchGroupId}/join`,
+  leave: (searchGroupId) => `/api/search-groups/${searchGroupId}/leave`,
+  update: (searchGroupId) => `/api/search-groups/${searchGroupId}`,
+  addVolunteer: (searchGroupId, userId) => `/api/search-groups/${searchGroupId}/volunteers/${userId}`,
+  removeVolunteer: (searchGroupId, userId) => `/api/search-groups/${searchGroupId}/volunteers/${userId}`,
+  memberCandidates: (searchGroupId) => `/api/search-groups/${searchGroupId}/member-candidates`,
+});

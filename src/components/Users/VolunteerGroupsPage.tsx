@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import {
@@ -6,6 +6,7 @@ import {
   Box,
   Button,
   Chip,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -28,13 +29,20 @@ import AddIcon from "@mui/icons-material/Add";
 import GroupAddIcon from "@mui/icons-material/GroupAdd";
 import PersonAddAltIcon from "@mui/icons-material/PersonAddAlt";
 import SearchIcon from "@mui/icons-material/Search";
-import { buildApiUrl } from "../../config/runtime";
+import { useSearchParams } from "react-router-dom";
+import { buildApiUrl, searchGroupEndpoints } from "../../config/runtime";
 
 type VolunteerMemberDto = {
   userId: number;
   name: string;
   email: string;
   phone: string;
+};
+
+type VolunteerCandidateDto = {
+  userId: number;
+  name: string;
+  email: string;
 };
 
 type SearchGroupDto = {
@@ -66,7 +74,6 @@ type NewGroupFormState = {
   city: string;
   coverageRadiusKm: string;
   petId: string;
-  petStatus: string;
   leaderName: string;
   leaderPhone: string;
 };
@@ -74,7 +81,6 @@ type NewGroupFormState = {
 type PetOption = {
   id: string;
   name: string;
-  status: string;
 };
 
 const currentUser: VolunteerMemberDto = {
@@ -83,13 +89,6 @@ const currentUser: VolunteerMemberDto = {
   email: "daniel@example.com",
   phone: "+57 300 555 0120",
 };
-
-const searchableVolunteers: VolunteerMemberDto[] = [
-  currentUser,
-  { userId: 105, name: "Laura Perez", email: "laura@example.com", phone: "+57 301 222 8844" },
-  { userId: 106, name: "Carlos Rios", email: "carlos@example.com", phone: "+57 302 410 7788" },
-  { userId: 107, name: "Maria Gomez", email: "maria@example.com", phone: "+57 300 700 1199" },
-];
 
 const mockGroups: SearchGroupDto[] = [
   {
@@ -175,6 +174,35 @@ const mapDtoToSearchGroup = (dto: any): SearchGroupDto => {
   };
 };
 
+const extractCollection = (data: any): any[] =>
+  Array.isArray(data) ? data : data?.content || data?.items || [];
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+  return token ? { Authorization: `Bearer ${token}` } : undefined;
+};
+
+const fetchPersistedGroups = async (): Promise<SearchGroupDto[]> => {
+  const response = await axios.get(buildApiUrl(searchGroupEndpoints.list), {
+    headers: getAuthHeaders(),
+  });
+  return extractCollection(response.data).map((dto: any) => mapDtoToSearchGroup(dto));
+};
+
+const getAuthenticatedUserId = (): number | null => {
+  const token = localStorage.getItem("token");
+  if (!token) return null;
+
+  try {
+    const claims = jwtDecode<Record<string, unknown>>(token);
+    const value = claims.userId ?? claims.id ?? claims.sub;
+    const userId = Number(value);
+    return Number.isInteger(userId) && userId > 0 ? userId : null;
+  } catch {
+    return null;
+  }
+};
+
 const createDefaultGroupForm = (): NewGroupFormState => ({
   groupName: "",
   description: "",
@@ -183,22 +211,46 @@ const createDefaultGroupForm = (): NewGroupFormState => ({
   city: "Medellin",
   coverageRadiusKm: "3",
   petId: "",
-  petStatus: "lost",
   leaderName: currentUser.name,
   leaderPhone: currentUser.phone,
 });
 
 const VolunteerGroupsPage: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [groups, setGroups] = useState<SearchGroupDto[]>(mockGroups);
   const [pets, setPets] = useState<PetOption[]>([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [memberSearch, setMemberSearch] = useState("");
+  const [memberSearchResults, setMemberSearchResults] = useState<VolunteerCandidateDto[]>([]);
+  const [memberSearchError, setMemberSearchError] = useState("");
+  const [isSearchingMembers, setIsSearchingMembers] = useState(false);
   const [activeGroup, setActiveGroup] = useState<SearchGroupDto | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newGroupForm, setNewGroupForm] = useState<NewGroupFormState>(createDefaultGroupForm);
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const [joiningGroupId, setJoiningGroupId] = useState<number | null>(null);
+  const [addingVolunteerId, setAddingVolunteerId] = useState<number | null>(null);
+  const currentUserId = useMemo(getAuthenticatedUserId, []);
+
+  const refreshGroups = useCallback(async () => {
+    const persistedGroups = await fetchPersistedGroups();
+    setGroups(persistedGroups);
+    return persistedGroups;
+  }, []);
+
+  useEffect(() => {
+    if (searchParams.get("create") !== "true") return;
+
+    const petId = searchParams.get("petId") ?? "";
+    setNewGroupForm((current) => ({ ...current, petId }));
+    setIsCreateDialogOpen(true);
+
+    const consumedParams = new URLSearchParams(searchParams);
+    consumedParams.delete("create");
+    consumedParams.delete("petId");
+    setSearchParams(consumedParams, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     let cancelled = false;
@@ -208,30 +260,21 @@ const VolunteerGroupsPage: React.FC = () => {
         const token = localStorage.getItem("token");
         const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
         const [groupsResponse, petsResponse] = await Promise.allSettled([
-          axios.get(buildApiUrl("/api/search-groups"), { headers }),
+          fetchPersistedGroups(),
           axios.get(buildApiUrl("/api/pets"), { headers }),
         ]);
 
         if (!cancelled && groupsResponse.status === "fulfilled") {
-          const groupDtos = Array.isArray(groupsResponse.value.data)
-            ? groupsResponse.value.data
-            : groupsResponse.value.data?.content || groupsResponse.value.data?.items || [];
-
-          if (groupDtos.length > 0) {
-            setGroups(groupDtos.map((dto: any) => mapDtoToSearchGroup(dto)));
-          }
+          setGroups(groupsResponse.value);
         }
 
         if (!cancelled && petsResponse.status === "fulfilled") {
-          const petDtos = Array.isArray(petsResponse.value.data)
-            ? petsResponse.value.data
-            : petsResponse.value.data?.content || petsResponse.value.data?.items || [];
+          const petDtos = extractCollection(petsResponse.value.data);
 
           setPets(
             petDtos.map((dto: any) => ({
               id: String(dto.id ?? ""),
               name: dto.name ?? `Pet ${dto.id ?? ""}`,
-              status: dto.status ?? "active",
             }))
           );
         }
@@ -246,6 +289,57 @@ const VolunteerGroupsPage: React.FC = () => {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    const query = memberSearch.trim();
+    if (!activeGroup || query.length < 2) {
+      setMemberSearchResults([]);
+      setMemberSearchError("");
+      setIsSearchingMembers(false);
+      return;
+    }
+
+    const abortController = new AbortController();
+    const timeoutId = window.setTimeout(async () => {
+      setIsSearchingMembers(true);
+      setMemberSearchError("");
+
+      try {
+        const response = await axios.get(buildApiUrl(searchGroupEndpoints.memberCandidates(activeGroup.id)), {
+          headers: getAuthHeaders(),
+          params: { q: query, page: 0, size: 20 },
+          signal: abortController.signal,
+        });
+        const existingMemberIds = new Set(activeGroup.volunteers.map((volunteer) => volunteer.userId));
+        const users = extractCollection(response.data)
+          .map((dto: any): VolunteerCandidateDto => ({
+            userId: Number(dto.userId ?? dto.id ?? 0),
+            name: dto.name ?? dto.fullName ?? dto.username ?? "Unknown volunteer",
+            email: dto.email ?? "",
+          }))
+          .filter((user: VolunteerCandidateDto) => user.userId > 0 && !existingMemberIds.has(user.userId));
+        setMemberSearchResults(users);
+      } catch (error: any) {
+        if (error?.code === "ERR_CANCELED") return;
+        console.error("Error searching registered users:", error);
+        setMemberSearchResults([]);
+        setMemberSearchError(
+          error?.response?.data?.message ||
+            error?.response?.data?.error ||
+            "Registered users could not be searched."
+        );
+      } finally {
+        if (!abortController.signal.aborted) {
+          setIsSearchingMembers(false);
+        }
+      }
+    }, 300);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      abortController.abort();
+    };
+  }, [activeGroup, memberSearch]);
 
   const filteredGroups = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -262,49 +356,21 @@ const VolunteerGroupsPage: React.FC = () => {
     });
   }, [groups, search, status]);
 
-  const volunteersForSearch = useMemo(() => {
-    const term = memberSearch.trim().toLowerCase();
-    const groupMemberIds = new Set(activeGroup?.volunteers.map((volunteer) => volunteer.userId));
-
-    return searchableVolunteers.filter((volunteer) => {
-      const notInGroup = !groupMemberIds.has(volunteer.userId);
-      const matchesSearch =
-        !term ||
-        volunteer.name.toLowerCase().includes(term) ||
-        volunteer.email.toLowerCase().includes(term) ||
-        volunteer.phone.includes(term);
-      return notInGroup && matchesSearch;
-    });
-  }, [activeGroup, memberSearch]);
-
   const handleJoinGroup = async (groupId: number) => {
     setJoiningGroupId(groupId);
     try {
-      const token = localStorage.getItem("token");
-      const response = await axios.post(
-        buildApiUrl(`/api/search-groups/${groupId}/join`),
+      await axios.post(
+        buildApiUrl(searchGroupEndpoints.join(groupId)),
         {},
         {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          headers: getAuthHeaders(),
         }
       );
-
-      if (response.data) {
-        const updatedGroup = mapDtoToSearchGroup(response.data);
-        setGroups((currentGroups) => currentGroups.map((group) => (group.id === groupId ? updatedGroup : group)));
-        setActiveGroup((current) => (current?.id === groupId ? updatedGroup : current));
-        return;
-      }
-
-      setGroups((currentGroups) =>
-        currentGroups.map((group) => {
-          if (group.id !== groupId || group.volunteers.some((volunteer) => volunteer.userId === currentUser.userId)) {
-            return group;
-          }
-
-          const volunteers = [...group.volunteers, currentUser];
-          return { ...group, volunteers, membersCount: volunteers.length };
-        })
+      const persistedGroups = await refreshGroups();
+      setActiveGroup((current) =>
+        current?.id === groupId
+          ? persistedGroups.find((group) => group.id === groupId) ?? null
+          : current
       );
     } catch (error: any) {
       console.error(`Error joining search group ${groupId}:`, error);
@@ -320,28 +386,38 @@ const VolunteerGroupsPage: React.FC = () => {
     }
   };
 
-  const handleAddVolunteer = (volunteer: VolunteerMemberDto) => {
+  const handleAddVolunteer = async (userId: number) => {
     if (!activeGroup) return;
+    if (!Number.isInteger(userId) || userId <= 0) return;
 
-    setGroups((currentGroups) =>
-      currentGroups.map((group) => {
-        if (group.id !== activeGroup.id || group.volunteers.some((member) => member.userId === volunteer.userId)) {
-          return group;
-        }
-
-        const volunteers = [...group.volunteers, volunteer];
-        return { ...group, volunteers, membersCount: volunteers.length };
-      })
-    );
-    setActiveGroup((current) =>
-      current
-        ? {
-            ...current,
-            volunteers: [...current.volunteers, volunteer],
-            membersCount: current.volunteers.length + 1,
-          }
-        : current
-    );
+    const groupId = activeGroup.id;
+    setAddingVolunteerId(userId);
+    try {
+      await axios.post(
+        buildApiUrl(searchGroupEndpoints.addVolunteer(groupId, userId)),
+        {},
+        { headers: getAuthHeaders() }
+      );
+      setMemberSearchResults((current) => current.filter((user) => user.userId !== userId));
+      try {
+        const persistedGroups = await refreshGroups();
+        setActiveGroup(persistedGroups.find((group) => group.id === groupId) ?? null);
+      } catch (refreshError) {
+        console.error("Volunteer added, but search groups could not be refreshed:", refreshError);
+        alert("The volunteer was added, but the group list could not be refreshed. Reload the page to see the latest data.");
+      }
+    } catch (error: any) {
+      console.error(`Error adding volunteer ${userId} to search group ${groupId}:`, error);
+      const message =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.response?.data ||
+        error?.message ||
+        "Unknown error";
+      alert(`Failed to add the volunteer. ${message}`);
+    } finally {
+      setAddingVolunteerId(null);
+    }
   };
 
   const handleCreateGroup = async () => {
@@ -353,9 +429,6 @@ const VolunteerGroupsPage: React.FC = () => {
     const leaderName = newGroupForm.leaderName.trim();
     const leaderPhone = newGroupForm.leaderPhone.trim();
     const coverageRadiusKm = Number(newGroupForm.coverageRadiusKm);
-    const selectedPet = pets.find((pet) => pet.id === newGroupForm.petId);
-    const petName = selectedPet?.name ?? "";
-
     if (!groupName || !description || !area || !city || !petId || !leaderName || !leaderPhone || !coverageRadiusKm) {
       return;
     }
@@ -368,60 +441,24 @@ const VolunteerGroupsPage: React.FC = () => {
       city,
       coverageRadiusKm,
       petId,
-      petName,
-      petStatus: newGroupForm.petStatus,
       leaderName,
       leaderPhone,
-      createdById: currentUser.userId,
-      createdByName: currentUser.name,
-      createdByEmail: currentUser.email,
-      volunteerUserIds: [currentUser.userId],
+      volunteerUserIds: currentUserId ? [currentUserId] : [],
     };
 
     setIsCreatingGroup(true);
     try {
-      const token = localStorage.getItem("token");
-      const decodedToken = token ? jwtDecode<Record<string, any>>(token) : null;
-      console.log("Creating search group:", {
-        endpoint: buildApiUrl("/api/search-groups"),
-        hasToken: Boolean(token),
-        tokenLength: token?.length ?? 0,
-        tokenPreview: token ? `${token.slice(0, 18)}...${token.slice(-10)}` : null,
-        authorizationHeaderPreview: token ? `Bearer ${token.slice(0, 18)}...${token.slice(-10)}` : null,
-        tokenUserId: decodedToken?.id ?? decodedToken?.userId ?? decodedToken?.sub,
-        tokenRole: decodedToken?.role ?? decodedToken?.roles ?? decodedToken?.authorities,
-        payload,
+      await axios.post(buildApiUrl(searchGroupEndpoints.create), payload, {
+        headers: getAuthHeaders(),
       });
-      const response = await axios.post(buildApiUrl("/api/search-groups"), payload, {
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      });
-
-      const createdGroup = response.data
-        ? mapDtoToSearchGroup(response.data)
-        : {
-            id: groups.reduce((maxId, group) => Math.max(maxId, group.id), 0) + 1,
-            groupName,
-            description,
-            status: newGroupForm.status,
-            area,
-            city,
-            membersCount: 1,
-            leaderName,
-            leaderPhone,
-            coverageRadiusKm,
-            createdAt: new Date().toISOString(),
-            petId,
-            petName,
-            petStatus: newGroupForm.petStatus,
-            createdById: currentUser.userId,
-            createdByName: currentUser.name,
-            createdByEmail: currentUser.email,
-            volunteers: [currentUser],
-          };
-
-      setGroups((currentGroups) => [createdGroup, ...currentGroups]);
       setIsCreateDialogOpen(false);
       setNewGroupForm(createDefaultGroupForm());
+      try {
+        await refreshGroups();
+      } catch (refreshError) {
+        console.error("Search group created, but groups could not be refreshed:", refreshError);
+        alert("The volunteer group was created, but the list could not be refreshed. Reload the page to see it.");
+      }
     } catch (error: any) {
       console.error("Error creating search group:", error);
       const message =
@@ -504,7 +541,7 @@ const VolunteerGroupsPage: React.FC = () => {
 
       <Stack spacing={2}>
         {filteredGroups.map((group) => {
-          const hasJoined = group.volunteers.some((volunteer) => volunteer.userId === currentUser.userId);
+          const hasJoined = currentUserId != null && group.volunteers.some((volunteer) => volunteer.userId === currentUserId);
 
           return (
             <Box
@@ -583,6 +620,8 @@ const VolunteerGroupsPage: React.FC = () => {
                     onClick={() => {
                       setActiveGroup(group);
                       setMemberSearch("");
+                      setMemberSearchResults([]);
+                      setMemberSearchError("");
                     }}
                     sx={{ borderRadius: 999, textTransform: "none", fontWeight: 900 }}
                   >
@@ -641,17 +680,32 @@ const VolunteerGroupsPage: React.FC = () => {
         </DialogTitle>
         <DialogContent sx={{ display: "grid", gap: 2, pt: 1 }}>
           <Typography variant="body2" sx={{ color: "#64748b" }}>
-            {activeGroup ? `Search users to add to ${activeGroup.groupName}.` : ""}
+            {activeGroup ? `Search registered users to add to ${activeGroup.groupName}.` : ""}
           </Typography>
           <TextField
-            label="Search by name, email, or phone"
+            label="Name or email"
             value={memberSearch}
             onChange={(event) => setMemberSearch(event.target.value)}
             fullWidth
             size="small"
+            autoFocus
+            error={Boolean(memberSearchError)}
+            helperText={memberSearchError || "Enter at least 2 characters."}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+              endAdornment: isSearchingMembers ? (
+                <InputAdornment position="end">
+                  <CircularProgress size={18} />
+                </InputAdornment>
+              ) : undefined,
+            }}
           />
           <Stack spacing={1}>
-            {volunteersForSearch.map((volunteer) => (
+            {memberSearchResults.map((volunteer) => (
               <Box
                 key={volunteer.userId}
                 sx={{
@@ -664,29 +718,35 @@ const VolunteerGroupsPage: React.FC = () => {
                   border: "1px solid rgba(226,232,240,0.95)",
                 }}
               >
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}>
                   <Avatar sx={{ width: 34, height: 34, bgcolor: "#06b6d4" }}>
                     {volunteer.name.charAt(0).toUpperCase()}
                   </Avatar>
-                  <Box>
+                  <Box sx={{ minWidth: 0 }}>
                     <Typography variant="body2" sx={{ fontWeight: 900, color: "#0f172a" }}>
                       {volunteer.name}
                     </Typography>
-                    <Typography variant="caption" sx={{ color: "#64748b" }}>
-                      {volunteer.email} · {volunteer.phone}
+                    <Typography variant="caption" sx={{ color: "#64748b", overflowWrap: "anywhere" }}>
+                      {volunteer.email}
                     </Typography>
                   </Box>
                 </Box>
                 <Tooltip title="Add to group">
-                  <IconButton onClick={() => handleAddVolunteer(volunteer)}>
-                    <PersonAddAltIcon />
-                  </IconButton>
+                  <span>
+                    <IconButton
+                      aria-label={`Add ${volunteer.name} to group`}
+                      onClick={() => handleAddVolunteer(volunteer.userId)}
+                      disabled={addingVolunteerId !== null}
+                    >
+                      {addingVolunteerId === volunteer.userId ? <CircularProgress size={20} /> : <PersonAddAltIcon />}
+                    </IconButton>
+                  </span>
                 </Tooltip>
               </Box>
             ))}
-            {volunteersForSearch.length === 0 && (
+            {memberSearch.trim().length >= 2 && !isSearchingMembers && !memberSearchError && memberSearchResults.length === 0 && (
               <Typography variant="body2" sx={{ py: 2, textAlign: "center", color: "#64748b" }}>
-                No available volunteers found.
+                No available registered users found.
               </Typography>
             )}
           </Stack>
@@ -783,18 +843,6 @@ const VolunteerGroupsPage: React.FC = () => {
                   {pet.name}
                 </option>
               ))}
-            </TextField>
-            <TextField
-              select
-              label="Pet status"
-              value={newGroupForm.petStatus}
-              onChange={(event) => setNewGroupForm((current) => ({ ...current, petStatus: event.target.value }))}
-              size="small"
-              SelectProps={{ native: true }}
-            >
-              <option value="lost">Lost</option>
-              <option value="active">Active</option>
-              <option value="recovered">Recovered</option>
             </TextField>
           </Box>
           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
