@@ -443,7 +443,6 @@ const FiruappDashboard: React.FC = () => {
   const [alertMessages, setAlertMessages] = useState<DashboardAlert[]>([]);
   const [alertsConnected, setAlertsConnected] = useState(false);
   const [cityByLocationKey, setCityByLocationKey] = useState<Record<string, string>>({});
-  const [selectedCityOption, setSelectedCityOption] = useState("");
   const [guideOpen, setGuideOpen] = useState(false);
   const [guideStepIndex, setGuideStepIndex] = useState(0);
   const [guideSpotlightRect, setGuideSpotlightRect] = useState<GuideTargetRect | null>(null);
@@ -600,10 +599,20 @@ const FiruappDashboard: React.FC = () => {
     selectedPetGpsCity ||
     selectedPet?.city;
   const cityOptions = useMemo(() => {
-    if (!selectedPetGpsCity) return colombiaCities;
-    const hasGpsCity = colombiaCities.some((city) => normalizeCityName(city) === normalizeCityName(selectedPetGpsCity));
-    return hasGpsCity ? colombiaCities : [selectedPetGpsCity, ...colombiaCities];
-  }, [selectedPetGpsCity]);
+    const cities = new Map<string, string>();
+    [
+      ...colombiaCities,
+      ...dashboardPets.map((pet) => pet.city),
+      ...petLocations.map((location) => location.city),
+      selectedPetGpsCity,
+      petFilters.city,
+    ].forEach((city) => {
+      if (city && !cities.has(normalizeCityName(city))) {
+        cities.set(normalizeCityName(city), city);
+      }
+    });
+    return Array.from(cities.values());
+  }, [dashboardPets, petLocations, selectedPetGpsCity, petFilters.city]);
   const selectedPetLocationLabel =
     selectedPetLocation
       ? [selectedPetCity, selectedPetLocation.address || "GPS coordinates"].filter(Boolean).join(" · ")
@@ -617,15 +626,6 @@ const FiruappDashboard: React.FC = () => {
   const handleLocationsChange = useCallback((locations: DashboardPetLocation[]) => {
     setPetLocations(locations);
   }, []);
-
-  useEffect(() => {
-    if (!selectedPetGpsCity) return;
-    const matchedCity = cityOptions.find((city) => normalizeCityName(city) === normalizeCityName(selectedPetGpsCity));
-    if (matchedCity) {
-      setSelectedCityOption(matchedCity);
-      setPetFilters((current) => ({ ...current, city: matchedCity }));
-    }
-  }, [cityOptions, selectedPetGpsCity]);
 
   useEffect(() => {
     if (!selectedPetLocation || selectedPetLocation.city) return undefined;
@@ -854,10 +854,9 @@ const FiruappDashboard: React.FC = () => {
               >
                 <PlaceIcon sx={{ color: "#607491", fontSize: 21 }} />
                 <Select
-                  value={selectedCityOption}
+                  value={petFilters.city}
                   onChange={(event) => {
                     const city = event.target.value;
-                    setSelectedCityOption(city);
                     setPetFilters((current) => ({ ...current, city }));
                   }}
                   displayEmpty

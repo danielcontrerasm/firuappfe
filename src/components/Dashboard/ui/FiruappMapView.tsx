@@ -216,14 +216,13 @@ const normalizeGeofences = (data: any, pet: { id: string; name: string }): PetGe
     .filter(Boolean) as PetGeofence[];
 };
 
-const CenterMap: React.FC<{ markers: PetLocation[] }> = ({ markers }) => {
+export const CenterMap: React.FC<{ markers: PetLocation[] }> = ({ markers }) => {
   const map = useMap();
 
   useEffect(() => {
     if (!markers.length) return;
-    const avgLat = markers.reduce((sum, p) => sum + p.latitude, 0) / markers.length;
-    const avgLng = markers.reduce((sum, p) => sum + p.longitude, 0) / markers.length;
-    map.setView([avgLat, avgLng], 14);
+    const bounds = L.latLngBounds(markers.map((pet) => [pet.latitude, pet.longitude]));
+    map.fitBounds(bounds, { padding: [80, 80], maxZoom: 14 });
   }, [markers, map]);
 
   return null;

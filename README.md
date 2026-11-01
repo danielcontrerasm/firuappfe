@@ -1,5 +1,16 @@
 # Getting Started with Create React App
 
+## FiruApp frontend engineer course
+
+The project includes a practical course based on the active dashboard code:
+
+- [Course home](frontend-course/README.md)
+- [Dashboard execution trace](frontend-course/00-dashboard-execution.md)
+- [Frontend engineer path](frontend-course/frontend-engineer-path.md)
+- [Drag-and-drop exercises](frontend-course/drag-and-drop-exercises.md)
+
+The course follows the real route from login to FiruappDashboard, then explains components, state, API effects, data mapping, filters, routing, Leaflet, WebSockets, and drag-and-drop practice.
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ## Available Scripts
