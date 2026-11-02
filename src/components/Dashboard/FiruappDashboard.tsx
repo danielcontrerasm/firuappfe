@@ -7,6 +7,7 @@ import FiruappSidebar from "./ui/FiruappSidebar.tsx";
 import FiruappMapView from "./ui/FiruappMapView.tsx";
 import FiruappPetsList from "./ui/FiruappPetList.tsx";
 import { Pet, firuColors } from "./ui/FiruappStyles.ts";
+import { isGpsOnline, useGpsStatusTime } from "./ui/petConnectivity.ts";
 import {
   Avatar,
   Badge,
@@ -168,7 +169,6 @@ const mapPetDtoToDashboardPet = (dto: any): Pet => ({
   battery: 82,
   signal: "Good",
   speed: "0.0 km/h",
-  lastSeen: dto.createdAt ? new Date(dto.createdAt).toLocaleDateString() : "Database pet",
 });
 
 const extractPetDtos = (data: any) => {
@@ -200,6 +200,8 @@ const matchesPetFilters = (pet: Pet, filters: DashboardPetFilters) => {
 
 const SummaryCard = ({ icon, label, value, color, bg }: { icon: React.ReactNode; label: string; value: string | number; color: string; bg: string }) => (
   <Paper
+    role="group"
+    aria-label={label}
     elevation={0}
     sx={{
       minHeight: 88,
@@ -428,6 +430,7 @@ const DashboardGuideOverlay = ({
 };
 
 const FiruappDashboard: React.FC = () => {
+  const now = useGpsStatusTime();
   const [dashboardPets, setDashboardPets] = useState<Pet[]>([]);
   const [databasePets, setDatabasePets] = useState<Pet[]>([]);
   const [petLocations, setPetLocations] = useState<DashboardPetLocation[]>([]);
@@ -511,6 +514,7 @@ const FiruappDashboard: React.FC = () => {
             city: location.city,
             neighborhood: location.neighborhood,
             battery: location.batteryPercent,
+            timestamp: location.timestamp,
           },
         ] as const)
     );
@@ -520,7 +524,7 @@ const FiruappDashboard: React.FC = () => {
     return dashboardPets
       .map((pet) => {
         const liveDetails = livePetDetailsByPetId[String(pet.apiId || pet.id)] ?? livePetDetailsByPetId[String(pet.id)];
-        if (!liveDetails) return pet;
+        if (!liveDetails) return { ...pet, gpsOnline: false };
         return {
           ...pet,
           name: liveDetails.name || pet.name,
@@ -528,10 +532,11 @@ const FiruappDashboard: React.FC = () => {
           city: liveDetails.city || pet.city,
           neighborhood: liveDetails.neighborhood || pet.neighborhood,
           battery: liveDetails.battery ?? pet.battery,
+          gpsOnline: isGpsOnline(liveDetails.timestamp, now),
         };
       })
       .filter((pet) => matchesPetFilters(pet, petFilters))
-  }, [dashboardPets, livePetDetailsByPetId, petFilters]);
+  }, [dashboardPets, livePetDetailsByPetId, petFilters, now]);
   useEffect(() => {
     const client = new Client({
       webSocketFactory: () => new SockJS(buildWsUrl("/ws")),
@@ -621,8 +626,12 @@ const FiruappDashboard: React.FC = () => {
   const selectedPetBattery = selectedPetLocation?.batteryPercent ?? selectedPet?.battery;
   const selectedPetBatteryColor = selectedPetBattery != null && selectedPetBattery <= 20 ? "#ef4444" : firuColors.green;
   const selectedPetIsLost = selectedPet?.status === "lost";
+  const selectedPetGpsOnline = selectedPet?.gpsOnline === true;
+  const selectedPetLocationColor = selectedPetIsLost ? "#cf1421" : selectedPetGpsOnline ? "#15803d" : firuColors.muted;
+  const selectedPetLocationBg = selectedPetIsLost ? "#fff7f7" : selectedPetGpsOnline ? "#f0fdf4" : "#f8fafc";
+  const selectedPetLocationBorder = selectedPetIsLost ? "#ffb9bd" : selectedPetGpsOnline ? "#bbf7d0" : "#dbe7f3";
   const lostPets = useMemo(() => filteredDashboardPets.filter((pet) => pet.status === "lost"), [filteredDashboardPets]);
-  const activePets = useMemo(() => filteredDashboardPets.filter((pet) => pet.status === "active"), [filteredDashboardPets]);
+  const onlinePets = useMemo(() => filteredDashboardPets.filter((pet) => pet.gpsOnline), [filteredDashboardPets]);
   const handleLocationsChange = useCallback((locations: DashboardPetLocation[]) => {
     setPetLocations(locations);
   }, []);
@@ -930,7 +939,7 @@ const FiruappDashboard: React.FC = () => {
             }}
           >
             <SummaryCard icon={<PetsIcon />} label="Pets" value={filteredDashboardPets.length} color="#0284c7" bg="#e0f2fe" />
-            <SummaryCard icon={<WifiIcon />} label="GPS Online" value={activePets.length} color="#16a34a" bg="#d9fbe8" />
+            <SummaryCard icon={<WifiIcon />} label="GPS Online" value={onlinePets.length} color="#16a34a" bg="#d9fbe8" />
             <SummaryCard icon={<SecurityIcon />} label="Safe Zones" value={3} color="#0284c7" bg="#e0f2fe" />
             <SummaryCard icon={<WarningAmberIcon />} label="Alerts" value={recentAlertItems.length} color="#f97316" bg="#fff2dc" />
             <SummaryCard icon={<WarningAmberIcon />} label="Lost Pets" value={lostPets.length} color="#ef4444" bg="#ffe4e8" />
@@ -1016,15 +1025,18 @@ const FiruappDashboard: React.FC = () => {
                           </Typography>
                           <Chip
                             size="small"
-                            label={selectedPet.status === "active" ? "LIVE" : "LOST"}
+                            label={selectedPetGpsOnline ? "ONLINE" : "OFFLINE"}
                             sx={{
                               height: 28,
                               borderRadius: 999,
-                              bgcolor: selectedPet.status === "active" ? "#17c964" : "#ff3444",
+                              bgcolor: selectedPetGpsOnline ? "#17c964" : firuColors.muted,
                               color: "#ffffff",
                               fontWeight: 950,
                             }}
                           />
+                          {selectedPetIsLost && (
+                            <Chip size="small" label="LOST" sx={{ bgcolor: "#ff3444", color: "#ffffff", fontWeight: 950 }} />
+                          )}
                         </Stack>
                         <Typography variant="body2" sx={{ color: "#61728f", mt: 0.55, fontWeight: 700 }}>
                           {[selectedPet.breed || selectedPet.race || "Mixed Breed", selectedPet.age || "6 years", selectedPet.weight || "22 kg"].join("  ·  ")}
@@ -1046,8 +1058,8 @@ const FiruappDashboard: React.FC = () => {
                       mt: 2,
                       p: 1.65,
                       borderRadius: 2,
-                      bgcolor: selectedPetIsLost ? "#fff7f7" : "#f0fdf4",
-                      border: selectedPetIsLost ? "1px solid #ffb9bd" : "1px solid #bbf7d0",
+                      bgcolor: selectedPetLocationBg,
+                      border: `1px solid ${selectedPetLocationBorder}`,
                       display: "flex",
                       alignItems: "center",
                       gap: 1.4,
@@ -1056,25 +1068,25 @@ const FiruappDashboard: React.FC = () => {
                     {selectedPetIsLost ? (
                       <WarningAmberIcon sx={{ color: "#ff3444", fontSize: 34 }} />
                     ) : (
-                      <MyLocationIcon sx={{ color: firuColors.green, fontSize: 34 }} />
+                      <MyLocationIcon sx={{ color: selectedPetLocationColor, fontSize: 34 }} />
                     )}
                     <Box sx={{ minWidth: 0, flex: 1 }}>
-                      <Typography variant="subtitle2" sx={{ color: selectedPetIsLost ? "#cf1421" : "#15803d", fontWeight: 950 }}>
+                      <Typography variant="subtitle2" sx={{ color: selectedPetLocationColor, fontWeight: 950 }}>
                         Last seen
                       </Typography>
-                      <Typography variant="body2" sx={{ color: selectedPetIsLost ? "#cf1421" : "#15803d", fontWeight: 900 }}>
+                      <Typography variant="body2" sx={{ color: selectedPetLocationColor, fontWeight: 900 }}>
                         {selectedPetLastSeen}
                       </Typography>
                       <Typography variant="caption" sx={{ color: "#61728f", fontWeight: 700 }}>
                         {selectedPetLocationLabel}
                       </Typography>
                     </Box>
-                    <KeyboardArrowRightIcon sx={{ color: selectedPetIsLost ? "#ff3444" : firuColors.green }} />
+                    <KeyboardArrowRightIcon sx={{ color: selectedPetLocationColor }} />
                   </Box>
 
                   <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.2, mt: 1.4 }}>
                     <MetricCard icon={<BatteryChargingFullIcon fontSize="small" />} label="Battery" value={formatBatteryPercent(selectedPetBattery)} color={selectedPetBatteryColor} />
-                    <MetricCard icon={<WifiIcon fontSize="small" />} label="Signal" value={selectedPet.signal || "Weak"} color="#1685ff" />
+                    <MetricCard icon={<WifiIcon fontSize="small" />} label="Signal" value={selectedPetGpsOnline ? selectedPet.signal || "Unknown" : "Offline"} color={selectedPetGpsOnline ? "#1685ff" : firuColors.muted} />
                     <MetricCard icon={<SpeedIcon fontSize="small" />} label="Speed" value={selectedPet.speed || "0.6 km/h"} color="#8b5cf6" />
                     <MetricCard icon={<MyLocationIcon fontSize="small" />} label="GPS accuracy" value="6 meters" color="#1685ff" />
                     <MetricCard icon={<AccessTimeIcon fontSize="small" />} label="Last update" value={selectedPetLastSeen} color="#64748b" />

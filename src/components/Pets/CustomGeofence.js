@@ -117,15 +117,15 @@ const ClickHandler = ({ onClick }) => {
   return null;
 };
 
-const FitGeofences = ({ geofences, polygon, circleCenter }) => {
+const FitGeofences = ({ geofences, isCreatingGeofence }) => {
   const map = useMap();
 
   useEffect(() => {
-    const coordinates = [
-      ...geofences.flatMap((geofence) => geofence.type === "circle" ? [geofence.center] : geofence.coordinates),
-      ...polygon,
-      ...(circleCenter ? [circleCenter] : []),
-    ];
+    if (isCreatingGeofence) return;
+
+    const coordinates = geofences.flatMap((geofence) =>
+      geofence.type === "circle" ? [geofence.center] : geofence.coordinates
+    );
 
     if (!coordinates.length) return;
 
@@ -135,7 +135,7 @@ const FitGeofences = ({ geofences, polygon, circleCenter }) => {
     }
 
     map.fitBounds(coordinates, { padding: [32, 32] });
-  }, [geofences, polygon, circleCenter, map]);
+  }, [geofences, isCreatingGeofence, map]);
 
   return null;
 };
@@ -468,7 +468,7 @@ const CustomGeofence = () => {
           />
 
           <ClickHandler onClick={handleMapClick} />
-          <FitGeofences geofences={storedGeofences} polygon={polygon} circleCenter={circleCenter} />
+          <FitGeofences geofences={storedGeofences} isCreatingGeofence={isCreatingGeofence} />
 
           <FeatureGroup>
             {storedGeofences.map((geofence) =>

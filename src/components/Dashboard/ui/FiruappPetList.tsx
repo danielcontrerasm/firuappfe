@@ -35,11 +35,6 @@ interface PetsListProps {
   containerRef?: React.Ref<HTMLDivElement>;
 }
 
-const statusColorMap: Record<string, string> = {
-  active: firuColors.green,
-  lost: firuColors.red,
-};
-
 const getBatteryColor = (battery?: number) => {
   if (battery == null) return firuColors.muted;
   if (battery <= 20) return firuColors.red;
@@ -175,7 +170,7 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
             variant="overline"
             sx={{ color: firuColors.muted, fontWeight: 900, letterSpacing: 1.1, fontSize: { xs: 10, sm: 12 } }}
           >
-            Live pets
+            Tracked pets
           </Typography>
           <Typography
             variant="h6"
@@ -185,7 +180,7 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
           </Typography>
         </Box>
         <Chip
-          label={`${pets.length} online`}
+          label={`${pets.filter((pet) => pet.gpsOnline).length} online`}
           size="small"
           sx={{
             height: { xs: 22, sm: 24 },
@@ -214,7 +209,7 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
         {pets.map((pet) => {
           const petStatus = pet.status.toLowerCase();
           const isSelected = pet.id === selectedId;
-          const statusColor = statusColorMap[petStatus] || firuColors.green;
+          const gpsOnline = pet.gpsOnline === true;
           const details = [pet.race || pet.breed, pet.age, pet.weight].filter(Boolean).join(" · ");
 
           return (
@@ -258,17 +253,20 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
                       {pet.name}
                     </Typography>
                     <Chip
-                      label={pet.status === "active" ? "LIVE" : "LOST"}
+                      label={gpsOnline ? "ONLINE" : "OFFLINE"}
                       size="small"
                       sx={{
                         height: { xs: 22, sm: 24 },
-                        bgcolor: statusColor,
+                        bgcolor: gpsOnline ? firuColors.green : firuColors.muted,
                         color: "white",
                         fontSize: { xs: 9.5, sm: 10.5 },
                         fontWeight: 900,
                         "& .MuiChip-label": { px: { xs: 0.55, sm: 0.75 } },
                       }}
                     />
+                    {petStatus === "lost" && (
+                      <Chip label="LOST" size="small" sx={{ bgcolor: firuColors.red, color: "white", fontWeight: 900 }} />
+                    )}
                   </Box>
                 }
                 secondary={

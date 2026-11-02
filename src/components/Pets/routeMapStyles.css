@@ -157,6 +157,12 @@
   font-weight: 900;
 }
 
+.firu-route-range-tools {
+  max-width: calc(100% - 48px);
+  flex-wrap: wrap;
+  border-radius: 18px;
+}
+
 .firu-route-time-input {
   min-width: 168px;
   border: 1px solid rgba(226, 232, 240, 0.95);

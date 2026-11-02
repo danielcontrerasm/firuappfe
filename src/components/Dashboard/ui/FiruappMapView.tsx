@@ -9,6 +9,7 @@ import RadarIcon from "@mui/icons-material/Radar";
 import { firuColors, Pet } from "./FiruappStyles.ts";
 import { loadPetImage } from "../../../services/usePetImage.ts";
 import { buildApiUrl } from "../../../config/runtime";
+import { isGpsOnline, useGpsStatusTime } from "./petConnectivity.ts";
 
 interface PetLocation {
   id: string | number;
@@ -228,9 +229,10 @@ export const CenterMap: React.FC<{ markers: PetLocation[] }> = ({ markers }) => 
   return null;
 };
 
-const createPetIcon = (imageUrl?: string, status?: string, name?: string) => {
+const createPetIcon = (imageUrl?: string, status?: string, name?: string, gpsOnline = false) => {
   const alert = isAlertStatus(status);
-  const safeLabel = alert ? "Lost" : "Live";
+  const safeLabel = `${alert ? "Lost · " : ""}${gpsOnline ? "Online" : "Offline"}`;
+  const classes = [alert ? "alert" : "", gpsOnline ? "" : "offline"].filter(Boolean).join(" ");
   const safeName = escapeHtml(name || "Pet");
   const markerImage = imageUrl ? `<img src="${imageUrl}" alt="" />` : "🐾";
 
@@ -239,11 +241,11 @@ const createPetIcon = (imageUrl?: string, status?: string, name?: string) => {
     className: "firu-pet-marker-wrapper",
     html: `
       <div class="firu-pet-marker-shell ${alert ? "alert" : ""}">
-        <div class="firu-pet-marker ${alert ? "alert" : ""}">
+        <div class="firu-pet-marker ${classes}">
           ${markerImage}
         </div>
-        <div class="firu-pet-dot ${alert ? "alert" : ""}"></div>
-        <div class="firu-pet-label ${alert ? "alert" : ""}">
+        <div class="firu-pet-dot ${classes}"></div>
+        <div class="firu-pet-label ${classes}">
           <strong>${safeName}</strong>
           <span>${safeLabel}</span>
         </div>
@@ -290,6 +292,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
   onLocationsChange,
   containerRef,
 }) => {
+  const now = useGpsStatusTime();
   const [petLocations, setPetLocations] = useState<PetLocation[]>([]);
   const [petGeofences, setPetGeofences] = useState<PetGeofence[]>([]);
   const [showGeofences, setShowGeofences] = useState(true);
@@ -503,7 +506,8 @@ const FiruappMapView: React.FC<MapViewProps> = ({
     };
   }, [markerPetIds, markerPetIdsKey]);
 
-  const isLiveLocationData = petLocations.length > 0;
+  const onlineMarkerCount = displayMarkers.filter((pet) => isGpsOnline(pet.timestamp, now)).length;
+  const hasOnlinePets = onlineMarkerCount > 0;
   const activeMapStyle = mapStyles[mapStyle];
   const mapCityLabel = locationCity || displayMarkers.find((marker) => marker.city)?.city || "GPS city";
 
@@ -536,9 +540,9 @@ const FiruappMapView: React.FC<MapViewProps> = ({
           gap: 0.75,
         }}
       >
-        <GpsFixedIcon sx={{ fontSize: 15, color: isLiveLocationData ? firuColors.green : firuColors.orange }} />
+        <GpsFixedIcon sx={{ fontSize: 15, color: hasOnlinePets ? firuColors.green : firuColors.muted }} />
         <Typography variant="caption" sx={{ color: firuColors.dark, fontWeight: 900 }}>
-          {displayMarkers.length} active
+          {onlineMarkerCount} online
         </Typography>
       </Box>
 
@@ -578,6 +582,9 @@ const FiruappMapView: React.FC<MapViewProps> = ({
             borderColor: firuColors.red,
             boxShadow: "0 14px 32px rgba(239,68,68,.34)",
           },
+          "& .firu-pet-marker.offline:not(.alert)": {
+            borderColor: firuColors.muted,
+          },
           "& .firu-pet-marker-shell": {
             position: "relative",
             width: 58,
@@ -612,6 +619,9 @@ const FiruappMapView: React.FC<MapViewProps> = ({
           "& .firu-pet-dot.alert": {
             bgcolor: "#ff2534",
           },
+          "& .firu-pet-dot.offline": {
+            bgcolor: firuColors.muted,
+          },
           "& .firu-pet-label": {
             position: "absolute",
             left: 54,
@@ -640,6 +650,9 @@ const FiruappMapView: React.FC<MapViewProps> = ({
           },
           "& .firu-pet-label.alert span": {
             color: "#ff2534",
+          },
+          "& .firu-pet-label.offline:not(.alert) span": {
+            color: firuColors.muted,
           },
           "& .firu-pet-marker img": {
             width: "100%",
@@ -759,7 +772,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
               <Marker
                 key={`${pet.id}-${markerState}-${markerImage || pet.imageUrl || pet.avatarUrl || "no-image"}`}
                 position={[pet.latitude, pet.longitude]}
-                icon={createPetIcon(markerImage || pet.imageUrl || pet.avatarUrl, markerStatus, pet.petName)}
+                icon={createPetIcon(markerImage || pet.imageUrl || pet.avatarUrl, markerStatus, pet.petName, isGpsOnline(pet.timestamp, now))}
                 eventHandlers={{
                   click: () => {
                     if (dashboardPetId) onSelectPet?.(dashboardPetId);
@@ -804,7 +817,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
         </Stack>
         <Chip
           icon={<GpsFixedIcon sx={{ fontSize: 18 }} />}
-          label={`${displayMarkers.length} pets online`}
+          label={`${onlineMarkerCount} pets online`}
           sx={{
             pointerEvents: "auto",
             height: 42,
@@ -814,7 +827,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
             color: "#0f1b34",
             fontWeight: 950,
             boxShadow: "0 12px 26px rgba(15,23,42,0.12)",
-            "& .MuiChip-icon": { color: isLiveLocationData ? "#17c964" : "#17c964" },
+            "& .MuiChip-icon": { color: hasOnlinePets ? firuColors.green : firuColors.muted },
           }}
         />
       </Box>
@@ -893,10 +906,10 @@ const FiruappMapView: React.FC<MapViewProps> = ({
           ACTIVE SIGNALS
         </Typography>
         <Typography variant="h4" sx={{ fontWeight: 950, mt: 0.5 }}>
-          {displayMarkers.length}
+          {onlineMarkerCount}
         </Typography>
         <Typography variant="body2" sx={{ color: "#cbd5e1" }}>
-          Tracking collars reporting now
+          Tracking collars reporting recently
         </Typography>
       </Box>
     </Box>

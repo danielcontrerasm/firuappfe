@@ -119,6 +119,16 @@ const toRouteRangeParam = (value) => {
   return Number.isNaN(date.getTime()) ? "" : date.toISOString();
 };
 
+const recentRoutePeriods = [
+  { minutes: 10, label: "10 minutes" },
+  { minutes: 60, label: "1 hour" },
+];
+
+const toRouteTimeInput = (date) => {
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+};
+
 const extractPetDtos = (data) => {
   if (Array.isArray(data)) return data;
   return data?.content || data?.items || data?.pets || data?.data || data?.results || data?.rows || data?.payload || [];
@@ -222,10 +232,13 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
   useEffect(() => {
     if (!selectedPetId) {
       setRoutePoints([]);
+      setLoadingRoute(false);
       setAppliedRouteRange(null);
       setWalkDistanceWeek(normalizeWalkDistanceWeek([]));
       return;
     }
+
+    let cancelled = false;
 
     const fetchPetRoute = async () => {
       setLoadingRoute(true);
@@ -251,16 +264,19 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
           petName: point.petName || selectedPet?.name || "Unknown",
         }));
 
-        setRoutePoints(normalizedRoutePoints);
+        if (!cancelled) setRoutePoints(normalizedRoutePoints);
       } catch (error) {
         console.error("Error fetching pet route:", error);
-        setRoutePoints([]);
+        if (!cancelled) setRoutePoints([]);
       } finally {
-        setLoadingRoute(false);
+        if (!cancelled) setLoadingRoute(false);
       }
     };
 
     fetchPetRoute();
+    return () => {
+      cancelled = true;
+    };
   }, [apiBaseUrl, appliedRouteRange, selectedPet?.name, selectedPetId]);
 
   useEffect(() => {
@@ -330,6 +346,18 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
     setAppliedRouteRange(null);
   };
 
+  const handleRecentRoutePeriod = ({ minutes, label }) => {
+    const to = new Date();
+    const from = new Date(to.getTime() - minutes * 60 * 1000);
+    const range = { from: toRouteTimeInput(from), to: toRouteTimeInput(to) };
+    setRouteRange(range);
+    setAppliedRouteRange({ ...range, presetLabel: label });
+  };
+
+  const routePeriodLabel = appliedRouteRange
+    ? appliedRouteRange.presetLabel ? `Last ${appliedRouteRange.presetLabel}` : "Selected time range"
+    : "Last 3 hours";
+
   const routeCoords = useMemo(
     () => routePoints.map((point) => [point.latitude, point.longitude]),
     [routePoints]
@@ -356,7 +384,7 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
   return (
     <div className="firu-route-page">
       <div className="firu-route-header">
-        <h2>Movement trail · Last 3 hours</h2>
+        <h2>Movement trail · {routePeriodLabel}</h2>
         <p>
           {loadingPets ? "Loading pets from the database." : "Select a database pet and optionally search positions by time range."}
         </p>
@@ -413,11 +441,24 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
           ))}
         </MapContainer>
 
-        <div className="firu-route-tools">
+        <div className="firu-route-tools firu-route-range-tools">
           <span className="firu-route-tool">Route</span>
+          {recentRoutePeriods.map((period) => (
+            <button
+              key={period.minutes}
+              type="button"
+              className={`firu-route-tool firu-geofence-button ${appliedRouteRange?.presetLabel === period.label ? "active" : ""}`}
+              aria-pressed={appliedRouteRange?.presetLabel === period.label}
+              onClick={() => handleRecentRoutePeriod(period)}
+              disabled={!selectedPetId || loadingRoute}
+            >
+              {period.label}
+            </button>
+          ))}
           <input
             className="firu-route-time-input"
             type="datetime-local"
+            step="1"
             value={routeRange.from}
             onChange={(event) => setRouteRange((current) => ({ ...current, from: event.target.value }))}
             aria-label="Route range from"
@@ -425,6 +466,7 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
           <input
             className="firu-route-time-input"
             type="datetime-local"
+            step="1"
             value={routeRange.to}
             onChange={(event) => setRouteRange((current) => ({ ...current, to: event.target.value }))}
             aria-label="Route range to"
@@ -484,9 +526,7 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
             {loadingRoute
               ? "Loading route positions"
               : selectedRoute
-                ? appliedRouteRange
-                  ? `${selectedRoute.petName}'s selected range`
-                  : `${selectedRoute.petName}'s last 3 hours`
+                ? `${selectedRoute.petName}'s ${routePeriodLabel.toLowerCase()}`
                 : loadingPets
                   ? "Loading database pets"
                   : "Select a pet to show its trail"}

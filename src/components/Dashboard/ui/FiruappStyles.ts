@@ -6,6 +6,7 @@ export interface Pet {
   apiId?: string;
   name: string;
   status: PetStatus;
+  gpsOnline?: boolean;
   ownerName?: string;
   city?: string;
   neighborhood?: string;
