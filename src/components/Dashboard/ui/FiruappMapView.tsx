@@ -1,5 +1,5 @@
 // ui/FiruappMapView.tsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Box, Chip, Stack, Typography } from "@mui/material";
 import axios from "axios";
 import { Circle, MapContainer, Marker, Polygon, Popup, TileLayer, useMap } from "react-leaflet";
@@ -217,14 +217,16 @@ const normalizeGeofences = (data: any, pet: { id: string; name: string }): PetGe
     .filter(Boolean) as PetGeofence[];
 };
 
-export const CenterMap: React.FC<{ markers: PetLocation[] }> = ({ markers }) => {
+export const CenterMap: React.FC<{ markers: PetLocation[]; selectionKey: string }> = ({ markers, selectionKey }) => {
   const map = useMap();
+  const fittedSelection = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!markers.length) return;
+    if (!markers.length || fittedSelection.current === selectionKey) return;
     const bounds = L.latLngBounds(markers.map((pet) => [pet.latitude, pet.longitude]));
     map.fitBounds(bounds, { padding: [80, 80], maxZoom: 14 });
-  }, [markers, map]);
+    fittedSelection.current = selectionKey;
+  }, [markers, map, selectionKey]);
 
   return null;
 };
@@ -331,6 +333,8 @@ const FiruappMapView: React.FC<MapViewProps> = ({
       ),
     [pets]
   );
+  // Metadata and GPS refreshes keep the same selection, preserving manual zoom and panning.
+  const selectionKey = JSON.stringify([petDataMode, Array.from(visiblePetIds).sort()]);
 
   useEffect(() => {
     const fetchPetLocations = async () => {
@@ -706,7 +710,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
             url={activeMapStyle.url}
             attribution={activeMapStyle.attribution}
           />
-          <CenterMap markers={displayMarkers} />
+          <CenterMap markers={displayMarkers} selectionKey={selectionKey} />
 
           {/*
           <Circle center={[mainMarker.latitude, mainMarker.longitude]} radius={550} pathOptions={{ color: firuColors.cyan, fillColor: firuColors.cyan, fillOpacity: 0.08, weight: 2 }} />
