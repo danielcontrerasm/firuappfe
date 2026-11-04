@@ -1,6 +1,6 @@
 // ui/FiruappSidebar.tsx
-import React, { useState } from "react";
-import { Avatar, Box, Button, Drawer, IconButton } from "@mui/material";
+import React from "react";
+import { Avatar, Box, Button } from "@mui/material";
 import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import PetsIcon from "@mui/icons-material/Pets";
 import RadarIcon from "@mui/icons-material/Radar";
@@ -12,7 +12,7 @@ import AssessmentIcon from "@mui/icons-material/Assessment";
 import GroupIcon from "@mui/icons-material/Group";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import ContentPasteSearchIcon from "@mui/icons-material/ContentPasteSearch";
-import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
+import MobileNavigation from "./MobileNavigation.tsx";
 import { firuColors } from "./FiruappStyles.ts";
 
 interface SidebarProps {
@@ -29,23 +29,21 @@ const navItems = [
   { label: "Lost Pets Wall", icon: ContentPasteSearchIcon, to: "/lost-pets" },
   { label: "GPS Sensors", icon: SensorsIcon, to: "/sensors" },
   { label: "Users", icon: PersonIcon, to: "/users" },
+  { label: "Mi perfil", icon: PersonIcon, to: "/profile" },
   { label: "Alerts", icon: NotificationsActiveIcon, to: "/alerts" },
 ];
 
 const FiruappSidebar: React.FC<SidebarProps> = ({ onChange }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     navigate("/login", { replace: true });
-    setMobileOpen(false);
   };
 
   const handleNavigate = (section?: SidebarProps["current"]) => {
     if (section) onChange?.(section);
-    setMobileOpen(false);
   };
 
   const navContent = (
@@ -164,47 +162,13 @@ const FiruappSidebar: React.FC<SidebarProps> = ({ onChange }) => {
 
   return (
     <>
-      <IconButton
-        aria-label="Open navigation"
-        onClick={() => setMobileOpen(true)}
-        sx={{
-          display: { xs: "inline-flex", md: "none" },
-          position: "fixed",
-          top: 14,
-          left: 14,
-          zIndex: 1300,
-          width: 44,
-          height: 44,
-          bgcolor: "rgba(255,255,255,0.96)",
-          border: "1px solid rgba(226,232,240,0.95)",
-          boxShadow: "0 14px 30px rgba(15,23,42,0.14)",
-          color: firuColors.dark,
-          "&:hover": { bgcolor: "#ffffff" },
-        }}
-      >
-        <MenuRoundedIcon />
-      </IconButton>
+      <MobileNavigation />
 
       <Box component="aside" sx={{ display: { xs: "none", md: "block" }, flexShrink: 0 }}>
         {navContent}
       </Box>
 
-      <Drawer
-        anchor="left"
-        open={mobileOpen}
-        onClose={() => setMobileOpen(false)}
-        sx={{
-          display: { xs: "block", md: "none" },
-          "& .MuiDrawer-paper": {
-            width: 284,
-            borderRight: "none",
-            boxShadow: "12px 0 34px rgba(15,23,42,0.18)",
-            background: "transparent",
-          },
-        }}
-      >
-        {navContent}
-      </Drawer>
+
     </>
   );
 };

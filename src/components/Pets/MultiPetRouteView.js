@@ -5,17 +5,19 @@ import axios from "axios";
 import { CenterRouteMap, normalizeRouteLocations } from "./routeMapUtils";
 import FiruappPetsList from "../Dashboard/ui/FiruappPetList.tsx";
 import "./routeMapStyles.css";
+import MapControls from "./MapControls.tsx";
+import PageHeader from "../Dashboard/ui/PageHeader.tsx";
 import { buildApiUrl } from "../../config/runtime";
 
 const mapStyles = {
   clean: {
-    label: "Clean map",
-    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    label: "Mapa claro",
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   },
   natural: {
-    label: "Natural map",
+    label: "Mapa detallado",
     url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   },
@@ -155,25 +157,20 @@ const mapDtoToRoutePet = (dto) => {
   };
 };
 
-const createPetIcon = () =>
-  L.divIcon({
-    className: "firu-marker",
-    html: `
-      <div class="firu-marker-wrap">
-        <div class="firu-marker-pulse"></div>
-        <div class="firu-marker-core">🐾</div>
-      </div>
-    `,
-    iconSize: [58, 58],
-    iconAnchor: [29, 29],
-    popupAnchor: [0, -30],
-  });
+const createRoutePointIcon = (index) => L.divIcon({
+  className: "firu-route-point-marker",
+  html: `<div class="firu-route-point">${index + 1}</div>`,
+  iconSize: [34, 34],
+  iconAnchor: [17, 17],
+  popupAnchor: [0, -18],
+});
 
 const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
+  const initialPetId = new URLSearchParams(window.location.search).get("petId");
   const [routePets, setRoutePets] = useState([]);
   const [routePoints, setRoutePoints] = useState([]);
-  const [selectedPetId, setSelectedPetId] = useState(null);
-  const [mapStyle, setMapStyle] = useState("natural");
+  const [selectedPetId, setSelectedPetId] = useState(initialPetId);
+  const [mapStyle, setMapStyle] = useState("clean");
   const [loadingPets, setLoadingPets] = useState(true);
   const [loadingRoute, setLoadingRoute] = useState(false);
   const [loadingWalkDistance, setLoadingWalkDistance] = useState(false);
@@ -225,9 +222,9 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
 
   useEffect(() => {
     setSelectedPetId((currentSelectedId) =>
-      routePets.some((pet) => pet.id === currentSelectedId) ? currentSelectedId : null
+      routePets.some((pet) => pet.id === currentSelectedId) ? currentSelectedId : (routePets.find(pet => pet.id === initialPetId)?.id || null)
     );
-  }, [routePets]);
+  }, [routePets, initialPetId]);
 
   useEffect(() => {
     if (!selectedPetId) {
@@ -376,13 +373,11 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
     [routeCoords, routePoints, selectedPet?.name, selectedPetId]
   );
 
-  const petIcon = useMemo(
-    () => createPetIcon(),
-    []
-  );
 
   return (
-    <div className="firu-route-page">
+    <div className="firu-route-page firu-history-page">
+      <div className="firu-mobile-only"><PageHeader title="Historial" /></div>
+      <div className="firu-history-intro firu-mobile-only"><h2>{selectedPet ? `Recorrido de ${selectedPet.name}` : 'Los pasos de tu mascota'}</h2><p>Selecciona una mascota para ver sus últimas posiciones.</p></div>
       <div className="firu-route-header">
         <h2>Movement trail · {routePeriodLabel}</h2>
         <p>
@@ -391,15 +386,16 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
       </div>
 
       <div className={`firu-route-map-shell map-style-${mapStyle}`}>
-        <FiruappPetsList
+        <div className="firu-history-pets"><FiruappPetsList
           pets={routePets}
           selectedId={selectedPetId || undefined}
           onSelect={setSelectedPetId}
-        />
+        /></div>
 
-        <MapContainer
+        <div className="firu-map-canvas"><MapContainer
           center={[6.235, -75.585]}
           zoom={13}
+          zoomControl={false}
           style={{ height: "100%", width: "100%" }}
         >
           <TileLayer
@@ -409,11 +405,12 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
           />
 
           <CenterRouteMap coords={routeCoords} />
+          <MapControls coordinates={routeCoords} cleanLayer={mapStyle === "clean"} onToggleLayer={() => setMapStyle(current => current === "natural" ? "clean" : "natural")} />
 
           {selectedRoute?.coords.length > 1 && (
             <Polyline
               positions={selectedRoute.coords}
-              pathOptions={{ color: "#8b5cf6", weight: 4, opacity: 0.65, dashArray: "8 8" }}
+              pathOptions={{ color: "#14b8a6", weight: 5, opacity: 0.9 }}
             />
           )}
 
@@ -421,7 +418,7 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
             <Marker
               key={`${selectedRoute.petId}-${point.latitude}-${point.longitude}-${pointIndex}`}
               position={[point.latitude, point.longitude]}
-              icon={petIcon}
+              icon={createRoutePointIcon(pointIndex)}
             >
               <Popup>
                 <strong>{selectedRoute.petName}</strong>
@@ -439,7 +436,8 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
               </Popup>
             </Marker>
           ))}
-        </MapContainer>
+        </MapContainer></div>
+        <div className="firu-route-mobile-stats firu-mobile-only"><div><strong>{selectedRoute?.points.length || 0}</strong><span>posiciones</span></div><div><strong>{formatDistanceKm(weeklyWalkDistanceTotal)}</strong><span>esta semana</span></div></div>
 
         <div className="firu-route-tools firu-route-range-tools">
           <span className="firu-route-tool">Route</span>

@@ -15,6 +15,7 @@ import PetsIcon from "@mui/icons-material/Pets";
 import PlaceIcon from "@mui/icons-material/Place";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import { useNavigate } from "react-router-dom";
+import FiruBrand from "../Dashboard/ui/FiruBrand.tsx";
 import { buildApiUrl } from "../../config/runtime";
 
 function Register() {
@@ -47,6 +48,7 @@ function Register() {
 
   return (
     <Box
+      className="firu-auth-page"
       sx={{
         minHeight: "100vh",
         display: "flex",
@@ -96,6 +98,7 @@ function Register() {
         </Box>
 
         <Paper
+          className="firu-auth-card"
           elevation={0}
           sx={{
             width: "100%",
@@ -111,17 +114,12 @@ function Register() {
           }}
         >
           <Box sx={{ textAlign: "center", mb: 3 }}>
-            <Box
-              component="img"
-              src="/logo_sidebar.png"
-              alt="FiruApp logo"
-              sx={{ width: 150, height: 118, objectFit: "contain" }}
-            />
+            <FiruBrand stacked />
             <Typography variant="h4" sx={{ mt: 1, color: "#0f172a", fontWeight: 950 }}>
-              Create account
+              Crea tu cuenta
             </Typography>
             <Typography variant="body2" sx={{ mt: 0.75, color: "#64748b" }}>
-              Set up your owner profile to manage pets, routes, and alerts.
+              Empieza a cuidar a quienes más amas.
             </Typography>
           </Box>
 
@@ -129,7 +127,8 @@ function Register() {
             <Stack spacing={1.5}>
               <TextField
                 fullWidth
-                label="Full name"
+                label="Nombre completo"
+                autoComplete="name"
                 variant="outlined"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -138,7 +137,8 @@ function Register() {
               />
               <TextField
                 fullWidth
-                label="Email"
+                label="Correo electrónico"
+                autoComplete="email"
                 type="email"
                 variant="outlined"
                 value={email}
@@ -148,18 +148,20 @@ function Register() {
               />
               <TextField
                 fullWidth
-                label="Password"
+                label="Contraseña"
+                autoComplete="new-password"
                 type="password"
                 variant="outlined"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                helperText="Use a password you can keep for owner access."
+                helperText="Elige una contraseña para proteger tu cuenta."
                 sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3, bgcolor: "#f8fafc" } }}
               />
             </Stack>
 
             <Button
+              className="firu-login-submit"
               type="submit"
               variant="contained"
               fullWidth
@@ -178,14 +180,14 @@ function Register() {
               }}
               disabled={loading}
             >
-              {loading ? <CircularProgress size={24} color="inherit" /> : "Create account"}
+              {loading ? <CircularProgress size={24} color="inherit" /> : "Crear cuenta"}
             </Button>
           </form>
 
           <Typography variant="body2" sx={{ mt: 2, color: "#64748b", textAlign: "center" }}>
-            Already have an account?{" "}
+            ¿Ya tienes cuenta?{" "}
             <a href="/login" style={{ color: "#0e7490", fontWeight: 900, textDecoration: "none" }}>
-              Sign in
+              Inicia sesión
             </a>
           </Typography>
         </Paper>

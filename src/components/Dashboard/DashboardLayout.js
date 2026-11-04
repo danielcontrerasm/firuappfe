@@ -16,6 +16,7 @@ const DashboardLayout = () => {
 
   return (
     <Box
+      className="firu-app-layout"
       sx={{
         minHeight: "100vh",
         display: "flex",
@@ -25,6 +26,7 @@ const DashboardLayout = () => {
       <FiruappSidebar current={current} />
 
       <Box
+        className="firu-layout-content"
         sx={{
           flexGrow: 1,
           minWidth: 0,

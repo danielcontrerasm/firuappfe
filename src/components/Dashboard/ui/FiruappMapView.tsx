@@ -6,6 +6,7 @@ import { Circle, MapContainer, Marker, Polygon, Popup, TileLayer, useMap } from 
 import L, { LatLngExpression } from "leaflet";
 import GpsFixedIcon from "@mui/icons-material/GpsFixed";
 import RadarIcon from "@mui/icons-material/Radar";
+import MapControls from "../../Pets/MapControls.tsx";
 import { firuColors, Pet } from "./FiruappStyles.ts";
 import { loadPetImage } from "../../../services/usePetImage.ts";
 import { buildApiUrl } from "../../../config/runtime";
@@ -63,16 +64,16 @@ const petImagesByName: Record<string, string> = {
 const geofenceColors = [firuColors.cyan, firuColors.green, firuColors.orange, firuColors.violet];
 const mapStyles = {
   clean: {
-    label: "Clean map",
-    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    filter: "saturate(0.82) contrast(1.02) brightness(1.03)",
-  },
-  natural: {
-    label: "Natural map",
+    label: "Mapa claro",
     url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    filter: "saturate(1.45) contrast(1.08) brightness(1.02)",
+    filter: "saturate(0.4) contrast(0.85) brightness(1.1)",
+  },
+  natural: {
+    label: "Mapa detallado",
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    filter: "saturate(0.85) contrast(0.98) brightness(1.03)",
   },
 };
 
@@ -298,7 +299,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
   const [petLocations, setPetLocations] = useState<PetLocation[]>([]);
   const [petGeofences, setPetGeofences] = useState<PetGeofence[]>([]);
   const [showGeofences, setShowGeofences] = useState(true);
-  const [mapStyle, setMapStyle] = useState<"clean" | "natural">("natural");
+  const [mapStyle, setMapStyle] = useState<"clean" | "natural">("clean");
   const [petImageBlobUrls, setPetImageBlobUrls] = useState<Record<string, string>>({});
   const statusByPetId = useMemo(
     () =>
@@ -521,6 +522,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
   return (
     <Box
       ref={containerRef}
+      className="firu-live-map"
       sx={{
         position: "relative",
         height: { xs: "calc(100vh - 190px)", md: "calc(100vh - 365px)", xl: "calc(100vh - 330px)" },
@@ -528,6 +530,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
       }}
     >
       <Box
+        className="firu-map-online-label"
         sx={{
           display: { xs: "flex", md: "none" },
           position: "absolute",
@@ -704,13 +707,14 @@ const FiruappMapView: React.FC<MapViewProps> = ({
           },
         }}
       >
-        <MapContainer center={fallbackCenter} zoom={14} style={{ height: "100%", width: "100%" }}>
+        <MapContainer center={fallbackCenter} zoom={14} zoomControl={false} style={{ height: "100%", width: "100%" }}>
           <TileLayer
             key={mapStyle}
             url={activeMapStyle.url}
             attribution={activeMapStyle.attribution}
           />
           <CenterMap markers={displayMarkers} selectionKey={selectionKey} />
+          <MapControls coordinates={displayMarkers.map(pet => [pet.latitude, pet.longitude])} cleanLayer={mapStyle === "clean"} onToggleLayer={() => setMapStyle(current => current === "natural" ? "clean" : "natural")} />
 
           {/*
           <Circle center={[mainMarker.latitude, mainMarker.longitude]} radius={550} pathOptions={{ color: firuColors.cyan, fillColor: firuColors.cyan, fillOpacity: 0.08, weight: 2 }} />
@@ -795,6 +799,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
       </Box>
 
       <Box
+        className="firu-map-desktop-overlay"
         sx={{
           position: "absolute",
           left: { xs: 12, md: 16 },
@@ -837,6 +842,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
       </Box>
 
       <Box
+        className="firu-map-desktop-overlay"
         sx={{
           position: "absolute",
           left: { xs: 12, md: 16 },
@@ -868,7 +874,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
           }}
         >
           <GpsFixedIcon sx={{ fontSize: 18 }} />
-          Map
+          Mapa
         </Box>
         <Box
           onClick={() => setMapStyle("clean")}
@@ -887,7 +893,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
           }}
         >
           <RadarIcon sx={{ fontSize: 18 }} />
-          Satellite
+          Claro
         </Box>
       </Box>
 

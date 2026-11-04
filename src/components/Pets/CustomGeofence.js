@@ -1,3 +1,4 @@
+import { useMediaQuery } from "@mui/material";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FeatureGroup,
@@ -15,17 +16,22 @@ import axios from "axios";
 import { useSearchParams } from "react-router-dom";
 import "./routeMapStyles.css";
 import { buildApiUrl } from "../../config/runtime";
+import MapControls from "./MapControls.tsx";
+import PageHeader from "../Dashboard/ui/PageHeader.tsx";
+import AddIcon from "@mui/icons-material/Add";
+import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 
-const defaultGeofenceNames = ["Home", "Park", "Parents House", "Family", "Farm"];
+const defaultGeofenceNames = ["Casa", "Parque", "Casa de los abuelos", "Familia", "Finca"];
 const mapStyles = {
   clean: {
-    label: "Clean map",
-    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    label: "Mapa claro",
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   },
   natural: {
-    label: "Natural map",
+    label: "Mapa detallado",
     url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   },
@@ -141,9 +147,11 @@ const FitGeofences = ({ geofences, isCreatingGeofence }) => {
 };
 
 const CustomGeofence = () => {
+  const isMobile = useMediaQuery("(max-width:899.95px)");
   const [searchParams, setSearchParams] = useSearchParams();
   const activePetId = searchParams.get("petId") || "all";
   const activePetIdNumber = Number(activePetId);
+  const [showFilters, setShowFilters] = useState(false);
   const [drawMode, setDrawMode] = useState("polygon");
   const [isCreatingGeofence, setIsCreatingGeofence] = useState(false);
   const [polygon, setPolygon] = useState([]);
@@ -154,7 +162,7 @@ const CustomGeofence = () => {
   const [pets, setPets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingPets, setLoadingPets] = useState(true);
-  const [mapStyle, setMapStyle] = useState("natural");
+  const [mapStyle, setMapStyle] = useState("clean");
   const [petFilters, setPetFilters] = useState({
     city: "",
     neighborhood: "",
@@ -408,7 +416,9 @@ const CustomGeofence = () => {
   };
 
   return (
-    <div className="firu-route-page geofence-page">
+    <div className={`firu-route-page geofence-page${isCreatingGeofence ? " is-creating" : ""}`}>
+      <div className="firu-mobile-only"><PageHeader title="Zonas seguras" /></div>
+      <div className="firu-geofence-intro firu-mobile-only"><h2>Protección donde más importa</h2><p>Recibe una alerta si tu mascota sale de las áreas configuradas.</p></div>
       <div className="firu-route-header">
         <h2>Geofence builder</h2>
         <p>
@@ -420,7 +430,8 @@ const CustomGeofence = () => {
         </p>
       </div>
 
-      <div className="firu-geofence-searchbar">
+      <button type="button" className="firu-filter-toggle firu-mobile-only" aria-expanded={showFilters} onClick={() => setShowFilters(current => !current)}>Filtrar mascotas</button>
+      <div className={`firu-geofence-searchbar${showFilters ? " is-open" : ""}`}>
         <input
           className="firu-geofence-search-input"
           placeholder="Search by city"
@@ -456,9 +467,10 @@ const CustomGeofence = () => {
       </div>
 
       <div className={`firu-route-map-shell map-style-${mapStyle}`}>
-        <MapContainer
+        <div className="firu-map-canvas"><MapContainer
           center={[6.235, -75.585]}
           zoom={13}
+          zoomControl={false}
           style={{ width: "100%", height: "100%" }}
         >
           <TileLayer
@@ -467,6 +479,7 @@ const CustomGeofence = () => {
             attribution={activeMapStyle.attribution}
           />
 
+          <MapControls coordinates={storedGeofences.flatMap(geofence => geofence.type === "circle" ? [geofence.center] : geofence.coordinates)} cleanLayer={mapStyle === "clean"} onToggleLayer={() => setMapStyle(current => current === "natural" ? "clean" : "natural")} />
           <ClickHandler onClick={handleMapClick} />
           <FitGeofences geofences={storedGeofences} isCreatingGeofence={isCreatingGeofence} />
 
@@ -477,7 +490,7 @@ const CustomGeofence = () => {
                   key={geofence.id}
                   center={geofence.center}
                   radius={geofence.radiusMeters}
-                  pathOptions={{ color: "#06b6d4", fillColor: "#06b6d4", fillOpacity: 0.1, weight: 3 }}
+                  pathOptions={{ color: "#27b365", fillColor: "#63db7d", fillOpacity: 0.18, weight: 3 }}
                 >
                   <Popup>
                     <div className="firu-geofence-popup">
@@ -493,7 +506,7 @@ const CustomGeofence = () => {
                 <Polygon
                   key={geofence.id}
                   positions={geofence.coordinates}
-                  pathOptions={{ color: "#06b6d4", fillColor: "#06b6d4", fillOpacity: 0.1, weight: 3 }}
+                  pathOptions={{ color: "#27b365", fillColor: "#63db7d", fillOpacity: 0.18, weight: 3 }}
                 >
                   <Popup>
                     <div className="firu-geofence-popup">
@@ -530,7 +543,15 @@ const CustomGeofence = () => {
               />
             )}
           </FeatureGroup>
-        </MapContainer>
+        </MapContainer></div>
+
+        {isMobile && <div className="firu-mobile-zone-create firu-mobile-only">
+          <label>Mascota<select aria-label="Mascota para la zona segura" value={activePetId} onChange={handlePetFilterChange}><option value="all">Todas las mascotas</option>{filteredPets.map(pet => <option key={pet.id} value={pet.id}>{pet.name}</option>)}</select></label>
+          <button type="button" className="firu-primary-button" disabled={!filteredPets.length || loadingPets} onClick={() => {
+            if (activePetId === "all" && filteredPets.length) handlePetSelection(filteredPets[0].id);
+            setPolygon([]); setCircleCenter(null); setIsCreatingGeofence(true);
+          }}><AddIcon />Nueva geocerca</button>
+        </div>}
 
         <div className="firu-geofence-pets">
           <div className="firu-geofence-pets-title">Pets</div>
@@ -589,6 +610,7 @@ const CustomGeofence = () => {
           </select>
           <select
             className="firu-geofence-name-select"
+            aria-label="Nombre de la zona"
             value={geofenceName}
             onChange={(event) => setGeofenceName(event.target.value)}
           >
@@ -599,23 +621,24 @@ const CustomGeofence = () => {
             ))}
           </select>
           <button
+            style={isMobile ? { display: "none" } : undefined}
             className={`firu-route-tool firu-geofence-button ${isCreatingGeofence ? "active" : ""}`}
             onClick={handleStartGeofence}
             disabled={activePetId === "all"}
           >
-            Create
+            {isMobile ? "Crear" : "Create"}
           </button>
           <button
             className={`firu-route-tool firu-geofence-button ${drawMode === "polygon" ? "active" : ""}`}
             onClick={() => handleDrawModeChange("polygon")}
           >
-            Polygon
+            {isMobile ? "Polígono" : "Polygon"}
           </button>
           <button
             className={`firu-route-tool firu-geofence-button ${drawMode === "circle" ? "active" : ""}`}
             onClick={() => handleDrawModeChange("circle")}
           >
-            Circle
+            {isMobile ? "Círculo" : "Circle"}
           </button>
           <button
             className="firu-route-tool firu-geofence-button"
@@ -626,6 +649,7 @@ const CustomGeofence = () => {
           {drawMode === "circle" && (
             <input
               className="firu-geofence-radius"
+              aria-label="Radio de la zona en metros"
               min="50"
               max="2000"
               step="50"
@@ -639,14 +663,14 @@ const CustomGeofence = () => {
             onClick={handleSaveGeofence}
             disabled={!isCreatingGeofence || (drawMode === "circle" ? !circleCenter : polygon.length < 3)}
           >
-            Save
+            {isMobile ? "Guardar" : "Save"}
           </button>
           <button
             className="firu-route-tool firu-geofence-button"
             onClick={handleClearPolygon}
-            disabled={drawMode === "circle" ? !circleCenter : !polygon.length}
+            disabled={!isMobile && (drawMode === "circle" ? !circleCenter : !polygon.length)}
           >
-            Clear
+            {isMobile ? "Cancelar" : "Clear"}
           </button>
         </div>
 
@@ -658,22 +682,24 @@ const CustomGeofence = () => {
           <span className="firu-route-pill"><span className="firu-route-dot" /> {storedGeofences.length} SAVED</span>
         </div>
 
-        {storedGeofences.length > 0 && (
+        {(!loading || storedGeofences.length > 0) && (
           <div className="firu-geofence-list">
-            <div className="firu-geofence-list-title">Saved geofences</div>
+            <div className="firu-geofence-list-title"><span className="firu-desktop-only">Saved geofences</span><span className="firu-mobile-only">Mis geocercas</span><span>{storedGeofences.length} zonas</span></div>
+            {!storedGeofences.length && <p className="firu-geofence-empty">Aún no hay zonas guardadas. Crea una para proteger a tu mascota.</p>}
             {storedGeofences.map((geofence) => (
               <div className="firu-geofence-list-row" key={geofence.id}>
+                <span className="firu-zone-icon firu-mobile-only"><HomeOutlinedIcon /></span>
                 <div>
                   <strong>{geofence.name}</strong>
                   <span>
                     {geofence.petName ? `${geofence.petName} · ` : ""}
                     {geofence.type === "circle"
-                      ? `Circle · ${Math.round(geofence.radiusMeters)} m`
-                      : `Polygon · ${geofence.coordinates.length} points`}
+                      ? `Zona segura · ${Math.round(geofence.radiusMeters)} m`
+                      : `Polígono · ${geofence.coordinates.length} puntos`}
                   </span>
                 </div>
-                <button type="button" onClick={() => handleDeleteGeofence(geofence)}>
-                  Delete
+                <button type="button" aria-label={`Eliminar zona ${geofence.name}`} onClick={() => handleDeleteGeofence(geofence)}>
+                  <span className="firu-desktop-only">Delete</span><DeleteOutlineIcon className="firu-mobile-only" />
                 </button>
               </div>
             ))}

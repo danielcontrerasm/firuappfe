@@ -16,6 +16,7 @@ import {
   FormControl,
   Toolbar,
   Pagination,
+  useMediaQuery,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
@@ -47,6 +48,7 @@ export interface EntityListPageProps<T> {
   onDelete?: (row: T) => void;
 
   pageSize?: number;
+  renderMobileRow?: (row: T) => React.ReactNode;
 }
 
 function EntityListPage<T extends { id: string | number }>({
@@ -62,7 +64,9 @@ function EntityListPage<T extends { id: string | number }>({
   onEdit,
   onDelete,
   pageSize = 5,
+  renderMobileRow,
 }: EntityListPageProps<T>) {
+  const isMobile = useMediaQuery("(max-width:899.95px)");
   const [search, setSearch] = useState("");
   const [filterValue, setFilterValue] = useState<string>("__all__");
   const [page, setPage] = useState(1);
@@ -97,6 +101,7 @@ function EntityListPage<T extends { id: string | number }>({
 
   return (
     <Box
+      className="firu-entity-page"
       sx={{
         minHeight: "calc(100vh - 64px)",
         p: { xs: 1.5, md: 2 },
@@ -124,7 +129,7 @@ function EntityListPage<T extends { id: string | number }>({
             boxShadow: "0 12px 30px rgba(16,185,129,0.35)",
           }}
         >
-          New
+          {isMobile ? "Agregar" : "New"}
         </Button>
       </Toolbar>
 
@@ -161,7 +166,7 @@ function EntityListPage<T extends { id: string | number }>({
                 setPage(1);
               }}
             >
-              <MenuItem value="__all__">All</MenuItem>
+              <MenuItem value="__all__">{isMobile ? "Todos" : "All"}</MenuItem>
               {filterOptions.map((opt) => (
                 <MenuItem key={opt.value} value={opt.value}>
                   {opt.label}
@@ -172,8 +177,20 @@ function EntityListPage<T extends { id: string | number }>({
         )}
       </Box>
 
+      {isMobile && renderMobileRow && <div className="firu-managed-pet-list">
+        {pageRows.map(row => <article key={String(row.id)} className="firu-managed-pet-card">
+          {renderMobileRow(row)}
+          <div className="firu-managed-pet-actions">
+            <Button size="small" startIcon={<EditIcon />} onClick={() => onEdit?.(row)}>Editar</Button>
+            <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={() => onDelete?.(row)}>Eliminar</Button>
+          </div>
+        </article>)}
+        {!pageRows.length && <p className="firu-empty-state">No hay mascotas para mostrar. Agrega una o ajusta la búsqueda.</p>}
+      </div>}
       {/* Table */}
       <Box
+        className="firu-entity-table"
+        style={{ display: isMobile && renderMobileRow ? "none" : undefined }}
         sx={{
           borderRadius: 3,
           overflow: "hidden",

@@ -8,6 +8,7 @@ import {
   Stack,
   TextField,
   Typography,
+  useMediaQuery,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import PlaceIcon from "@mui/icons-material/Place";
@@ -18,6 +19,8 @@ import GpsFixedIcon from "@mui/icons-material/GpsFixed";
 import PetsIcon from "@mui/icons-material/Pets";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import PersonSearchIcon from "@mui/icons-material/PersonSearch";
+
+import MobileCommunity from "./MobileCommunity.tsx";
 
 type LostPetStatus = "critical" | "active_search" | "sighting_pending";
 
@@ -187,6 +190,7 @@ const metricCardSx = {
 };
 
 const LostPetsWallPage: React.FC = () => {
+  const isMobile = useMediaQuery("(max-width:899.95px)");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"all" | LostPetStatus>("all");
 
@@ -210,6 +214,8 @@ const LostPetsWallPage: React.FC = () => {
   const criticalCount = lostPets.filter((pet) => pet.status === "critical").length;
   const volunteerCount = lostPets.reduce((sum, pet) => sum + pet.volunteers, 0);
   const lowBatteryCount = lostPets.filter((pet) => pet.battery <= 20).length;
+
+  if (isMobile) return <MobileCommunity pets={lostPets} />;
 
   return (
     <Box sx={{ minHeight: "calc(100vh - 64px)" }}>

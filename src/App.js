@@ -11,7 +11,8 @@ import UsersListPage from "./components/Users/UsersListPage.tsx";
 import SensorsListPage from "./components/Users/SensorsListPage.tsx";
 import PetsListPage from "./components/Users/PetsListPage.tsx";
 import VolunteerGroupsPage from "./components/Users/VolunteerGroupsPage.tsx";
- // ✅ no {}
+import ProfilePage from "./components/Dashboard/ProfilePage.tsx";
+import AlertsPage from "./components/Dashboard/AlertsPage.tsx";
 
 
 function App() {
@@ -29,6 +30,9 @@ function App() {
 
       {/* Protected routes with sidebar layout */}
       <Route element={<DashboardLayout />}>
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/more" element={<Navigate to="/profile" replace />} />
+        <Route path="/alerts" element={<AlertsPage />} />
         <Route path="/geofence" element={<CustomGeofence />} />
         <Route path="/route" element={<Navigate to="/routes/recent" replace />} />
         <Route path="/routes/recent" element={<MultiPetRouteView />} />

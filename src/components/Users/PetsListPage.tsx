@@ -340,17 +340,18 @@ const PetsListPage: React.FC = () => {
   return (
     <>
       <EntityListPage<PetRow>
-        title={loadingPets ? "Pets · Loading..." : "Pets"}
+        title={loadingPets ? "Mis mascotas · Cargando…" : "Mis mascotas"}
         columns={columns}
         rows={pets}
+        renderMobileRow={row => <div className="firu-managed-pet-main"><AuthenticatedPetAvatar name={row.name} petId={row.id} imageUrl={row.imageUrl} size={58} /><div><h2>{row.name}</h2><p>{row.race || row.type}</p><span className={`firu-status-badge ${row.status === 'lost' ? 'is-lost' : ''}`}>{row.status === 'lost' ? 'Se busca' : row.status === 'offline' ? 'Sin conexión' : 'Registrada'}</span></div></div>}
         searchField="name"
-        searchPlaceholder="Search by pet name"
-        filterLabel="Status"
+        searchPlaceholder="Buscar mascota"
+        filterLabel="Estado"
         filterField="status"
         filterOptions={[
-          { label: "Active", value: "active" },
-          { label: "Lost", value: "lost" },
-          { label: "Offline", value: "offline" },
+          { label: "Registradas", value: "active" },
+          { label: "Perdidas", value: "lost" },
+          { label: "Sin conexión", value: "offline" },
         ]}
         onCreate={() => {
           setCreatingPet(emptyPetDraft);

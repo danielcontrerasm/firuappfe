@@ -1,8 +1,6 @@
 // pages/FiruappDashboard.tsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
-import SockJS from "sockjs-client";
-import { Client } from "@stomp/stompjs";
 import FiruappSidebar from "./ui/FiruappSidebar.tsx";
 import FiruappMapView from "./ui/FiruappMapView.tsx";
 import FiruappPetsList from "./ui/FiruappPetList.tsx";
@@ -22,6 +20,7 @@ import {
   Stack,
   TextField,
   Typography,
+  useMediaQuery,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
@@ -40,9 +39,12 @@ import PetsIcon from "@mui/icons-material/Pets";
 import SecurityIcon from "@mui/icons-material/Security";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import { usePetImage } from "../../services/usePetImage.ts";
-import { buildApiUrl, buildWsUrl } from "../../config/runtime";
+import { buildApiUrl } from "../../config/runtime";
 
-const ALERT_USER_ID = 1;
+
+import { useLiveAlerts } from "../../services/useLiveAlerts.ts";
+const MobileTrackingDashboard = React.lazy(() => import("./MobileTrackingDashboard.tsx"));
+
 const GUIDE_PENDING_KEY = "firuapp-guide-pending";
 
 const colombiaCities = [
@@ -84,12 +86,6 @@ type GuideTargetRect = {
   width: number;
   height: number;
 };
-
-interface DashboardAlert {
-  id: string;
-  message: string;
-  receivedAt: string;
-}
 
 type PetDataMode = "mock" | "database" | "mixed";
 type DashboardPetFilters = {
@@ -166,7 +162,8 @@ const mapPetDtoToDashboardPet = (dto: any): Pet => ({
   race: dto.race,
   age: dto.age != null ? `${dto.age} years` : undefined,
   weight: dto.weight != null ? `${dto.weight} kg` : undefined,
-  battery: 82,
+  battery: dto.batteryPercent ?? dto.batteryPercentage ?? dto.battery,
+  imageUrl: dto.imageUrl || dto.avatarUrl || dto.photoUrl,
   signal: "Good",
   speed: "0.0 km/h",
 });
@@ -431,6 +428,7 @@ const DashboardGuideOverlay = ({
 
 const FiruappDashboard: React.FC = () => {
   const now = useGpsStatusTime();
+  const isMobile = useMediaQuery("(max-width:899.95px)");
   const [dashboardPets, setDashboardPets] = useState<Pet[]>([]);
   const [databasePets, setDatabasePets] = useState<Pet[]>([]);
   const [petLocations, setPetLocations] = useState<DashboardPetLocation[]>([]);
@@ -443,8 +441,7 @@ const FiruappDashboard: React.FC = () => {
   });
   const [selectedPetId, setSelectedPetId] = useState<string | undefined>();
   const [section, setSection] = useState<"all" | "geofence" | "route">("all");
-  const [alertMessages, setAlertMessages] = useState<DashboardAlert[]>([]);
-  const [alertsConnected, setAlertsConnected] = useState(false);
+  const { alerts: alertMessages, connected: alertsConnected } = useLiveAlerts();
   const [cityByLocationKey, setCityByLocationKey] = useState<Record<string, string>>({});
   const [guideOpen, setGuideOpen] = useState(false);
   const [guideStepIndex, setGuideStepIndex] = useState(0);
@@ -537,43 +534,6 @@ const FiruappDashboard: React.FC = () => {
       })
       .filter((pet) => matchesPetFilters(pet, petFilters))
   }, [dashboardPets, livePetDetailsByPetId, petFilters, now]);
-  useEffect(() => {
-    const client = new Client({
-      webSocketFactory: () => new SockJS(buildWsUrl("/ws")),
-      reconnectDelay: 5000,
-      onConnect: () => {
-        setAlertsConnected(true);
-        client.subscribe(`/topic/alerts/${ALERT_USER_ID}`, (message) => {
-          const alertText = message.body;
-          console.log("Alert received:", alertText);
-          setAlertMessages((currentAlerts) => [
-            {
-              id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-              message: alertText,
-              receivedAt: new Date().toLocaleTimeString(),
-            },
-            ...currentAlerts,
-          ].slice(0, 5));
-        });
-      },
-      onDisconnect: () => {
-        setAlertsConnected(false);
-      },
-      onStompError: (frame) => {
-        console.error("Alert websocket STOMP error:", frame.headers.message, frame.body);
-        setAlertsConnected(false);
-      },
-      onWebSocketClose: () => {
-        setAlertsConnected(false);
-      },
-    });
-
-    client.activate();
-
-    return () => {
-      client.deactivate();
-    };
-  }, []);
 
   useEffect(() => {
     setSelectedPetId((currentSelectedId) =>
@@ -776,6 +736,17 @@ const FiruappDashboard: React.FC = () => {
       window.removeEventListener("scroll", handleLayout, true);
     };
   }, [currentGuideStep, guideOpen, refreshGuideSpotlight]);
+
+  if (isMobile) return <React.Suspense fallback={<Box sx={{ minHeight: "100dvh", bgcolor: "white" }} />}><MobileTrackingDashboard
+    pets={filteredDashboardPets}
+    selectedPet={selectedPet}
+    onSelect={setSelectedPetId}
+    onLocationsChange={handleLocationsChange}
+    alertCount={alertMessages.length}
+    city={selectedPetGpsCity}
+    filters={petFilters}
+    onFiltersChange={setPetFilters}
+  /></React.Suspense>;
 
   return (
     <Box sx={{ minHeight: "100vh", display: "flex", bgcolor: firuColors.bg, color: firuColors.text }}>
@@ -1118,7 +1089,7 @@ const FiruappDashboard: React.FC = () => {
       <DashboardGuideOverlay
         open={guideOpen}
         title={currentGuideStep.title}
-        description={currentGuideStep.description}
+        description={currentGuideStep.decription}
         stepIndex={guideStepIndex}
         totalSteps={guideSteps.length}
         spotlightRect={guideSpotlightRect}
