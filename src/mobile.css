@@ -1,0 +1,278 @@
+:root {
+  --firu-ink: #102640;
+  --firu-muted: #81909e;
+  --firu-green: #079e82;
+  --firu-blue: #0752e8;
+  --firu-line: #e8edf1;
+  --firu-nav-height: calc(76px + env(safe-area-inset-bottom, 0px));
+}
+.firu-mobile-only, .firu-mobile-nav { display: none; }
+.firu-map-canvas { height: 100%; width: 100%; min-width: 0; position: relative; }
+.firu-map-controls { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
+.firu-map-controls > button { width: 44px; height: 44px; border: 0; border-radius: 50%; background: rgba(255,255,255,.97); color: #0a203c; box-shadow: 0 4px 16px #0f233524; display: grid; place-items: center; cursor: pointer; padding: 0; }
+.firu-map-controls > button:hover { background: #edf9f6; }
+.firu-map-controls > button[aria-pressed="true"] { color: #07856e; background: #e6f8f2; }
+.firu-map-controls > button:disabled { opacity: .5; cursor: progress; }
+.firu-map-controls > button svg { font-size: 25px; }
+.firu-map-error { position: absolute; right: 54px; top: 0; width: 220px; padding: 12px; border-radius: 12px; color: #102640; background: white; box-shadow: 0 4px 20px #10264026; font: 13px/1.5 Inter, sans-serif; }
+.firu-map-error button { margin-left: 8px; border: 0; background: none; cursor: pointer; }
+.firu-brand { display: flex; align-items: center; gap: 6px; color: #09233f; }
+.firu-brand svg { width: 74px; height: 52px; flex-shrink: 0; }
+.firu-brand > span { font-size: 29px; letter-spacing: -1px; font-weight: 800; }
+.firu-brand-stacked { flex-direction: column; gap: 0; }
+.firu-brand-stacked svg { width: 142px; height: 100px; }
+.firu-brand-stacked > span { color: #082e2d; font-size: 43px; letter-spacing: -2px; line-height: 1.1; }
+.firu-content-page { color: var(--firu-ink); background: white; border-radius: 20px; overflow: hidden; min-height: calc(100dvh - 32px); }
+.firu-page-header { position: relative; min-height: 80px; padding: 22px 60px; display: flex; justify-content: center; align-items: center; border-bottom: 1px solid var(--firu-line); background: white; }
+.firu-page-header h1 { margin: 0; color: var(--firu-ink); font-size: 24px; font-weight: 750; letter-spacing: -.65px; text-align: center; }
+.firu-page-header-action { position: absolute; right: 16px; display: flex; }
+.firu-page-header-action .MuiIconButton-root { color: var(--firu-ink); }
+.firu-page-content { padding: 24px; max-width: 800px; margin: auto; }
+.firu-filter-tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 18px 0 22px; padding-bottom: 2px; }
+.firu-filter-tabs > button, .firu-filter-tabs > a { flex-shrink: 0; text-decoration: none; border: 1px solid transparent; border-radius: 999px; background: #f4f6f8; color: #738293; font: inherit; font-size: 13px; padding: 11px 13px; cursor: pointer; white-space: nowrap; }
+.firu-filter-tabs > .is-active { color: #a87600; border-color: #ffcd4d; background: #fff3d4; font-weight: 650; }
+.firu-section-heading { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.firu-section-heading h1, .firu-section-heading h2, .firu-section-heading h3 { margin: 0; font-size: 19px; color: var(--firu-ink); font-weight: 750; letter-spacing: -.5px; }
+.firu-section-heading > a { display: flex; align-items: center; flex-shrink: 0; gap: 2px; font-size: 13px; color: var(--firu-blue); text-decoration: none; font-weight: 550; }
+.firu-section-heading > a svg { font-size: 20px; }
+.firu-empty-state { text-align: center; padding: 32px 18px; color: #7c8c9b; }
+.firu-empty-state > svg { color: #309f94; font-size: 36px; }
+.firu-empty-state h2 { color: var(--firu-ink); font-size: 18px; }
+.firu-empty-state p { font-size: 14px; line-height: 1.6; }
+.firu-empty-state a { color: #078e7b; font-size: 14px; font-weight: 650; }
+.firu-info-banner { display: flex; gap: 12px; padding: 16px; border-radius: 16px; background: #effafb; color: #47727c; margin-top: 20px; align-items: center; }
+.firu-info-banner > svg { color: #159ca4; flex-shrink: 0; }
+.firu-info-banner p { margin: 0; font-size: 14px; line-height: 1.6; }
+.firu-alerts-heading { font-size: 12px; color: #8b99a8; margin-bottom: 14px; }
+.firu-alerts-heading > span + span { color: #ee4545; font-weight: 650; }
+.firu-alert-row { display: flex; align-items: center; gap: 12px; padding: 18px 4px; border-bottom: 1px solid var(--firu-line); }
+.firu-alert-symbol { flex: 0 0 46px; height: 46px; border-radius: 16px; display: grid; place-items: center; color: #ec4848; background: #ffeded; }
+.firu-alert-symbol.is-battery { background: #fff4df; color: #e79518; }
+.firu-alert-row h2 { margin: 0 0 5px; font-size: 15px; font-weight: 700; line-height: 1.4; }
+.firu-alert-row p { margin: 0 0 3px; color: #7b8899; font-size: 13px; }
+.firu-alert-row small { color: #9aa6b5; font-size: 12px; }
+.firu-profile-hero { text-align: center; padding: 10px 0 26px; }
+.firu-profile-avatar { width: 92px; height: 92px; border: 4px solid #f1eddf; border-radius: 50%; margin: 0 auto 12px; background: linear-gradient(135deg, #94c3cb, #278197); color: white; display: grid; place-items: center; }
+.firu-profile-avatar > svg { font-size: 50px; }
+.firu-profile-hero h2 { margin: 0; font-size: 24px; letter-spacing: -.7px; }
+.firu-profile-hero p { margin: 8px 0 14px; color: #92a0ab; font-size: 14px; overflow-wrap: anywhere; }
+.firu-protected-badge { display: inline-flex; align-items: center; gap: 7px; padding: 10px 15px; border-radius: 999px; color: #268c59; background: #eef9f2; font-size: 13px; font-weight: 650; }
+.firu-protected-badge svg { font-size: 19px; }
+.firu-profile-group { margin-top: 18px; }
+.firu-profile-group > h2 { font-size: 18px; margin: 0 0 14px; letter-spacing: -.4px; }
+.firu-menu-card { border: 1px solid var(--firu-line); border-radius: 18px; overflow: hidden; }
+.firu-menu-card a { display: flex; align-items: center; gap: 14px; padding: 13px 14px; min-height: 64px; text-decoration: none; color: var(--firu-ink); font-size: 15px; }
+.firu-menu-card a + a { border-top: 1px solid var(--firu-line); }
+.firu-menu-card a > svg:last-child { margin-left: auto; color: #a4adb7; font-size: 22px; }
+.firu-menu-icon { display: grid; place-items: center; width: 38px; height: 38px; flex-shrink: 0; border-radius: 12px; background: #eff7f8; color: #2b8798; }
+.firu-menu-icon svg { font-size: 25px; }
+.firu-logout { display: flex; align-items: center; justify-content: center; gap: 10px; font: inherit; font-size: 14px; font-weight: 600; margin-top: 24px; padding: 14px; border: 0; background: #fff2f1; color: #d85151; border-radius: 14px; cursor: pointer; width: 100%; }
+.firu-pet-detail-title { display: flex; align-items: center; justify-content: space-between; }
+.firu-pet-detail { text-align: center; color: var(--firu-ink); }
+.firu-pet-detail .firu-pet-photo { width: 86px; height: 86px; margin: auto; }
+
+@media (max-width: 899.95px) {
+  html, body, #root { min-height: 100%; background: white; color: var(--firu-ink); }
+  body { -webkit-tap-highlight-color: transparent; }
+  button, input, select { font-family: inherit; }
+  button, a, input, select { touch-action: manipulation; }
+  button:focus-visible, a:focus-visible { outline: 3px solid #1b7edf; outline-offset: 3px; }
+  .firu-mobile-only { display: block; }
+  .firu-desktop-only { display: none !important; }
+  .firu-mobile-nav { position: fixed; inset: auto 0 0; z-index: 1200; display: flex; justify-content: space-around; height: var(--firu-nav-height); padding: 9px 8px calc(9px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid #e4e8ed; background: rgba(255,255,255,.98); backdrop-filter: blur(16px); }
+  .firu-mobile-nav a { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; color: #566278; font-size: 12px; text-decoration: none; line-height: 1.2; }
+  .firu-mobile-nav svg { font-size: 27px; }
+  .firu-mobile-nav a.is-active { color: #074feb; font-weight: 700; }
+  .firu-app-layout { background: white !important; }
+  .firu-app-layout .firu-layout-content { padding: env(safe-area-inset-top, 0px) 0 var(--firu-nav-height); background: white; }
+  .firu-content-page { border-radius: 0; min-height: calc(100dvh - var(--firu-nav-height)); }
+  .firu-page-header { min-height: 72px; padding: 20px 55px; }
+  .firu-page-header h1 { font-size: 23px; }
+  .firu-page-content { padding: 18px 20px 26px; }
+  .firu-mobile-tracking { padding-top: env(safe-area-inset-top, 0px); padding-bottom: var(--firu-nav-height); min-height: 100dvh; background: white; color: var(--firu-ink); }
+  .firu-tracking-header { height: 70px; display: flex; align-items: center; justify-content: space-between; padding: 8px 20px 0; }
+  .firu-notification-button.MuiIconButton-root { color: #0a213e; width: 44px; height: 44px; }
+  .firu-notification-button > .MuiBadge-root > svg { font-size: 30px; }
+  .firu-pet-chips { display: flex; gap: 10px; align-items: center; overflow-x: auto; scrollbar-width: none; padding: 10px 16px 16px; min-height: 83px; }
+  .firu-pet-chip { display: flex; align-items: center; flex-shrink: 0; gap: 8px; border: 1px solid #f0f0f0; background: #fff; border-radius: 999px; padding: 7px 13px 7px 7px; box-shadow: 0 4px 12px #142a3b10; color: var(--firu-ink); cursor: pointer; }
+  .firu-pet-chip.is-selected { background: #fff9e5; border-color: #ffcc37; box-shadow: 0 4px 12px #dfb42b24; }
+  .firu-pet-photo.MuiAvatar-root { width: 42px; height: 42px; background: #e5f4f0; color: #188a71; font-size: 18px; font-weight: 700; }
+  .firu-pet-chip > span { display: grid; gap: 3px; text-align: left; }
+  .firu-pet-chip strong { font-size: 15px; letter-spacing: -.4px; }
+  .firu-pet-chip small { display: flex; align-items: center; gap: 5px; color: #8b99a6; font-size: 11px; white-space: nowrap; }
+  .firu-pet-chip small.is-online { color: #099a22; }
+  .firu-pet-chip i, .firu-status-badge i, .firu-live-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+  .firu-add-pet.MuiIconButton-root { width: 46px; height: 46px; flex-shrink: 0; border: 1px solid #f0f0f0; color: #17324b; box-shadow: 0 4px 14px #142a3b15; }
+  .firu-tracking-map { position: relative; height: clamp(330px, 48dvh, 570px); background: #edf0e8; }
+  .firu-tracking-map .firu-live-map { height: 100%; min-height: 0; }
+  .firu-tracking-map .firu-live-map > .MuiBox-root:nth-child(2) { border: 0; border-radius: 0; box-shadow: none; }
+  .firu-tracking-map .firu-map-online-label, .firu-tracking-map .firu-map-desktop-overlay { display: none; }
+  .firu-tracking-map .leaflet-container { border-radius: 0; }
+  .firu-map-controls { right: 12px; gap: 8px; top: 44%; }
+  .firu-map-controls > button { width: 44px; height: 44px; }
+  .firu-map-summary { position: absolute; bottom: 26px; left: 12px; right: 12px; display: grid; grid-template-columns: 1.1fr .8fr 1fr; padding: 14px 6px; border-radius: 17px; background: rgba(255,255,255,.97); box-shadow: 0 4px 15px #10264018; z-index: 1000; }
+  .firu-map-summary > div, .firu-map-summary > a { display: flex; align-items: center; justify-content: center; gap: 7px; text-decoration: none; color: var(--firu-ink); min-width: 0; }
+  .firu-map-summary > :not(:first-child) { border-left: 1px solid #e1e5e9; }
+  .firu-map-summary svg { font-size: 24px; color: #119c3b; flex-shrink: 0; }
+  .firu-map-summary span { display: grid; gap: 3px; }
+  .firu-map-summary strong { font-size: 12px; letter-spacing: -.3px; }
+  .firu-map-summary small { color: #647389; font-size: 10px; }
+  .firu-map-summary .firu-live-dot { background: #a0acb7; width: 9px; height: 9px; }
+  .firu-map-summary .firu-live-dot.is-online { background: #19b85b; box-shadow: 0 0 0 5px #eff9ed; }
+  .firu-pets-sheet { position: relative; margin-top: -14px; z-index: 1001; background: white; border-radius: 26px 26px 0 0; padding: 10px 16px 10px; }
+  .firu-sheet-handle { width: 40px; height: 5px; border-radius: 999px; background: #c5c9d1; margin: 0 auto 12px; }
+  .firu-pets-sheet .firu-section-heading h1 { font-size: 20px; letter-spacing: -.7px; }
+  .firu-pet-search { display: flex; gap: 9px; margin-top: 12px; }
+  .firu-pet-search > label, .firu-community-search { display: flex; align-items: center; gap: 7px; min-width: 0; flex: 1; background: #f6f7f9; border: 1px solid #e0e5eb; border-radius: 12px; padding: 0 10px; min-height: 42px; }
+  .firu-pet-search input, .firu-community-search input { border: 0; background: transparent; width: 100%; min-width: 0; outline: 0; font-size: 16px; color: var(--firu-ink); padding: 9px 0; }
+  .firu-pet-search > label svg { font-size: 20px; }
+  .firu-pet-search > button { display: flex; align-items: center; gap: 5px; border: 1px solid #e0e5eb; border-radius: 12px; padding: 7px 10px; background: white; color: var(--firu-ink); font-weight: 650; box-shadow: 0 2px 5px #10264008; cursor: pointer; }
+  .firu-pet-search > button svg { font-size: 20px; }
+  .firu-mobile-filters { display: grid; gap: 8px; margin: 12px 0; padding: 12px; background: #f5faf8; border-radius: 12px; }
+  .firu-mobile-filters label { display: grid; gap: 5px; font-size: 12px; }
+  .firu-mobile-filters input { width: 100%; border: 1px solid #dbe7e2; border-radius: 8px; font-size: 16px; padding: 9px; }
+  .firu-text-button { color: #008c75; border: 0; background: none; font-weight: 600; padding: 8px; cursor: pointer; }
+  .firu-mobile-pet-row { display: flex; align-items: center; width: 100%; min-height: 76px; padding: 10px 0; gap: 9px; border: 0; border-bottom: 1px solid #edf0f3; background: white; text-align: left; color: var(--firu-ink); cursor: pointer; }
+  .firu-mobile-pet-row .firu-pet-photo { flex-shrink: 0; }
+  .firu-pet-name { display: grid; gap: 3px; min-width: 0; flex: 1; }
+  .firu-pet-name strong { font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: -.5px; }
+  .firu-pet-name small { font-size: 11px; color: #69778c; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .firu-status-badge { display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 6px 7px; border-radius: 999px; background: #f1f3f5; color: #83909c; white-space: nowrap; font-size: 10px; }
+  .firu-status-badge.is-online { background: #edf9ec; color: #0c9c20; }
+  .firu-status-badge.is-lost { background: #fff0ed; color: #ed5147; }
+  .firu-battery { display: flex; align-items: center; gap: 2px; color: #0e223e; font-size: 12px; font-weight: 650; white-space: nowrap; }
+  .firu-battery svg { color: #149c2e; font-size: 20px; transform: rotate(90deg); }
+  .firu-mobile-pet-row > svg { font-size: 21px; flex-shrink: 0; color: #50607a; }
+  .firu-community-hero { position: relative; display: flex; gap: 14px; align-items: flex-start; border-radius: 20px; background: linear-gradient(115deg, #e8faf3, #dcf7fa); padding: 20px; margin-bottom: 16px; }
+  .firu-community-hero > div { flex: 1; }
+  .firu-community-hero h2 { margin: 0; font-size: 23px; letter-spacing: -.7px; line-height: 1.2; }
+  .firu-community-hero p { margin: 12px 0 0; font-size: 14px; line-height: 1.6; color: #71958e; max-width: 260px; }
+  .firu-community-hero > span { width: 46px; height: 46px; border-radius: 50%; background: #12a58c; display: grid; place-items: center; color: white; flex-shrink: 0; }
+  .firu-community-hero > span svg { font-size: 29px; }
+  .firu-community-search { margin: 10px 0; }
+  .firu-community-cards { display: grid; gap: 16px; }
+  .firu-example-note { margin: 6px 0 12px; font-size: 11px; color: #91a0ad; }
+  .firu-community-card { overflow: hidden; border: 1px solid #e2e8ed; border-radius: 19px; box-shadow: 0 6px 18px #10264007; }
+  .firu-community-photo { height: 150px; position: relative; background: #e2ebe8; }
+  .firu-community-photo img { width: 100%; height: 100%; display: block; object-fit: cover; object-position: center 40%; }
+  .firu-community-photo > span { position: absolute; top: 10px; left: 10px; border-radius: 999px; color: white; background: #ef5047; padding: 6px 12px; font-size: 12px; font-weight: 700; }
+  .firu-community-card-body { padding: 10px 14px 14px; }
+  .firu-community-card-body h3 { font-size: 20px; }
+  .firu-community-card-body .MuiIconButton-root { color: #ed466b; }
+  .firu-community-card-body p { margin: 8px 0 8px; font-size: 13px; line-height: 1.6; color: #6b7a8b; }
+  .firu-community-location { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #33a586; }
+  .firu-community-location svg { font-size: 19px; }
+  .firu-case-link { display: flex; justify-content: space-between; align-items: center; width: 100%; border: 0; padding: 10px 0 0; color: #0084d6; background: none; font-size: 13px; font-weight: 650; cursor: pointer; }
+  .firu-route-page, .firu-route-page.geofence-page { background: white; padding: 0; min-height: 0; }
+  .firu-route-page > .firu-route-header { display: none; }
+  .firu-geofence-intro, .firu-history-intro { padding: 18px 20px 12px; }
+  .firu-geofence-intro h2, .firu-history-intro h2 { margin: 0; font-size: 19px; font-weight: 750; letter-spacing: -.4px; }
+  .firu-geofence-intro p, .firu-history-intro p { margin: 9px 0 0; font-size: 13px; line-height: 1.65; color: #8998a6; }
+  .firu-filter-toggle { border: 0; color: #0986bb; background: none; font-size: 12px; padding: 0 20px 14px; cursor: pointer; }
+  .geofence-page .firu-geofence-searchbar { display: none; margin: 0 20px 16px; grid-template-columns: 1fr 1fr; padding: 10px; box-shadow: none; border-radius: 12px; }
+  .geofence-page .firu-geofence-searchbar.is-open { display: grid; }
+  .geofence-page .firu-geofence-search-input { min-width: 0; font-size: 16px; font-weight: 400; }
+  .firu-route-page .firu-route-map-shell { display: flex; flex-direction: column; height: auto; min-height: 0; border: 0; border-radius: 0; box-shadow: none; overflow: visible; background: white; gap: 0; }
+  .firu-route-page .firu-map-canvas { height: 310px; width: calc(100% - 40px); margin: 0 20px; border-radius: 18px; overflow: hidden; order: 1; }
+  .firu-route-page .firu-map-canvas .leaflet-container { border-radius: 0; }
+  .firu-route-page .firu-map-canvas .leaflet-tile-pane { filter: saturate(.8); }
+  .firu-route-page .firu-geofence-pets, .firu-route-page .firu-route-status, .firu-route-page .firu-route-card { display: none; }
+  .firu-mobile-zone-create { order: 2; margin: 15px 20px 0; }
+  .firu-mobile-zone-create > label { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #7a8a98; margin-bottom: 12px; }
+  .firu-mobile-zone-create select { flex: 1; min-width: 0; padding: 10px; border-radius: 10px; border: 1px solid #e0e7ec; background: white; color: #152c45; font-size: 16px; }
+  .firu-primary-button { width: 100%; min-height: 50px; background: linear-gradient(100deg, #08a58e, #07885e); color: white; border: 0; border-radius: 14px; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 16px; font-weight: 650; box-shadow: 0 6px 15px #0c997e17; cursor: pointer; }
+  .firu-primary-button:disabled { opacity: .45; cursor: default; }
+  .firu-route-page .firu-geofence-actions { position: static; order: 3; display: none; margin: 14px 20px 0; border-radius: 15px; padding: 12px; flex-wrap: wrap; box-shadow: none; border: 1px solid #e3ece9; background: #f5fbf8; }
+  .geofence-page.is-creating .firu-geofence-actions { display: flex; }
+  .geofence-page.is-creating .firu-mobile-zone-create > button { display: none; }
+  .firu-geofence-actions .firu-geofence-pet-select { display: none; }
+  .firu-route-page .firu-route-tool, .firu-route-page .firu-geofence-name-select { min-height: 42px; font-size: 13px; }
+  .firu-route-page .firu-geofence-name-select { width: 100%; font-size: 16px; }
+  .firu-route-page .firu-geofence-radius { font-size: 16px; }
+  .firu-route-page .firu-geofence-list { position: static; order: 4; width: auto; max-width: none; max-height: none; margin: 24px 20px; padding: 0; background: white; border: 0; border-radius: 0; box-shadow: none; overflow: visible; }
+  .firu-geofence-list .firu-geofence-list-title { display: flex; align-items: center; justify-content: space-between; margin: 0 0 15px; color: var(--firu-ink); font-size: 19px; font-weight: 750; letter-spacing: -.4px; text-transform: none; }
+  .firu-geofence-list-title > span:last-child { color: #1684ce; font-size: 13px; font-weight: 550; letter-spacing: 0; }
+  .firu-geofence-list .firu-geofence-list-row { padding: 14px 12px; border: 1px solid #e4eaf0; border-radius: 15px; box-shadow: 0 4px 13px #142a3b05; margin: 0 0 11px; gap: 12px; min-height: 74px; }
+  .firu-geofence-list-row > div { flex: 1; min-width: 0; }
+  .firu-geofence-list .firu-geofence-list-row strong { color: #152b43; font-size: 15px; font-weight: 700; }
+  .firu-geofence-list .firu-geofence-list-row span { color: #8c9ba8; font-size: 12px; line-height: 1.5; }
+  .firu-geofence-list .firu-geofence-list-row .firu-zone-icon { display: grid; place-items: center; flex-shrink: 0; border-radius: 13px; width: 43px; height: 43px; background: #ecf9f0; color: #149650; }
+  .firu-zone-icon svg { font-size: 26px; }
+  .firu-geofence-list .firu-geofence-list-row button { background: transparent; color: #98a6b0; padding: 10px; min-width: 40px; min-height: 40px; }
+  .firu-geofence-empty { color: #8c9ba8; font-size: 14px; line-height: 1.6; }
+  .firu-history-page .firu-route-map-shell { padding-bottom: 24px; }
+  .firu-history-pets { order: 0; padding: 0 20px 14px; }
+  .firu-history-pets > .MuiBox-root { position: static; }
+  .firu-history-pets .MuiList-root { display: flex; gap: 10px; padding-bottom: 3px; }
+  .firu-history-pets .MuiListItemButton-root { min-width: 235px; }
+  .firu-history-page .firu-map-canvas { height: clamp(350px, 50dvh, 570px); width: 100%; margin: 0; border-radius: 0; }
+  .firu-route-mobile-stats { display: flex; order: 2; justify-content: space-around; padding: 16px; margin: -30px 20px 16px; position: relative; z-index: 1000; background: white; border-radius: 16px; box-shadow: 0 4px 16px #10264015; }
+  .firu-route-mobile-stats > div { display: grid; text-align: center; gap: 4px; flex: 1; }
+  .firu-route-mobile-stats > div + div { border-left: 1px solid #e1e7ea; }
+  .firu-route-mobile-stats strong { color: var(--firu-ink); font-size: 22px; }
+  .firu-route-mobile-stats span { color: #798794; font-size: 12px; }
+  .firu-history-page .firu-route-range-tools { position: static; order: 3; max-width: none; margin: 0 20px; box-shadow: none; border-radius: 14px; padding: 12px; gap: 8px; }
+  .firu-history-page .firu-route-time-input { width: 100%; min-width: 0; border-radius: 8px; font-size: 16px; font-weight: 400; }
+  .firu-history-page .firu-walk-distance-table { position: static; order: 4; margin: 16px 20px 0; width: auto; max-height: none; box-shadow: none; }
+  .firu-entity-page { background: white !important; border: 0 !important; border-radius: 0 !important; padding: 0 20px 20px !important; }
+  .firu-entity-page > .MuiToolbar-root { min-height: 72px; margin: 0 -20px 18px; padding: 12px 20px; border-bottom: 1px solid var(--firu-line); gap: 12px; }
+  .firu-entity-page > .MuiToolbar-root .MuiTypography-h4 { font-size: 23px; letter-spacing: -.5px; }
+  .firu-entity-page .MuiButton-contained { background: linear-gradient(100deg, #08a58e, #07885e); box-shadow: none; border-radius: 12px; min-height: 42px; }
+  .firu-entity-table { overflow-x: auto !important; border-radius: 16px !important; box-shadow: none !important; }
+  .firu-entity-table .MuiTable-root { min-width: 650px; }
+  .firu-profile-hero { padding-top: 10px; }
+  .firu-auth-page { background: linear-gradient(180deg, #fff 60%, #f1fbf6 100%) !important; padding: max(24px, env(safe-area-inset-top, 0px)) 24px calc(24px + env(safe-area-inset-bottom, 0px)) !important; min-height: 100dvh !important; }
+  .firu-auth-page .firu-auth-card { border: 0; box-shadow: none; padding: 20px 0; background: transparent; border-radius: 0; max-width: 430px; }
+  .firu-auth-card .firu-brand-stacked { margin: 10px auto 45px; }
+  .firu-auth-card .MuiTypography-h4 { font-size: 25px; letter-spacing: -.7px; font-weight: 750; text-align: center; }
+  .firu-auth-card .firu-login-subtitle { text-align: center; font-size: 14px; color: #8b99a5; }
+  .firu-auth-card .MuiOutlinedInput-root { background: #fcfefe; border-radius: 13px; min-height: 54px; }
+  .firu-auth-card .MuiOutlinedInput-notchedOutline { border-color: #d8e2e9; }
+  .firu-auth-card .MuiInputLabel-root { color: #7a8c9e; }
+  .firu-auth-card .firu-login-submit { background: linear-gradient(100deg, #07a38b, #06865f); box-shadow: 0 5px 14px #0c997e18; height: 52px; border-radius: 13px; font-size: 15px; }
+  .firu-auth-footer { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 40px; color: #50a58c; font-size: 12px; }
+}
+@media (max-width: 359px) {
+  .firu-page-content { padding-left: 16px; padding-right: 16px; }
+  .firu-mobile-pet-row { gap: 6px; }
+  .firu-mobile-pet-row .firu-pet-photo { width: 36px; height: 36px; }
+  .firu-mobile-pet-row .firu-status-badge { font-size: 9px; padding: 5px; }
+  .firu-battery { font-size: 11px; }
+  .firu-pet-name strong { font-size: 14px; }
+  .firu-mobile-nav a { font-size: 11px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .firu-pet-marker-shell::before, .firu-geofence-alert, .firu-marker-pulse { animation: none !important; }
+}
+@media (max-width: 899.95px) {
+  .firu-managed-pet-list { display: grid; gap: 14px; }
+  .firu-managed-pet-card { border: 1px solid #e2e8ed; border-radius: 18px; box-shadow: 0 5px 15px #10264006; overflow: hidden; }
+  .firu-managed-pet-main { display: flex; align-items: center; gap: 14px; padding: 18px; }
+  .firu-managed-pet-main h2 { margin: 0; color: #102640; font-size: 20px; letter-spacing: -.5px; }
+  .firu-managed-pet-main p { margin: 5px 0 8px; color: #81909e; font-size: 13px; }
+  .firu-managed-pet-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 8px 12px; border-top: 1px solid #edf0f3; }
+  .firu-managed-pet-actions .MuiButton-root { font-weight: 600; font-size: 12px; }
+}
+
+.firu-route-point-marker { background: none; border: 0; }
+.firu-route-point { width: 34px; height: 34px; display: grid; place-items: center; border: 3px solid white; border-radius: 50%; background: #0bb79d; color: white; font: 700 18px/1 Inter, sans-serif; box-shadow: 0 3px 8px #10264032; }
+@media (max-width: 899.95px) {
+  .firu-mobile-tracking .firu-tracking-map .firu-pet-marker-shell { width: 58px; height: 64px; }
+  .firu-mobile-tracking .firu-tracking-map .firu-pet-marker { border-color: #0a2846; width: 54px; height: 54px; box-shadow: 0 0 0 3px white, 0 6px 14px #10264030; }
+  .firu-mobile-tracking .firu-tracking-map .firu-pet-marker.offline:not(.alert) { border-color: #758b9b; }
+  .firu-mobile-tracking .firu-tracking-map .firu-pet-marker.alert { border-color: #ef544e; }
+  .firu-mobile-tracking .firu-tracking-map .firu-pet-marker-shell::after { content: ''; position: absolute; left: 19px; top: 44px; width: 20px; height: 20px; background: #0a2846; transform: rotate(45deg); border-bottom: 3px solid white; border-right: 3px solid white; z-index: 0; }
+  .firu-mobile-tracking .firu-tracking-map .firu-pet-label { top: -31px; left: 50%; transform: translateX(-50%); padding: 5px 10px; min-width: 0; border-radius: 8px; }
+  .firu-mobile-tracking .firu-tracking-map .firu-pet-label span { display: none; }
+  .firu-mobile-tracking .firu-tracking-map .firu-pet-label strong { font-size: 14px; white-space: nowrap; }
+  .firu-mobile-tracking .firu-tracking-map .firu-pet-dot { top: 58px; left: 23px; width: 13px; height: 13px; }
+  .firu-history-pets .MuiListItemButton-root { min-width: 290px; }
+  .firu-history-pets .MuiListItemText-root { flex: 1; }
+  .firu-history-pets .MuiListItemText-primary > .MuiBox-root > .MuiTypography-root { font-size: 15px; }
+}
+
+.firu-route-page.map-style-clean .leaflet-tile-pane, .firu-route-page .map-style-clean .firu-map-canvas .leaflet-tile-pane { filter: saturate(.4) contrast(.85) brightness(1.1); }
+.firu-route-page.map-style-natural .leaflet-tile-pane, .firu-route-page .map-style-natural .firu-map-canvas .leaflet-tile-pane { filter: saturate(.85) contrast(.98) brightness(1.03); }
+@media (min-width: 900px) {
+  .firu-route-page .firu-map-controls { right: 300px; }
+}
