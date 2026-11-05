@@ -384,7 +384,20 @@ const FiruappMapView: React.FC<MapViewProps> = ({
         const response = await axios.get(apiUrl, {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         });
-        const locations: unknown = (response.data && response.data.locations) || response.data || [];
+        const unwrapLocations = (payload: any): unknown => {
+          if (Array.isArray(payload)) return payload;
+          if (!payload || typeof payload !== "object") return [];
+          const candidates = [payload.locations, payload.content, payload.items, payload.results, payload.rows, payload.data, payload.payload];
+          for (const candidate of candidates) {
+            if (Array.isArray(candidate) && candidate.length) return candidate;
+            if (candidate && typeof candidate === "object") {
+              const nested = unwrapLocations(candidate);
+              if (Array.isArray(nested) && nested.length) return nested;
+            }
+          }
+          return [];
+        };
+        const locations: unknown = unwrapLocations(response.data);
 
         if (Array.isArray(locations)) {
           const normalized = locations

@@ -81,6 +81,13 @@ type WalkerWalk = {
   lastPosition?: { latitude: number; longitude: number };
 };
 
+type WalkerPet = {
+  id: string | number;
+  name: string;
+  zone?: string;
+  status?: string;
+};
+
 type RoutePoint = {
   latitude: number;
   longitude: number;
@@ -151,6 +158,12 @@ const demoWalks: WalkerWalk[] = [
   },
 ];
 
+const demoPets: WalkerPet[] = [
+  { id: "demo-bruno-pet", name: "Bruno", zone: "El Poblado", status: "active" },
+  { id: "demo-rocky-pet", name: "Rocky", zone: "Castropol", status: "active" },
+  { id: "demo-mora-pet", name: "Mora", zone: "La Frontera", status: "active" },
+];
+
 const demoAvailability: AvailabilitySlot[] = [
   { time: "10:00 a. m.", status: "Disponible" },
   { time: "12:00 p. m.", status: "Ocupado" },
@@ -192,7 +205,18 @@ const initials = (name: string) =>
 
 const extractCollection = (data: any): any[] => {
   if (Array.isArray(data)) return data;
-  return data?.content || data?.items || data?.results || data?.data || data?.rows || data?.payload || [];
+  if (!data || typeof data !== "object") return [];
+
+  const collectionKeys = ["content", "items", "results", "rows", "payload", "pets", "records", "data"];
+  for (const key of collectionKeys) {
+    const value = data[key];
+    if (Array.isArray(value) && value.length) return value;
+    if (value && typeof value === "object") {
+      const nested = extractCollection(value);
+      if (nested.length) return nested;
+    }
+  }
+  return [];
 };
 
 const authHeaders = () => {
@@ -254,6 +278,13 @@ const mapRequest = (item: any, index: number): WalkerRequest => {
     notes: item.notes,
   };
 };
+
+const mapWalkerPet = (item: any, index: number): WalkerPet => ({
+  id: item.id ?? `remote-pet-${index}`,
+  name: item.name || item.petName || item.pet?.name || `Mascota ${index + 1}`,
+  zone: item.neighborhood || item.zone || item.address?.neighborhood || item.city || "Zona por confirmar",
+  status: String(item.status || item.pet?.status || "active").toLowerCase(),
+});
 
 const isPersistableId = (id: string | number) => /^\d+$/.test(String(id));
 
@@ -379,6 +410,7 @@ const WalkerDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [requests, setRequests] = useState<WalkerRequest[]>(demoRequests);
   const [walks, setWalks] = useState<WalkerWalk[]>(demoWalks);
+  const [pets, setPets] = useState<WalkerPet[]>(demoPets);
   const [profileName, setProfileName] = useState("Andrés Mejía");
   const [availability, setAvailability] = useState<AvailabilitySlot[]>(() => {
     if (typeof window === "undefined") return demoAvailability;
@@ -420,26 +452,28 @@ const WalkerDashboard: React.FC = () => {
     const rows = requests
       .map((request, index) => {
         const name = request.petName || `Mascota ${index + 1}`;
+        if (name === "Sin mascota") return null;
         if (seen.has(name)) return null;
         seen.add(name);
         return { name, zone: request.zone, status: index === 2 ? "En camino" : index === 1 ? "Pendiente" : "Paseó" };
       })
       .filter(Boolean) as { name: string; zone: string; status: string }[];
-    return rows.length ? rows.slice(0, 3) : [
-      { name: "Bruno", zone: "El Poblado", status: "Pendiente" },
-      { name: "Rocky", zone: "Castropol", status: "En camino" },
-      { name: "Mora", zone: "La Frontera", status: "Paseó" },
-    ];
-  }, [requests]);
+    const petRows = pets
+      .filter((pet) => !seen.has(pet.name))
+      .map((pet) => ({ name: pet.name, zone: pet.zone || "Zona por confirmar", status: "Pendiente" }));
+    const combinedRows = [...rows, ...petRows];
+    return combinedRows.length ? combinedRows.slice(0, 3) : demoPets.map((pet) => ({ name: pet.name, zone: pet.zone || "Zona por confirmar", status: "Pendiente" }));
+  }, [pets, requests]);
 
   const loadRemoteData = useCallback(async () => {
     if (typeof window === "undefined" || !window.localStorage.getItem("token")) return;
     setLoading(true);
-    const [meResult, requestResult, walkResult, profileResult] = await Promise.allSettled([
+    const [meResult, requestResult, walkResult, profileResult, petResult] = await Promise.allSettled([
       api<CurrentUser>("GET", "/api/me"),
       api<any>("GET", "/api/walk-requests?page=0&size=100"),
       api<any>("GET", "/api/dog-walks?page=0&size=100"),
       api<any>("GET", "/api/walkers/me"),
+      api<any>("GET", "/api/pets"),
     ]);
 
     if (meResult.status === "fulfilled") {
@@ -450,6 +484,9 @@ const WalkerDashboard: React.FC = () => {
 
     if (requestResult.status === "fulfilled") {
       setRequests(extractCollection(requestResult.value).map(mapRequest));
+    }
+    if (petResult.status === "fulfilled") {
+      setPets(extractCollection(petResult.value).map(mapWalkerPet));
     }
     if (walkResult.status === "fulfilled") {
       const remoteWalks = extractCollection(walkResult.value).map((walk: any, index) => ({

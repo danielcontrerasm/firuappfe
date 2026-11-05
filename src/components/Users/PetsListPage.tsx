@@ -63,6 +63,21 @@ const getPetImageUrl = (dto: any) =>
   dto.image ??
   dto.imagePath;
 
+const extractPetDtos = (data: any): any[] => {
+  if (Array.isArray(data)) return data;
+  if (!data || typeof data !== "object") return [];
+  const collectionKeys = ["content", "items", "pets", "results", "rows", "payload", "records", "data"];
+  for (const key of collectionKeys) {
+    const value = data[key];
+    if (Array.isArray(value) && value.length) return value;
+    if (value && typeof value === "object") {
+      const nested = extractPetDtos(value);
+      if (nested.length) return nested;
+    }
+  }
+  return [];
+};
+
 const mapDtoToPetRow = (dto: any, fallback: PetRow = emptyPetDraft): PetRow => ({
   ...fallback,
   id: String(dto.id ?? fallback.id),
@@ -185,9 +200,7 @@ const PetsListPage: React.FC = () => {
         const response = await axios.get(buildApiUrl("/api/pets"), {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         });
-        const petDtos = Array.isArray(response.data)
-          ? response.data
-          : response.data?.content || response.data?.items || [];
+        const petDtos = extractPetDtos(response.data);
 
         if (!cancelled) {
           setPets(petDtos.filter((dto: any) => isOwnedByCurrentUser(dto)).map((dto: any) => mapDtoToPetRow(dto)));

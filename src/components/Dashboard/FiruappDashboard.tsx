@@ -110,6 +110,8 @@ type DashboardPetLocation = {
   city?: string;
   neighborhood?: string;
   batteryPercent?: number;
+  imageUrl?: string;
+  status?: string;
 };
 
 const formatLocationTimestamp = (timestamp?: string) => {
@@ -173,16 +175,17 @@ const mapPetDtoToDashboardPet = (dto: any): Pet => ({
 
 const extractPetDtos = (data: any) => {
   if (Array.isArray(data)) return data;
-  return (
-    data?.content ||
-    data?.items ||
-    data?.pets ||
-    data?.data ||
-    data?.results ||
-    data?.rows ||
-    data?.payload ||
-    []
-  );
+  if (!data || typeof data !== "object") return [];
+  const collectionKeys = ["content", "items", "pets", "results", "rows", "payload", "records", "data"];
+  for (const key of collectionKeys) {
+    const value = data[key];
+    if (Array.isArray(value) && value.length) return value;
+    if (value && typeof value === "object") {
+      const nested = extractPetDtos(value);
+      if (nested.length) return nested;
+    }
+  }
+  return [];
 };
 
 const matchesPetFilters = (pet: Pet, filters: DashboardPetFilters) => {
@@ -493,13 +496,10 @@ const FiruappDashboard: React.FC = () => {
       try {
         const loadedPets = await fetchDatabasePets();
         if (!cancelled) {
-          setDatabasePets(loadedPets);
+          setDatabasePets((currentPets) => loadedPets.length ? loadedPets : currentPets);
         }
       } catch (error) {
         console.error("Error loading dashboard pets from database:", error);
-        if (!cancelled) {
-          setDatabasePets([]);
-        }
       }
     };
 
@@ -615,6 +615,26 @@ const FiruappDashboard: React.FC = () => {
   const onlinePets = useMemo(() => filteredDashboardPets.filter((pet) => pet.gpsOnline), [filteredDashboardPets]);
   const handleLocationsChange = useCallback((locations: DashboardPetLocation[]) => {
     setPetLocations(locations);
+    setDatabasePets((currentPets) => {
+      const knownIds = new Set(currentPets.flatMap((pet) => [pet.id, pet.apiId].filter(Boolean).map(String)));
+      const petsFromLocations = locations
+        .filter((location) => location.petId != null && !String(location.petId).startsWith("mock-") && !knownIds.has(String(location.petId)))
+        .map((location) => ({
+          id: `db-${location.petId}`,
+          apiId: String(location.petId),
+          name: location.petName || `Pet ${location.petId}`,
+          status: String(location.status || "active").toLowerCase() === "lost" ? "lost" : "active",
+          ownerName: location.ownerName || "",
+          city: location.city || "",
+          neighborhood: location.neighborhood || "",
+          imageUrl: location.imageUrl,
+          battery: location.batteryPercent,
+          signal: "Good" as const,
+          speed: "0.0 km/h",
+        }));
+
+      return petsFromLocations.length ? [...currentPets, ...petsFromLocations] : currentPets;
+    });
   }, []);
 
   useEffect(() => {
