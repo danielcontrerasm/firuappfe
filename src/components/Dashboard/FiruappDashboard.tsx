@@ -454,6 +454,7 @@ const FiruappDashboard: React.FC = () => {
   });
   const [selectedPetId, setSelectedPetId] = useState<string | undefined>();
   const [showPetCards, setShowPetCards] = useState(true);
+  const [detailsPanelOpen, setDetailsPanelOpen] = useState(true);
   const [section, setSection] = useState<"all" | "geofence" | "route">("all");
   const { alerts: alertMessages, connected: alertsConnected, dismissAlert } = useLiveAlerts();
   const [cityByLocationKey, setCityByLocationKey] = useState<Record<string, string>>({});
@@ -940,7 +941,7 @@ const FiruappDashboard: React.FC = () => {
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 1fr) 412px" },
+              gridTemplateColumns: detailsPanelOpen ? { xs: "1fr", lg: "minmax(0, 1fr) 412px" } : "1fr",
               gap: 1.8,
               alignItems: "start",
             }}
@@ -955,7 +956,10 @@ const FiruappDashboard: React.FC = () => {
                 mapStyle={mapStyle}
                 onMapStyleChange={setMapStyle}
                 locationCity={selectedPetGpsCity}
-                onSelectPet={setSelectedPetId}
+                onSelectPet={(petId) => {
+                  setSelectedPetId(petId);
+                  setDetailsPanelOpen(true);
+                }}
                 onLocationsChange={handleLocationsChange}
               />
               {showPetCards ? (
@@ -966,6 +970,7 @@ const FiruappDashboard: React.FC = () => {
                   onSelect={(petId) => {
                     setSelectedPetId(petId);
                     setShowPetCards(false);
+                    setDetailsPanelOpen(false);
                   }}
                   onStatusChange={(petId, status) => {
                     setDatabasePets((currentPets) => currentPets.map((pet) => ((pet.apiId || pet.id) === petId ? { ...pet, status } : pet)));
@@ -976,8 +981,11 @@ const FiruappDashboard: React.FC = () => {
                 <Button
                   size="small"
                   startIcon={<PetsIcon sx={{ fontSize: 18 }} />}
-                  onClick={() => setShowPetCards(true)}
-                  aria-label="Show pet cards"
+                  onClick={() => {
+                    setShowPetCards(true);
+                    setDetailsPanelOpen(true);
+                  }}
+                  aria-label="Show pet controls"
                   sx={{
                     position: "absolute",
                     left: { xs: 12, md: 16 },
@@ -995,12 +1003,12 @@ const FiruappDashboard: React.FC = () => {
                     "&:hover": { bgcolor: "#f8fbff" },
                   }}
                 >
-                  Show pet cards
+                  Show pet controls
                 </Button>
               )}
             </Paper>
 
-            <Stack spacing={1.8}>
+            {detailsPanelOpen && <Stack spacing={1.8}>
               <Paper elevation={0} sx={{ bgcolor: "#ffffff", border: "1px solid #dbe7f3", borderRadius: 2.2, overflow: "hidden", boxShadow: "0 16px 42px rgba(15,23,42,0.07)" }}>
                 <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2, py: 1.15, minHeight: 52 }}>
                   <Typography variant="subtitle2" sx={{ color: "#071735", fontWeight: 950 }}>
@@ -1087,7 +1095,7 @@ const FiruappDashboard: React.FC = () => {
                     <IconButton
                       size="small"
                       aria-label="Close pet details"
-                      onClick={() => setSelectedPetId(undefined)}
+                      onClick={() => setDetailsPanelOpen(false)}
                       sx={{ bgcolor: "#f8fbff", border: "1px solid #dbe7f3", color: "#6c7c95", "&:hover": { bgcolor: "#eef6ff" } }}
                     >
                       <CloseIcon fontSize="small" />
@@ -1151,7 +1159,7 @@ const FiruappDashboard: React.FC = () => {
                   </Button>
                 </Paper>
               )}
-            </Stack>
+            </Stack>}
           </Box>
         </Box>
       </Box>
