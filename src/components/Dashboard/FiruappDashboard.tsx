@@ -43,7 +43,7 @@ import SecurityIcon from "@mui/icons-material/Security";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import { usePetImage } from "../../services/usePetImage.ts";
 import { buildApiUrl } from "../../config/runtime";
-import { isOwnedByCurrentUser } from "../../services/auth.ts";
+import { isCurrentUserAdmin, isOwnedByCurrentUser } from "../../services/auth.ts";
 
 
 import { useLiveAlerts } from "../../services/useLiveAlerts.ts";
@@ -432,6 +432,8 @@ const DashboardGuideOverlay = ({
 const FiruappDashboard: React.FC = () => {
   const now = useGpsStatusTime();
   const isMobile = useMediaQuery("(max-width:899.95px)");
+  const isAdmin = isCurrentUserAdmin();
+  const canUseDemoData = isAdmin || !localStorage.getItem("token");
   const [dashboardPets, setDashboardPets] = useState<Pet[]>([]);
   const [databasePets, setDatabasePets] = useState<Pet[]>([]);
   const [petLocations, setPetLocations] = useState<DashboardPetLocation[]>([]);
@@ -446,6 +448,7 @@ const FiruappDashboard: React.FC = () => {
     onShowGeofencesChange: setShowGeofences,
     mapStyle,
     onMapStyleChange: setMapStyle,
+    canUseDemoData,
   };
   const [petFilters, setPetFilters] = useState<DashboardPetFilters>({
     city: "",

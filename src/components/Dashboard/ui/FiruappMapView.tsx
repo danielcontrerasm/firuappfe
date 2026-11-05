@@ -251,6 +251,7 @@ export const MapResizeSync: React.FC<{ resizeKey?: string | number }> = ({ resiz
     const frame = typeof window.requestAnimationFrame === "function"
       ? window.requestAnimationFrame(invalidate)
       : window.setTimeout(invalidate, 0);
+    const delayedResize = window.setTimeout(invalidate, 180);
     const cancelFrame = typeof window.cancelAnimationFrame === "function"
       ? () => window.cancelAnimationFrame(frame as number)
       : () => window.clearTimeout(frame as number);
@@ -262,11 +263,13 @@ export const MapResizeSync: React.FC<{ resizeKey?: string | number }> = ({ resiz
     if (container && typeof ResizeObserver !== "undefined") {
       observer = new ResizeObserver(invalidate);
       observer.observe(container);
+      if (container.parentElement) observer.observe(container.parentElement);
     }
     window.addEventListener("resize", invalidate);
 
     return () => {
       cancelFrame();
+      window.clearTimeout(delayedResize);
       observer?.disconnect();
       window.removeEventListener("resize", invalidate);
     };

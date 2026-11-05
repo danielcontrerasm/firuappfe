@@ -11,6 +11,8 @@ const DashboardLayout = () => {
       ? "geofence"
       : location.pathname === "/route" || location.pathname === "/routes/recent"
         ? "route"
+        : location.pathname === "/walks"
+          ? "walks"
         : "all";
   const isMapPage = ["/geofence", "/route", "/routes/recent"].includes(location.pathname);
 

@@ -183,20 +183,21 @@ const getAuthHeaders = () => {
   return token ? { Authorization: `Bearer ${token}` } : undefined;
 };
 
+const isGroupVisibleToCurrentUser = (group: SearchGroupDto): boolean => {
+  const currentUserId = getCurrentUserId();
+  const isMember = currentUserId
+    ? group.volunteers.some((volunteer) => String(volunteer.userId) === currentUserId)
+    : false;
+  return isOwnedByCurrentUser(group) || isMember;
+};
+
 const fetchPersistedGroups = async (): Promise<SearchGroupDto[]> => {
   const response = await axios.get(buildApiUrl(searchGroupEndpoints.list), {
     headers: getAuthHeaders(),
   });
   return extractCollection(response.data)
-    .filter((dto: any) => {
-      const currentUserId = getCurrentUserId();
-      const group = mapDtoToSearchGroup(dto);
-      const isMember = currentUserId
-        ? group.volunteers.some((volunteer) => String(volunteer.userId) === currentUserId)
-        : false;
-      return isOwnedByCurrentUser(dto) || isMember;
-    })
-    .map((dto: any) => mapDtoToSearchGroup(dto));
+    .map((dto: any) => mapDtoToSearchGroup(dto))
+    .filter(isGroupVisibleToCurrentUser);
 };
 
 const getAuthenticatedUserId = (): number | null => {
@@ -227,7 +228,7 @@ const createDefaultGroupForm = (): NewGroupFormState => ({
 
 const VolunteerGroupsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [groups, setGroups] = useState<SearchGroupDto[]>(mockGroups);
+  const [groups, setGroups] = useState<SearchGroupDto[]>(() => mockGroups.filter(isGroupVisibleToCurrentUser));
   const [pets, setPets] = useState<PetOption[]>([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");

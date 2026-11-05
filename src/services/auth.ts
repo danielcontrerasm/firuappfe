@@ -41,7 +41,8 @@ export const decodeAuthToken = (token = getStoredAuthToken()): AuthClaims => {
   if (!token) return {};
 
   try {
-    return jwtDecode<AuthClaims>(token);
+    const normalizedToken = token.replace(/^Bearer\s+/i, "");
+    return jwtDecode<AuthClaims>(normalizedToken);
   } catch {
     return {};
   }

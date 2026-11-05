@@ -13,10 +13,11 @@ export interface DashboardControlsProps {
   onShowGeofencesChange: (visible: boolean) => void;
   mapStyle: MapStyle;
   onMapStyleChange: (style: MapStyle) => void;
+  canUseDemoData?: boolean;
   compact?: boolean;
 }
 
-export default function DashboardControls({ demoEnabled, onDemoToggle, showGeofences, onShowGeofencesChange, mapStyle, onMapStyleChange, compact = false }: DashboardControlsProps) {
+export default function DashboardControls({ demoEnabled, onDemoToggle, showGeofences, onShowGeofencesChange, mapStyle, onMapStyleChange, canUseDemoData = true, compact = false }: DashboardControlsProps) {
   const [mapMenuAnchor, setMapMenuAnchor] = useState<HTMLElement | null>(null);
   const menuId = useId();
   const mapMenuOpen = Boolean(mapMenuAnchor);
@@ -45,14 +46,16 @@ export default function DashboardControls({ demoEnabled, onDemoToggle, showGeofe
         "& .MuiButton-outlined": { bgcolor: "white", color: "#33445e", borderColor: "#dbe7f3" },
       }}
     >
-      <Button
-        variant={demoEnabled ? "contained" : "outlined"}
-        startIcon={<ScienceOutlinedIcon />}
-        aria-pressed={demoEnabled}
-        onClick={onDemoToggle}
-      >
-        Demo Data
-      </Button>
+      {canUseDemoData && (
+        <Button
+          variant={demoEnabled ? "contained" : "outlined"}
+          startIcon={<ScienceOutlinedIcon />}
+          aria-pressed={demoEnabled}
+          onClick={onDemoToggle}
+        >
+          Demo Data
+        </Button>
+      )}
       <Button
         variant={showGeofences ? "contained" : "outlined"}
         startIcon={<RadarIcon />}
