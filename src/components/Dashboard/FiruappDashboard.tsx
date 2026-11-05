@@ -4,7 +4,9 @@ import axios from "axios";
 import FiruappSidebar from "./ui/FiruappSidebar.tsx";
 import FiruappMapView from "./ui/FiruappMapView.tsx";
 import FiruappPetsList from "./ui/FiruappPetList.tsx";
-import { Pet, firuColors } from "./ui/FiruappStyles.ts";
+import DashboardControls from "./ui/DashboardControls.tsx";
+import { demoPets } from "./ui/dashboardDemoData.ts";
+import { MapStyle, Pet, PetDataMode, firuColors } from "./ui/FiruappStyles.ts";
 import { isGpsOnline, useGpsStatusTime } from "./ui/petConnectivity.ts";
 import {
   Avatar,
@@ -87,7 +89,6 @@ type GuideTargetRect = {
   height: number;
 };
 
-type PetDataMode = "mock" | "database" | "mixed";
 type DashboardPetFilters = {
   city: string;
   neighborhood: string;
@@ -432,7 +433,18 @@ const FiruappDashboard: React.FC = () => {
   const [dashboardPets, setDashboardPets] = useState<Pet[]>([]);
   const [databasePets, setDatabasePets] = useState<Pet[]>([]);
   const [petLocations, setPetLocations] = useState<DashboardPetLocation[]>([]);
-  const petDataMode: PetDataMode = "database";
+  const [demoEnabled, setDemoEnabled] = useState(false);
+  const [showGeofences, setShowGeofences] = useState(true);
+  const [mapStyle, setMapStyle] = useState<MapStyle>("clean");
+  const petDataMode: PetDataMode = demoEnabled ? "mixed" : "database";
+  const dashboardControls = {
+    demoEnabled,
+    onDemoToggle: () => setDemoEnabled((current) => !current),
+    showGeofences,
+    onShowGeofencesChange: setShowGeofences,
+    mapStyle,
+    onMapStyleChange: setMapStyle,
+  };
   const [petFilters, setPetFilters] = useState<DashboardPetFilters>({
     city: "",
     neighborhood: "",
@@ -490,14 +502,14 @@ const FiruappDashboard: React.FC = () => {
   }, [fetchDatabasePets]);
 
   useEffect(() => {
-    const nextPets = databasePets;
+    const nextPets = demoEnabled ? [...databasePets, ...demoPets] : databasePets;
     setDashboardPets(nextPets);
     setSelectedPetId((currentSelectedId) =>
       nextPets.some((pet) => pet.id === currentSelectedId)
         ? currentSelectedId
         : undefined
     );
-  }, [databasePets]);
+  }, [databasePets, demoEnabled]);
 
   const livePetDetailsByPetId = useMemo(() => {
     return Object.fromEntries(
@@ -746,6 +758,8 @@ const FiruappDashboard: React.FC = () => {
     city={selectedPetGpsCity}
     filters={petFilters}
     onFiltersChange={setPetFilters}
+    controls={dashboardControls}
+    petDataMode={petDataMode}
   /></React.Suspense>;
 
   return (
@@ -816,7 +830,9 @@ const FiruappDashboard: React.FC = () => {
                 Keep an eye on your pets in real time.
               </Typography>
             </Box>
-
+            <DashboardControls {...dashboardControls} />
+          </Box>
+          <Box>
             <Stack ref={filterBarRef} direction="row" spacing={1.25} flexWrap="wrap" useFlexGap>
               <Box
                 sx={{
@@ -929,6 +945,10 @@ const FiruappDashboard: React.FC = () => {
                 containerRef={mapPanelRef}
                 pets={filteredDashboardPets}
                 petDataMode={petDataMode}
+                showGeofences={showGeofences}
+                onShowGeofencesChange={setShowGeofences}
+                mapStyle={mapStyle}
+                onMapStyleChange={setMapStyle}
                 locationCity={selectedPetGpsCity}
                 onSelectPet={setSelectedPetId}
                 onLocationsChange={handleLocationsChange}

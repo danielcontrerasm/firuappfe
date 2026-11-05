@@ -1,5 +1,7 @@
 // ui/FiruappStyles.ts
 export type PetStatus = "active" | "lost";
+export type PetDataMode = "mock" | "database" | "mixed";
+export type MapStyle = "clean" | "natural";
 
 export interface Pet {
   id: string;

@@ -7,7 +7,8 @@ import L, { LatLngExpression } from "leaflet";
 import GpsFixedIcon from "@mui/icons-material/GpsFixed";
 import RadarIcon from "@mui/icons-material/Radar";
 import MapControls from "../../Pets/MapControls.tsx";
-import { firuColors, Pet } from "./FiruappStyles.ts";
+import { firuColors, MapStyle, Pet, PetDataMode } from "./FiruappStyles.ts";
+import { createDemoPetLocations } from "./dashboardDemoData.ts";
 import { loadPetImage } from "../../../services/usePetImage.ts";
 import { buildApiUrl } from "../../../config/runtime";
 import { isGpsOnline, useGpsStatusTime } from "./petConnectivity.ts";
@@ -42,7 +43,11 @@ interface PetGeofence {
 interface MapViewProps {
   apiUrl?: string;
   pets?: Pet[];
-  petDataMode?: "mock" | "database" | "mixed";
+  petDataMode?: PetDataMode;
+  showGeofences?: boolean;
+  onShowGeofencesChange?: (visible: boolean) => void;
+  mapStyle?: MapStyle;
+  onMapStyleChange?: (style: MapStyle) => void;
   locationCity?: string;
   onSelectPet?: (id: string) => void;
   onLocationsChange?: (locations: PetLocation[]) => void;
@@ -261,31 +266,6 @@ const createPetIcon = (imageUrl?: string, status?: string, name?: string, gpsOnl
   );
 };
 
-const mockPetLocations: PetLocation[] = [
-  {
-    id: "mock-location-1",
-    petId: "mock-2",
-    latitude: 6.2442,
-    longitude: -75.5812,
-    petName: "Bella",
-    timestamp: new Date().toISOString(),
-    imageUrl: "/german.png",
-    status: "active",
-    batteryPercent: 82,
-  },
-  {
-    id: "mock-location-2",
-    petId: "mock-3",
-    latitude: 6.2482,
-    longitude: -75.5862,
-    petName: "Rocky",
-    timestamp: new Date().toISOString(),
-    imageUrl: "/labrador.png",
-    status: "lost",
-    batteryPercent: 18,
-  },
-];
-
 const FiruappMapView: React.FC<MapViewProps> = ({
   apiUrl = buildApiUrl("/api/pets/locations"),
   pets = [],
@@ -294,12 +274,30 @@ const FiruappMapView: React.FC<MapViewProps> = ({
   onSelectPet,
   onLocationsChange,
   containerRef,
+  showGeofences: controlledShowGeofences,
+  onShowGeofencesChange,
+  mapStyle: controlledMapStyle,
+  onMapStyleChange,
 }) => {
   const now = useGpsStatusTime();
   const [petLocations, setPetLocations] = useState<PetLocation[]>([]);
   const [petGeofences, setPetGeofences] = useState<PetGeofence[]>([]);
-  const [showGeofences, setShowGeofences] = useState(true);
-  const [mapStyle, setMapStyle] = useState<"clean" | "natural">("clean");
+  const [localShowGeofences, setLocalShowGeofences] = useState(true);
+  const [localMapStyle, setLocalMapStyle] = useState<MapStyle>("clean");
+  const showGeofences = controlledShowGeofences ?? localShowGeofences;
+  const mapStyle = controlledMapStyle ?? localMapStyle;
+  const setShowGeofences = (visible: boolean) => {
+    setLocalShowGeofences(visible);
+    onShowGeofencesChange?.(visible);
+  };
+  const setMapStyle = (style: MapStyle) => {
+    setLocalMapStyle(style);
+    onMapStyleChange?.(style);
+  };
+  const mockPetLocations = useMemo(
+    () => petDataMode === "database" ? [] : createDemoPetLocations(now),
+    [petDataMode, now]
+  );
   const [petImageBlobUrls, setPetImageBlobUrls] = useState<Record<string, string>>({});
   const statusByPetId = useMemo(
     () =>
@@ -394,7 +392,6 @@ const FiruappMapView: React.FC<MapViewProps> = ({
             .filter(Boolean) as PetLocation[];
 
           setPetLocations(normalized);
-          onLocationsChange?.(normalized);
         }
       } catch (error) {
         console.error("Error fetching pet locations:", error);
@@ -404,9 +401,19 @@ const FiruappMapView: React.FC<MapViewProps> = ({
     fetchPetLocations();
     const interval = window.setInterval(fetchPetLocations, 30000);
     return () => window.clearInterval(interval);
-  }, [apiUrl, onLocationsChange]);
+  }, [apiUrl]);
 
   useEffect(() => {
+    const locations = petDataMode === "mock"
+      ? mockPetLocations
+      : petDataMode === "mixed"
+        ? [...petLocations, ...mockPetLocations]
+        : petLocations;
+    onLocationsChange?.(locations);
+  }, [petDataMode, petLocations, mockPetLocations, onLocationsChange]);
+
+  useEffect(() => {
+    let cancelled = false;
     const fetchPetGeofences = async () => {
       const petsForGeofences = pets
         .map((pet) => ({
@@ -435,10 +442,11 @@ const FiruappMapView: React.FC<MapViewProps> = ({
         })
       );
 
-      setPetGeofences(responses.flat());
+      if (!cancelled) setPetGeofences(responses.flat());
     };
 
     fetchPetGeofences();
+    return () => { cancelled = true; };
   }, [pets]);
 
   const displayMarkers = useMemo(
@@ -453,7 +461,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
 
       return [...mockPetLocations, ...petLocations].filter((location) => visiblePetIds.has(String(location.petId ?? location.id)));
     },
-    [petDataMode, petLocations, visiblePetIds]
+    [petDataMode, petLocations, visiblePetIds, mockPetLocations]
   );
   const markerPetIds = useMemo(
     () =>
@@ -714,7 +722,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
             attribution={activeMapStyle.attribution}
           />
           <CenterMap markers={displayMarkers} selectionKey={selectionKey} />
-          <MapControls coordinates={displayMarkers.map(pet => [pet.latitude, pet.longitude])} cleanLayer={mapStyle === "clean"} onToggleLayer={() => setMapStyle(current => current === "natural" ? "clean" : "natural")} />
+          <MapControls coordinates={displayMarkers.map(pet => [pet.latitude, pet.longitude])} cleanLayer={mapStyle === "clean"} onToggleLayer={() => setMapStyle(mapStyle === "natural" ? "clean" : "natural")} />
 
           {/*
           <Circle center={[mainMarker.latitude, mainMarker.longitude]} radius={550} pathOptions={{ color: firuColors.cyan, fillColor: firuColors.cyan, fillOpacity: 0.08, weight: 2 }} />
@@ -819,8 +827,9 @@ const FiruappMapView: React.FC<MapViewProps> = ({
             sx={{ height: 46, borderRadius: 2, bgcolor: "#ffffff", border: "1px solid #dbe7f3", color: "#0f1b34", fontWeight: 900, boxShadow: "0 12px 26px rgba(15,23,42,0.12)" }}
           />
           <Chip
-            label="All pets"
-            onClick={() => setShowGeofences((current) => !current)}
+            label="Geofences"
+            aria-pressed={showGeofences}
+            onClick={() => setShowGeofences(!showGeofences)}
             sx={{ height: 46, borderRadius: 2, bgcolor: "#ffffff", border: "1px solid #dbe7f3", color: "#0f1b34", fontWeight: 900, cursor: "pointer", boxShadow: "0 12px 26px rgba(15,23,42,0.12)" }}
           />
         </Stack>

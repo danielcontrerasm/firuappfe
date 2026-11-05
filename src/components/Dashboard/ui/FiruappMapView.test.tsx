@@ -1,8 +1,9 @@
 import React from "react";
-import { act, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import axios from "axios";
 import { useMap } from "react-leaflet";
 import FiruappMapView, { CenterMap } from "./FiruappMapView.tsx";
+import { demoPets } from "./dashboardDemoData.ts";
 
 jest.mock("react-leaflet", () => {
   const React = require("react");
@@ -12,8 +13,8 @@ jest.mock("react-leaflet", () => {
     MapContainer: Container,
     Popup: Container,
     TileLayer: () => null,
-    Circle: () => null,
-    Polygon: () => null,
+    Circle: ({ children }: any) => <div data-testid="map-geofence">{children}</div>,
+    Polygon: ({ children }: any) => <div data-testid="map-geofence">{children}</div>,
     Marker: ({ icon, children, position }: any) => (
       <div data-testid="map-marker" data-latitude={position[0]} data-longitude={position[1]}>
         <div dangerouslySetInnerHTML={{ __html: icon.options.html }} />
@@ -186,5 +187,77 @@ describe("GPS connectivity on the map", () => {
     await screen.findByText("1 pets online");
 
     expect(within(markerFor("Rocky")).getByText("Lost · Online")).toBeInTheDocument();
+  });
+
+  test("demo mode adds markers, safe zones, and detail data without removing real locations", async () => {
+    const onLocationsChange = jest.fn();
+    const { rerender } = render(<FiruappMapView pets={pets} onLocationsChange={onLocationsChange} />);
+    await screen.findByText("1 pets online");
+
+    await act(async () => {
+      rerender(<FiruappMapView pets={[...pets, ...demoPets]} petDataMode="mixed" onLocationsChange={onLocationsChange} />);
+    });
+    await screen.findByText("3 pets online");
+    expect(screen.getAllByTestId("map-marker")).toHaveLength(4);
+    expect(screen.getAllByTestId("map-geofence")).toHaveLength(2);
+    expect(onLocationsChange).toHaveBeenLastCalledWith(expect.arrayContaining([
+      expect.objectContaining({ petId: "mock-2", city: "Medellín", batteryPercent: 82 }),
+      expect.objectContaining({ petId: "mock-3", city: "Medellín", batteryPercent: 18 }),
+      expect.objectContaining({ petId: 1 }),
+      expect.objectContaining({ petId: 4 }),
+    ]));
+    expect((axios.get as jest.Mock).mock.calls.some(([url]) => url.includes("/mock-"))).toBe(false);
+
+    await act(async () => {
+      rerender(<FiruappMapView pets={pets} petDataMode="database" onLocationsChange={onLocationsChange} />);
+    });
+    await screen.findByText("1 pets online");
+    expect(screen.getAllByTestId("map-marker")).toHaveLength(2);
+    expect(screen.queryByTestId("map-geofence")).not.toBeInTheDocument();
+    expect(onLocationsChange).toHaveBeenLastCalledWith(expect.arrayContaining([
+      expect.objectContaining({ petId: 1 }), expect.objectContaining({ petId: 4 }),
+    ]));
+    expect(onLocationsChange.mock.calls.at(-1)[0]).toHaveLength(2);
+  });
+
+  test("hides and restores saved geofences while keeping pet markers visible", async () => {
+    (axios.get as jest.Mock).mockImplementation((url: string) => Promise.resolve({
+      data: url.endsWith("/api/pets/locations") ? reports : [
+        { id: 1, type: "circle", center: { latitude: 10.97, longitude: -74.79 }, radiusMeters: 200 },
+      ],
+    }));
+    const onShowGeofencesChange = jest.fn();
+    const { rerender } = render(<FiruappMapView pets={pets} showGeofences onShowGeofencesChange={onShowGeofencesChange} />);
+    expect(await screen.findAllByTestId("map-geofence")).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole("button", { name: "Geofences" }));
+    expect(onShowGeofencesChange).toHaveBeenCalledWith(false);
+    await act(async () => {
+      rerender(<FiruappMapView pets={pets} showGeofences={false} onShowGeofencesChange={onShowGeofencesChange} />);
+    });
+    expect(screen.queryByTestId("map-geofence")).not.toBeInTheDocument();
+    expect(screen.getAllByTestId("map-marker")).toHaveLength(2);
+
+    await act(async () => {
+      rerender(<FiruappMapView pets={pets} showGeofences onShowGeofencesChange={onShowGeofencesChange} />);
+    });
+    expect(screen.getAllByTestId("map-geofence")).toHaveLength(2);
+  });
+
+  test("keeps the map's layer button in sync with the selected map style", async () => {
+    const onMapStyleChange = jest.fn();
+    const { rerender } = render(<FiruappMapView pets={pets} mapStyle="clean" onMapStyleChange={onMapStyleChange} />);
+    await screen.findByText("1 pets online");
+    const layerButton = screen.getByRole("button", { name: "Cambiar capa del mapa" });
+    expect(layerButton).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(layerButton);
+    expect(onMapStyleChange).toHaveBeenCalledWith("natural");
+    await act(async () => {
+      rerender(<FiruappMapView pets={pets} mapStyle="natural" onMapStyleChange={onMapStyleChange} />);
+    });
+    expect(layerButton).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(layerButton);
+    expect(onMapStyleChange).toHaveBeenLastCalledWith("clean");
   });
 });

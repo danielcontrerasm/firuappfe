@@ -68,6 +68,7 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
   const [menuAnchor, setMenuAnchor] = useState<{ mouseX: number; mouseY: number } | null>(null);
   const [menuPet, setMenuPet] = useState<Pet | null>(null);
   const navigate = useNavigate();
+  const isDemoPet = menuPet?.id.startsWith("mock-");
 
   const handleRightClick = (event: React.MouseEvent<HTMLDivElement, MouseEvent>, pet: Pet) => {
     event.preventDefault();
@@ -328,7 +329,7 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
           },
         }}
       >
-        <MenuItem onClick={handleCreateGeofence}>
+        <MenuItem onClick={handleCreateGeofence} disabled={isDemoPet}>
           <ListItemIcon><AddLocationAltIcon fontSize="small" /></ListItemIcon>
           Create Geofence
         </MenuItem>
@@ -336,15 +337,15 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
           <ListItemIcon><AssessmentIcon fontSize="small" /></ListItemIcon>
           View Daily Report
         </MenuItem>
-        <MenuItem onClick={handleCreateSearchGroup}>
+        <MenuItem onClick={handleCreateSearchGroup} disabled={isDemoPet}>
           <ListItemIcon><GroupsIcon fontSize="small" /></ListItemIcon>
           Create Search Group
         </MenuItem>
-        <MenuItem onClick={() => updatePetStatus("lost")}>
+        <MenuItem onClick={() => updatePetStatus("lost")} disabled={isDemoPet}>
           <ListItemIcon><ReportProblemIcon fontSize="small" color="warning" /></ListItemIcon>
           Mark as Lost
         </MenuItem>
-        <MenuItem onClick={() => updatePetStatus("active")}>
+        <MenuItem onClick={() => updatePetStatus("active")} disabled={isDemoPet}>
           <ListItemIcon><CheckCircleIcon fontSize="small" color="success" /></ListItemIcon>
           Mark as Found
         </MenuItem>

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Avatar, Badge, Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton } from "@mui/material";
+import { Avatar, Badge, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton } from "@mui/material";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
@@ -13,7 +13,8 @@ import CloseIcon from "@mui/icons-material/Close";
 import FiruBrand from "./ui/FiruBrand.tsx";
 import FiruappMapView from "./ui/FiruappMapView.tsx";
 import FiruappSidebar from "./ui/FiruappSidebar.tsx";
-import { Pet } from "./ui/FiruappStyles.ts";
+import { Pet, PetDataMode } from "./ui/FiruappStyles.ts";
+import DashboardControls, { DashboardControlsProps } from "./ui/DashboardControls.tsx";
 import { usePetImage } from "../../services/usePetImage.ts";
 
 function PetPhoto({ pet }: { pet: Pet }) {
@@ -21,7 +22,7 @@ function PetPhoto({ pet }: { pet: Pet }) {
   return <Avatar src={src} alt={pet.name} className="firu-pet-photo">{pet.name.charAt(0)}</Avatar>;
 }
 
-export default function MobileTrackingDashboard({ pets, selectedPet, onSelect, onLocationsChange, alertCount, city, filters, onFiltersChange }: {
+export default function MobileTrackingDashboard({ pets, selectedPet, onSelect, onLocationsChange, alertCount, city, filters, onFiltersChange, controls, petDataMode }: {
   pets: Pet[];
   selectedPet?: Pet;
   onSelect: (id: string) => void;
@@ -30,6 +31,8 @@ export default function MobileTrackingDashboard({ pets, selectedPet, onSelect, o
   city?: string;
   filters: { city: string; neighborhood: string; ownerName: string; petName: string };
   onFiltersChange: React.Dispatch<React.SetStateAction<{ city: string; neighborhood: string; ownerName: string; petName: string }>>;
+  controls: DashboardControlsProps;
+  petDataMode: PetDataMode;
 }) {
   const navigate = useNavigate();
   const [showFilters, setShowFilters] = useState(false);
@@ -47,6 +50,7 @@ export default function MobileTrackingDashboard({ pets, selectedPet, onSelect, o
           <Badge badgeContent={alertCount} color="error"><NotificationsNoneIcon /></Badge>
         </IconButton>
       </header>
+      <Box sx={{ px: 2, pb: 1.5 }}><DashboardControls {...controls} /></Box>
       <div className="firu-pet-chips" aria-label="Seleccionar mascota">
         {pets.map(pet => <button key={pet.id} type="button" className={`firu-pet-chip${selectedPet?.id === pet.id ? " is-selected" : ""}`} aria-pressed={selectedPet?.id === pet.id} onClick={() => onSelect(pet.id)}>
           <PetPhoto pet={pet} /><span><strong>{pet.name}</strong><small className={pet.gpsOnline ? "is-online" : ""}><i />{pet.gpsOnline ? "En vivo" : "Sin conexión"}</small></span>
@@ -55,7 +59,17 @@ export default function MobileTrackingDashboard({ pets, selectedPet, onSelect, o
       </div>
       <main>
         <div className="firu-tracking-map">
-          <FiruappMapView pets={pets} petDataMode="database" locationCity={city} onSelectPet={openPet} onLocationsChange={onLocationsChange} />
+          <FiruappMapView
+            pets={pets}
+            petDataMode={petDataMode}
+            locationCity={city}
+            onSelectPet={openPet}
+            onLocationsChange={onLocationsChange}
+            showGeofences={controls.showGeofences}
+            onShowGeofencesChange={controls.onShowGeofencesChange}
+            mapStyle={controls.mapStyle}
+            onMapStyleChange={controls.onMapStyleChange}
+          />
           <div className="firu-map-summary">
             <div><PetsOutlinedIcon /><span><strong>{pets.length} mascotas</strong><small>En seguimiento</small></span></div>
             <div><span className={`firu-live-dot${onlineCount ? " is-online" : ""}`} /><span><strong>{onlineCount} GPS</strong><small>En línea</small></span></div>
@@ -89,8 +103,8 @@ export default function MobileTrackingDashboard({ pets, selectedPet, onSelect, o
         <DialogTitle className="firu-pet-detail-title">{selectedPet?.name}<IconButton aria-label="Cerrar detalles" onClick={() => setDetailOpen(false)}><CloseIcon /></IconButton></DialogTitle>
         {selectedPet && <DialogContent><div className="firu-pet-detail"><PetPhoto pet={selectedPet} /><h2>{selectedPet.name}</h2><p>{selectedPet.breed || selectedPet.race}</p><span className="firu-status-badge">{status(selectedPet)}</span><p>Batería: {selectedPet.battery == null ? 'Sin datos' : `${selectedPet.battery}%`}</p></div></DialogContent>}
         <DialogActions sx={{ flexDirection: 'column', gap: 1, p: 2, '& > :not(style) ~ :not(style)': { ml: 0 } }}>
-          <Button fullWidth variant="contained" onClick={() => navigate(`/routes/recent?petId=${selectedPet?.apiId || selectedPet?.id}`)}>Ver recorrido</Button>
-          <Button fullWidth variant="outlined" onClick={() => navigate(`/geofence?petId=${selectedPet?.apiId || selectedPet?.id}`)}>Ver zona segura</Button>
+          <Button fullWidth variant="contained" disabled={selectedPet?.id.startsWith("mock-")} onClick={() => navigate(`/routes/recent?petId=${selectedPet?.apiId || selectedPet?.id}`)}>Ver recorrido</Button>
+          <Button fullWidth variant="outlined" disabled={selectedPet?.id.startsWith("mock-")} onClick={() => navigate(`/geofence?petId=${selectedPet?.apiId || selectedPet?.id}`)}>Ver zona segura</Button>
           <Button fullWidth onClick={() => navigate('/pets')}>Gestionar mascota</Button>
         </DialogActions>
       </Dialog>
