@@ -8,6 +8,7 @@ import "./routeMapStyles.css";
 import MapControls from "./MapControls.tsx";
 import PageHeader from "../Dashboard/ui/PageHeader.tsx";
 import { buildApiUrl } from "../../config/runtime";
+import { isOwnedByCurrentUser } from "../../services/auth.ts";
 
 const mapStyles = {
   clean: {
@@ -196,7 +197,9 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         });
         const petDtos = extractPetDtos(response.data);
-        const databasePets = Array.isArray(petDtos) ? petDtos.map(mapDtoToRoutePet) : [];
+        const databasePets = Array.isArray(petDtos)
+          ? petDtos.filter((pet) => isOwnedByCurrentUser(pet)).map(mapDtoToRoutePet)
+          : [];
 
         if (!cancelled) {
           setRoutePets(databasePets);

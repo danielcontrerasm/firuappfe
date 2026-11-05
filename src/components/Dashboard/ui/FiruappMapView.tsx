@@ -12,6 +12,7 @@ import { createDemoPetLocations } from "./dashboardDemoData.ts";
 import { loadPetImage } from "../../../services/usePetImage.ts";
 import { buildApiUrl } from "../../../config/runtime";
 import { isGpsOnline, useGpsStatusTime } from "./petConnectivity.ts";
+import { isOwnedByCurrentUser } from "../../../services/auth.ts";
 
 interface PetLocation {
   id: string | number;
@@ -52,6 +53,7 @@ interface MapViewProps {
   onSelectPet?: (id: string) => void;
   onLocationsChange?: (locations: PetLocation[]) => void;
   containerRef?: React.Ref<HTMLDivElement>;
+  mapResizeKey?: string | number;
 }
 
 const fallbackCenter: LatLngExpression = [6.2442, -75.5812];
@@ -237,6 +239,42 @@ export const CenterMap: React.FC<{ markers: PetLocation[]; selectionKey: string 
   return null;
 };
 
+export const MapResizeSync: React.FC<{ resizeKey?: string | number }> = ({ resizeKey }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    const invalidate = () => {
+      const invalidateSize = (map as L.Map & { invalidateSize?: (options?: unknown) => void }).invalidateSize;
+      invalidateSize?.call(map, { pan: false, animate: false });
+    };
+
+    const frame = typeof window.requestAnimationFrame === "function"
+      ? window.requestAnimationFrame(invalidate)
+      : window.setTimeout(invalidate, 0);
+    const cancelFrame = typeof window.cancelAnimationFrame === "function"
+      ? () => window.cancelAnimationFrame(frame as number)
+      : () => window.clearTimeout(frame as number);
+
+    const container = typeof (map as L.Map & { getContainer?: () => HTMLElement }).getContainer === "function"
+      ? (map as L.Map & { getContainer: () => HTMLElement }).getContainer()
+      : null;
+    let observer: ResizeObserver | undefined;
+    if (container && typeof ResizeObserver !== "undefined") {
+      observer = new ResizeObserver(invalidate);
+      observer.observe(container);
+    }
+    window.addEventListener("resize", invalidate);
+
+    return () => {
+      cancelFrame();
+      observer?.disconnect();
+      window.removeEventListener("resize", invalidate);
+    };
+  }, [map, resizeKey]);
+
+  return null;
+};
+
 const createPetIcon = (imageUrl?: string, status?: string, name?: string, gpsOnline = false) => {
   const alert = isAlertStatus(status);
   const safeLabel = `${alert ? "Lost · " : ""}${gpsOnline ? "Online" : "Offline"}`;
@@ -274,6 +312,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
   onSelectPet,
   onLocationsChange,
   containerRef,
+  mapResizeKey,
   showGeofences: controlledShowGeofences,
   onShowGeofencesChange,
   mapStyle: controlledMapStyle,
@@ -346,6 +385,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
 
         if (Array.isArray(locations)) {
           const normalized = locations
+            .filter((loc: any) => isOwnedByCurrentUser(loc))
             .map((loc: any) => {
               if (!loc) return null;
               const latitude = Number(loc.latitude);
@@ -721,6 +761,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
             url={activeMapStyle.url}
             attribution={activeMapStyle.attribution}
           />
+          <MapResizeSync resizeKey={mapResizeKey} />
           <CenterMap markers={displayMarkers} selectionKey={selectionKey} />
           <MapControls coordinates={displayMarkers.map(pet => [pet.latitude, pet.longitude])} cleanLayer={mapStyle === "clean"} onToggleLayer={() => setMapStyle(mapStyle === "natural" ? "clean" : "natural")} />
 

@@ -13,6 +13,15 @@ import PetsListPage from "./components/Users/PetsListPage.tsx";
 import VolunteerGroupsPage from "./components/Users/VolunteerGroupsPage.tsx";
 import ProfilePage from "./components/Dashboard/ProfilePage.tsx";
 import AlertsPage from "./components/Dashboard/AlertsPage.tsx";
+import { isCurrentUserAdmin } from "./services/auth.ts";
+
+const AdminOnlyRoute = ({ children }) => {
+  if (!isCurrentUserAdmin()) {
+    return <Navigate to="/owner-dashboard" replace />;
+  }
+
+  return children;
+};
 
 
 function App() {
@@ -36,9 +45,9 @@ function App() {
         <Route path="/geofence" element={<CustomGeofence />} />
         <Route path="/route" element={<Navigate to="/routes/recent" replace />} />
         <Route path="/routes/recent" element={<MultiPetRouteView />} />
-        <Route path="/users" element={<UsersListPage />} />
+        <Route path="/users" element={<AdminOnlyRoute><UsersListPage /></AdminOnlyRoute>} />
         <Route path="/pets" element={<PetsListPage />} />
-        <Route path="/sensors" element={<SensorsListPage />} />
+        <Route path="/sensors" element={<AdminOnlyRoute><SensorsListPage /></AdminOnlyRoute>} />
         <Route path="/volunteers" element={<VolunteerGroupsPage />} />
         <Route path="/lost-pets" element={<LostPetsWallPage />} />
       </Route>

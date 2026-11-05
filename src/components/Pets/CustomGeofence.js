@@ -16,6 +16,7 @@ import axios from "axios";
 import { useSearchParams } from "react-router-dom";
 import "./routeMapStyles.css";
 import { buildApiUrl } from "../../config/runtime";
+import { isOwnedByCurrentUser } from "../../services/auth.ts";
 import MapControls from "./MapControls.tsx";
 import PageHeader from "../Dashboard/ui/PageHeader.tsx";
 import AddIcon from "@mui/icons-material/Add";
@@ -213,7 +214,7 @@ const CustomGeofence = () => {
         const petDtos = extractPetDtos(response.data);
         if (!cancelled) {
           setPets(
-            petDtos.map((pet) => ({
+            petDtos.filter((pet) => isOwnedByCurrentUser(pet)).map((pet) => ({
               id: String(pet.id),
               name: pet.name || `Pet ${pet.id}`,
               status: String(pet.status || "active").toLowerCase(),

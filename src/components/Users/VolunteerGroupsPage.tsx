@@ -31,6 +31,7 @@ import PersonAddAltIcon from "@mui/icons-material/PersonAddAlt";
 import SearchIcon from "@mui/icons-material/Search";
 import { useSearchParams } from "react-router-dom";
 import { buildApiUrl, searchGroupEndpoints } from "../../config/runtime";
+import { getCurrentUserId, isOwnedByCurrentUser } from "../../services/auth.ts";
 
 type VolunteerMemberDto = {
   userId: number;
@@ -186,7 +187,16 @@ const fetchPersistedGroups = async (): Promise<SearchGroupDto[]> => {
   const response = await axios.get(buildApiUrl(searchGroupEndpoints.list), {
     headers: getAuthHeaders(),
   });
-  return extractCollection(response.data).map((dto: any) => mapDtoToSearchGroup(dto));
+  return extractCollection(response.data)
+    .filter((dto: any) => {
+      const currentUserId = getCurrentUserId();
+      const group = mapDtoToSearchGroup(dto);
+      const isMember = currentUserId
+        ? group.volunteers.some((volunteer) => String(volunteer.userId) === currentUserId)
+        : false;
+      return isOwnedByCurrentUser(dto) || isMember;
+    })
+    .map((dto: any) => mapDtoToSearchGroup(dto));
 };
 
 const getAuthenticatedUserId = (): number | null => {
@@ -269,7 +279,7 @@ const VolunteerGroupsPage: React.FC = () => {
         }
 
         if (!cancelled && petsResponse.status === "fulfilled") {
-          const petDtos = extractCollection(petsResponse.value.data);
+          const petDtos = extractCollection(petsResponse.value.data).filter((dto: any) => isOwnedByCurrentUser(dto));
 
           setPets(
             petDtos.map((dto: any) => ({

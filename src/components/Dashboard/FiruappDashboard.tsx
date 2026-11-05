@@ -43,6 +43,7 @@ import SecurityIcon from "@mui/icons-material/Security";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import { usePetImage } from "../../services/usePetImage.ts";
 import { buildApiUrl } from "../../config/runtime";
+import { isOwnedByCurrentUser } from "../../services/auth.ts";
 
 
 import { useLiveAlerts } from "../../services/useLiveAlerts.ts";
@@ -477,7 +478,9 @@ const FiruappDashboard: React.FC = () => {
       count: Array.isArray(petDtos) ? petDtos.length : 0,
       responseKeys: response?.data && typeof response.data === "object" ? Object.keys(response.data) : [],
     });
-    return (Array.isArray(petDtos) ? petDtos : []).map(mapPetDtoToDashboardPet);
+    return (Array.isArray(petDtos) ? petDtos : [])
+      .filter((petDto: any) => isOwnedByCurrentUser(petDto))
+      .map(mapPetDtoToDashboardPet);
   }, []);
 
   useEffect(() => {
@@ -956,6 +959,7 @@ const FiruappDashboard: React.FC = () => {
                 mapStyle={mapStyle}
                 onMapStyleChange={setMapStyle}
                 locationCity={selectedPetGpsCity}
+                mapResizeKey={detailsPanelOpen ? "details" : "full-map"}
                 onSelectPet={(petId) => {
                   setSelectedPetId(petId);
                   setDetailsPanelOpen(true);

@@ -15,6 +15,7 @@ import ContentPasteSearchIcon from "@mui/icons-material/ContentPasteSearch";
 import MobileNavigation from "./MobileNavigation.tsx";
 import FiruBrand from "./FiruBrand.tsx";
 import { firuColors } from "./FiruappStyles.ts";
+import { isCurrentUserAdmin } from "../../../services/auth.ts";
 
 interface SidebarProps {
   current: "all" | "geofence" | "route";
@@ -28,8 +29,8 @@ const navItems = [
   { label: "My Pets", icon: PetsIcon, to: "/pets" },
   { label: "Volunteer Groups", icon: GroupIcon, to: "/volunteers" },
   { label: "Lost Pets Wall", icon: ContentPasteSearchIcon, to: "/lost-pets" },
-  { label: "GPS Sensors", icon: SensorsIcon, to: "/sensors" },
-  { label: "Users", icon: PersonIcon, to: "/users" },
+  { label: "GPS Sensors", icon: SensorsIcon, to: "/sensors", adminOnly: true },
+  { label: "Users", icon: PersonIcon, to: "/users", adminOnly: true },
   { label: "Mi perfil", icon: PersonIcon, to: "/profile" },
   { label: "Alerts", icon: NotificationsActiveIcon, to: "/alerts" },
 ];
@@ -37,6 +38,7 @@ const navItems = [
 const FiruappSidebar: React.FC<SidebarProps> = ({ onChange }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const isAdmin = isCurrentUserAdmin();
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -71,7 +73,7 @@ const FiruappSidebar: React.FC<SidebarProps> = ({ onChange }) => {
 
 
       <Box sx={{ display: "grid", gap: 0.55, width: "100%", mt: 0.25 }}>
-        {navItems.map((item) => {
+        {navItems.filter((item) => !item.adminOnly || isAdmin).map((item) => {
           const Icon = item.icon;
           const active = location.pathname === item.to;
 

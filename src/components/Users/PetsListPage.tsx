@@ -15,6 +15,7 @@ import {
 import EntityListPage, { Column } from "./EntityListPage.tsx";
 import { petImageEndpoint, usePetImage } from "../../services/usePetImage.ts";
 import { buildApiUrl, buildAssetUrl } from "../../config/runtime";
+import { isOwnedByCurrentUser } from "../../services/auth.ts";
 
 type PetStatus = "active" | "lost" | "offline";
 
@@ -189,7 +190,7 @@ const PetsListPage: React.FC = () => {
           : response.data?.content || response.data?.items || [];
 
         if (!cancelled) {
-          setPets(petDtos.map((dto: any) => mapDtoToPetRow(dto)));
+          setPets(petDtos.filter((dto: any) => isOwnedByCurrentUser(dto)).map((dto: any) => mapDtoToPetRow(dto)));
         }
       } catch (error) {
         console.error("Error fetching pets:", error);
