@@ -204,7 +204,8 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
           gap: 1.2,
           overflowX: "auto",
           overflowY: { xs: "hidden", md: "auto" },
-          maxHeight: { xs: "none", md: 94 },
+          // Keep four cards visible (two rows) while allowing larger households to scroll.
+          maxHeight: { xs: "none", md: 184 },
           pb: 0.25,
         }}
       >
