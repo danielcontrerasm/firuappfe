@@ -453,6 +453,7 @@ const FiruappDashboard: React.FC = () => {
     petName: "",
   });
   const [selectedPetId, setSelectedPetId] = useState<string | undefined>();
+  const [showPetCards, setShowPetCards] = useState(true);
   const [section, setSection] = useState<"all" | "geofence" | "route">("all");
   const { alerts: alertMessages, connected: alertsConnected, dismissAlert } = useLiveAlerts();
   const [cityByLocationKey, setCityByLocationKey] = useState<Record<string, string>>({});
@@ -957,16 +958,46 @@ const FiruappDashboard: React.FC = () => {
                 onSelectPet={setSelectedPetId}
                 onLocationsChange={handleLocationsChange}
               />
-              <FiruappPetsList
-                containerRef={petListRef}
-                pets={filteredDashboardPets}
-                selectedId={selectedPet?.id}
-                onSelect={setSelectedPetId}
-                onStatusChange={(petId, status) => {
-                  setDatabasePets((currentPets) => currentPets.map((pet) => ((pet.apiId || pet.id) === petId ? { ...pet, status } : pet)));
-                  setDashboardPets((currentPets) => currentPets.map((pet) => ((pet.apiId || pet.id) === petId ? { ...pet, status } : pet)));
-                }}
-              />
+              {showPetCards ? (
+                <FiruappPetsList
+                  containerRef={petListRef}
+                  pets={filteredDashboardPets}
+                  selectedId={selectedPet?.id}
+                  onSelect={(petId) => {
+                    setSelectedPetId(petId);
+                    setShowPetCards(false);
+                  }}
+                  onStatusChange={(petId, status) => {
+                    setDatabasePets((currentPets) => currentPets.map((pet) => ((pet.apiId || pet.id) === petId ? { ...pet, status } : pet)));
+                    setDashboardPets((currentPets) => currentPets.map((pet) => ((pet.apiId || pet.id) === petId ? { ...pet, status } : pet)));
+                  }}
+                />
+              ) : (
+                <Button
+                  size="small"
+                  startIcon={<PetsIcon sx={{ fontSize: 18 }} />}
+                  onClick={() => setShowPetCards(true)}
+                  aria-label="Show pet cards"
+                  sx={{
+                    position: "absolute",
+                    left: { xs: 12, md: 16 },
+                    bottom: { xs: 16, md: 20 },
+                    zIndex: 1100,
+                    minHeight: 42,
+                    px: 1.8,
+                    borderRadius: 2,
+                    bgcolor: "#ffffff",
+                    border: "1px solid #dbe7f3",
+                    color: "#0f1b34",
+                    fontWeight: 900,
+                    textTransform: "none",
+                    boxShadow: "0 12px 26px rgba(15,23,42,0.16)",
+                    "&:hover": { bgcolor: "#f8fbff" },
+                  }}
+                >
+                  Show pet cards
+                </Button>
+              )}
             </Paper>
 
             <Stack spacing={1.8}>
