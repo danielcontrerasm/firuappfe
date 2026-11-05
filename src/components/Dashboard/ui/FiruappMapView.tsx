@@ -533,8 +533,8 @@ const FiruappMapView: React.FC<MapViewProps> = ({
       className="firu-live-map"
       sx={{
         position: "relative",
-        height: { xs: "calc(100vh - 190px)", md: "calc(100vh - 365px)", xl: "calc(100vh - 330px)" },
-        minHeight: { xs: 520, md: 610 },
+        height: { xs: "calc(100vh - 190px)", md: "calc(100vh - 300px)", xl: "calc(100vh - 290px)" },
+        minHeight: { xs: 520, md: 620 },
       }}
     >
       <Box
@@ -566,8 +566,8 @@ const FiruappMapView: React.FC<MapViewProps> = ({
           height: "100%",
           borderRadius: { xs: 4, md: 5 },
           overflow: "hidden",
-          border: "1px solid rgba(203,213,225,0.9)",
-          boxShadow: "0 20px 45px rgba(15,23,42,0.10)",
+          border: "none",
+          boxShadow: "none",
           "& .leaflet-container": { background: "#e7f4f6" },
           "& .leaflet-tile-pane": { filter: activeMapStyle.filter },
           "& .leaflet-control-zoom": { border: "none !important", boxShadow: "0 12px 28px rgba(15,23,42,.16)" },
@@ -827,8 +827,9 @@ const FiruappMapView: React.FC<MapViewProps> = ({
             sx={{ height: 46, borderRadius: 2, bgcolor: "#ffffff", border: "1px solid #dbe7f3", color: "#0f1b34", fontWeight: 900, boxShadow: "0 12px 26px rgba(15,23,42,0.12)" }}
           />
           <Chip
-            label="Geofences"
+            label="All pets"
             aria-pressed={showGeofences}
+            aria-label="Toggle geofences"
             onClick={() => setShowGeofences(!showGeofences)}
             sx={{ height: 46, borderRadius: 2, bgcolor: "#ffffff", border: "1px solid #dbe7f3", color: "#0f1b34", fontWeight: 900, cursor: "pointer", boxShadow: "0 12px 26px rgba(15,23,42,0.12)" }}
           />

@@ -13,9 +13,10 @@ export interface DashboardControlsProps {
   onShowGeofencesChange: (visible: boolean) => void;
   mapStyle: MapStyle;
   onMapStyleChange: (style: MapStyle) => void;
+  compact?: boolean;
 }
 
-export default function DashboardControls({ demoEnabled, onDemoToggle, showGeofences, onShowGeofencesChange, mapStyle, onMapStyleChange }: DashboardControlsProps) {
+export default function DashboardControls({ demoEnabled, onDemoToggle, showGeofences, onShowGeofencesChange, mapStyle, onMapStyleChange, compact = false }: DashboardControlsProps) {
   const [mapMenuAnchor, setMapMenuAnchor] = useState<HTMLElement | null>(null);
   const menuId = useId();
   const mapMenuOpen = Boolean(mapMenuAnchor);
@@ -29,7 +30,17 @@ export default function DashboardControls({ demoEnabled, onDemoToggle, showGeofe
       role="group"
       aria-label="Dashboard controls"
       sx={{
-        "& .MuiButton-root": { minHeight: 42, borderRadius: 2, textTransform: "none", fontWeight: 800 },
+        flexShrink: 0,
+        "& .MuiButton-root": {
+          minHeight: compact ? 36 : 42,
+          px: compact ? 1.15 : 1.6,
+          borderRadius: 2,
+          textTransform: "none",
+          fontWeight: 800,
+          fontSize: compact ? 12 : 14,
+        },
+        "& .MuiButton-startIcon": { mr: compact ? 0.55 : 1 },
+        "& .MuiButton-endIcon": { ml: compact ? 0.4 : 0.8 },
         "& .MuiButton-contained": { bgcolor: "#062346", "&:hover": { bgcolor: "#0f355f" } },
         "& .MuiButton-outlined": { bgcolor: "white", color: "#33445e", borderColor: "#dbe7f3" },
       }}

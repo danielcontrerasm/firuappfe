@@ -230,7 +230,7 @@ describe("GPS connectivity on the map", () => {
     const { rerender } = render(<FiruappMapView pets={pets} showGeofences onShowGeofencesChange={onShowGeofencesChange} />);
     expect(await screen.findAllByTestId("map-geofence")).toHaveLength(2);
 
-    fireEvent.click(screen.getByRole("button", { name: "Geofences" }));
+    fireEvent.click(screen.getByRole("button", { name: "Toggle geofences" }));
     expect(onShowGeofencesChange).toHaveBeenCalledWith(false);
     await act(async () => {
       rerender(<FiruappMapView pets={pets} showGeofences={false} onShowGeofencesChange={onShowGeofencesChange} />);

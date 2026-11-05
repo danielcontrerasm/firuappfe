@@ -15,6 +15,7 @@ import {
   Button,
   Chip,
   IconButton,
+  InputAdornment,
   InputBase,
   MenuItem,
   Paper,
@@ -202,10 +203,10 @@ const SummaryCard = ({ icon, label, value, color, bg }: { icon: React.ReactNode;
     aria-label={label}
     elevation={0}
     sx={{
-      minHeight: 88,
-      px: 1.7,
-      py: 1.4,
-      borderRadius: 2,
+      minHeight: 76,
+      px: 1.6,
+      py: 1.15,
+      borderRadius: 2.2,
       bgcolor: "#ffffff",
       border: "1px solid rgba(226,232,240,0.95)",
       boxShadow: "0 16px 38px rgba(15,23,42,0.06)",
@@ -230,11 +231,11 @@ const SummaryCard = ({ icon, label, value, color, bg }: { icon: React.ReactNode;
       >
         {icon}
       </Box>
-      <Box sx={{ minWidth: 0 }}>
-        <Typography variant="h5" sx={{ fontWeight: 950, color: "#071735", lineHeight: 1 }}>
+      <Box sx={{ minWidth: 0, display: "flex", alignItems: "baseline", gap: 0.75 }}>
+        <Typography variant="h5" sx={{ fontWeight: 950, color: "#071735", lineHeight: 1, fontSize: 22 }}>
           {value}
         </Typography>
-        <Typography variant="caption" sx={{ display: "block", mt: 0.45, color: "#64748b", fontWeight: 800 }}>
+        <Typography variant="body2" sx={{ color: "#64748b", fontWeight: 800, whiteSpace: "nowrap" }}>
           {label}
         </Typography>
       </Box>
@@ -763,7 +764,7 @@ const FiruappDashboard: React.FC = () => {
   /></React.Suspense>;
 
   return (
-    <Box sx={{ minHeight: "100vh", display: "flex", bgcolor: firuColors.bg, color: firuColors.text }}>
+    <Box className="firu-dashboard-shell" sx={{ minHeight: "100vh", display: "flex", bgcolor: "#f7fbff", color: firuColors.text }}>
       <FiruappSidebar current={section} onChange={setSection} />
 
       <Box sx={{ flexGrow: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
@@ -771,11 +772,11 @@ const FiruappDashboard: React.FC = () => {
           ref={searchBarRef}
           elevation={0}
           sx={{
-            height: { xs: "auto", md: 80 },
-            px: { xs: 2, md: 3 },
+            height: { xs: "auto", md: 78 },
+            px: { xs: 2, md: 2.75 },
             py: { xs: 1.5, md: 0 },
             borderRadius: 0,
-            bgcolor: "rgba(255,255,255,0.82)",
+            bgcolor: "rgba(255,255,255,0.94)",
             borderBottom: "1px solid rgba(226,232,240,0.86)",
             boxShadow: "0 12px 34px rgba(15,23,42,0.045)",
             display: "flex",
@@ -787,15 +788,15 @@ const FiruappDashboard: React.FC = () => {
         >
           <Box
             sx={{
-              width: { xs: "100%", md: 620 },
+              width: { xs: "100%", md: 675 },
               display: "flex",
               alignItems: "center",
               gap: 1.35,
               bgcolor: "#f8fbff",
               border: "1px solid #d8e5f1",
               px: 1.7,
-              py: 1.25,
-              borderRadius: 2,
+              py: 1.1,
+              borderRadius: 2.2,
               boxShadow: "inset 0 1px 0 rgba(255,255,255,0.92), 0 10px 22px rgba(15,23,42,0.035)",
             }}
           >
@@ -807,6 +808,8 @@ const FiruappDashboard: React.FC = () => {
               sx={{ flex: 1, fontSize: 16, color: "#1f3350", fontWeight: 600 }}
             />
           </Box>
+
+          <DashboardControls {...dashboardControls} compact />
 
           <Stack direction="row" spacing={1.35} alignItems="center" sx={{ ml: "auto" }}>
             <IconButton sx={{ width: 52, height: 52, bgcolor: "#f8fbff", border: "1px solid #d8e5f1", borderRadius: 2 }}>
@@ -820,23 +823,20 @@ const FiruappDashboard: React.FC = () => {
           </Stack>
         </Paper>
 
-        <Box sx={{ px: { xs: 2, md: 3.2 }, py: { xs: 2, md: 2.4 }, display: "grid", gap: 2.1 }}>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 2, flexWrap: "wrap" }}>
+        <Box sx={{ px: { xs: 2, md: 2.75 }, py: { xs: 2, md: 2.25 }, display: "grid", gap: 2.05 }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 2, flexWrap: { xs: "wrap", lg: "nowrap" } }}>
             <Box>
-              <Typography variant="h3" sx={{ fontWeight: 950, color: "#071735", letterSpacing: 0, fontSize: { xs: 32, md: 40 }, lineHeight: 1.04 }}>
+              <Typography variant="h3" sx={{ fontWeight: 950, color: "#071735", letterSpacing: -1.1, fontSize: { xs: 32, md: 38 }, lineHeight: 1.04, whiteSpace: { lg: "nowrap" } }}>
                 Good afternoon, Daniel ☀
               </Typography>
               <Typography variant="body1" sx={{ color: "#6c7c95", mt: 0.4, fontSize: 18, fontWeight: 700 }}>
                 Keep an eye on your pets in real time.
               </Typography>
             </Box>
-            <DashboardControls {...dashboardControls} />
-          </Box>
-          <Box>
-            <Stack ref={filterBarRef} direction="row" spacing={1.25} flexWrap="wrap" useFlexGap>
+            <Stack ref={filterBarRef} direction="row" spacing={1.2} flexWrap="wrap" useFlexGap sx={{ justifyContent: "flex-end", flex: 1, minWidth: 0 }}>
               <Box
                 sx={{
-                  minWidth: 220,
+                  width: { xs: "100%", sm: 220, lg: 244 },
                   height: 46,
                   px: 1.35,
                   borderRadius: 2,
@@ -886,8 +886,9 @@ const FiruappDashboard: React.FC = () => {
                 value={petFilters.neighborhood}
                 onChange={(event) => setPetFilters((current) => ({ ...current, neighborhood: event.target.value }))}
                 size="small"
+                InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: "#607491", fontSize: 21 }} /></InputAdornment> }}
                 sx={{
-                  minWidth: { xs: "100%", sm: 220 },
+                  width: { xs: "100%", sm: 220, lg: 288 },
                   "& .MuiOutlinedInput-root": {
                     height: 46,
                     borderRadius: 2,
@@ -903,8 +904,9 @@ const FiruappDashboard: React.FC = () => {
                 value={petFilters.ownerName}
                 onChange={(event) => setPetFilters((current) => ({ ...current, ownerName: event.target.value }))}
                 size="small"
+                InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: "#607491", fontSize: 21 }} /></InputAdornment> }}
                 sx={{
-                  minWidth: { xs: "100%", sm: 220 },
+                  width: { xs: "100%", sm: 220, lg: 288 },
                   "& .MuiOutlinedInput-root": {
                     height: 46,
                     borderRadius: 2,
@@ -935,12 +937,12 @@ const FiruappDashboard: React.FC = () => {
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 1fr) 420px" },
-              gap: 2,
+              gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 1fr) 412px" },
+              gap: 1.8,
               alignItems: "start",
             }}
           >
-            <Paper elevation={0} sx={{ bgcolor: "#ffffff", border: "1px solid #dbe7f3", borderRadius: 2, p: 1.4, position: "relative", overflow: "hidden", boxShadow: "0 18px 48px rgba(15,23,42,0.075)" }}>
+            <Paper elevation={0} sx={{ bgcolor: "#ffffff", border: "1px solid #dbe7f3", borderRadius: 2.4, p: 0, position: "relative", overflow: "hidden", boxShadow: "0 18px 48px rgba(15,23,42,0.075)" }}>
               <FiruappMapView
                 containerRef={mapPanelRef}
                 pets={filteredDashboardPets}
@@ -965,15 +967,20 @@ const FiruappDashboard: React.FC = () => {
               />
             </Paper>
 
-            <Stack spacing={1.6}>
-              <Paper elevation={0} sx={{ bgcolor: "#ffffff", border: "1px solid #dbe7f3", borderRadius: 2, overflow: "hidden", boxShadow: "0 16px 42px rgba(15,23,42,0.07)" }}>
-                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2, py: 1.35 }}>
+            <Stack spacing={1.8}>
+              <Paper elevation={0} sx={{ bgcolor: "#ffffff", border: "1px solid #dbe7f3", borderRadius: 2.2, overflow: "hidden", boxShadow: "0 16px 42px rgba(15,23,42,0.07)" }}>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2, py: 1.15, minHeight: 52 }}>
                   <Typography variant="subtitle2" sx={{ color: "#071735", fontWeight: 950 }}>
                     Recent Alerts
                   </Typography>
                   <Stack direction="row" spacing={1} alignItems="center">
                     <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: alertsConnected ? "#17c964" : "#ff970f" }} />
-                    <Button size="small" sx={{ color: "#1685ff", fontWeight: 850, textTransform: "none" }}>
+                    {!recentAlertItems.length && (
+                      <Typography variant="caption" sx={{ color: "#17a957", fontWeight: 850, whiteSpace: "nowrap" }}>
+                        No recent alerts
+                      </Typography>
+                    )}
+                    <Button size="small" sx={{ color: "#1685ff", fontWeight: 850, textTransform: "none", minWidth: 0, px: 0.5 }}>
                       View all
                     </Button>
                   </Stack>
@@ -1005,10 +1012,10 @@ const FiruappDashboard: React.FC = () => {
               </Paper>
 
               {selectedPet && (
-                <Paper elevation={0} sx={{ bgcolor: "#ffffff", border: "1px solid #dbe7f3", borderRadius: 2, p: 2, boxShadow: "0 16px 42px rgba(15,23,42,0.07)" }}>
+                <Paper elevation={0} sx={{ bgcolor: "#ffffff", border: "1px solid #dbe7f3", borderRadius: 2.2, p: 1.8, boxShadow: "0 16px 42px rgba(15,23,42,0.07)" }}>
                   <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={1}>
                     <Stack direction="row" spacing={1.6} alignItems="center" sx={{ minWidth: 0 }}>
-                      <SelectedPetAvatar pet={selectedPet} />
+                      <Box sx={{ transform: "scale(0.9)", transformOrigin: "left center", mr: -0.8 }}><SelectedPetAvatar pet={selectedPet} /></Box>
                       <Box sx={{ minWidth: 0 }}>
                         <Stack direction="row" spacing={1.2} alignItems="center">
                           <Typography variant="h5" sx={{ color: "#071735", fontWeight: 950 }}>
@@ -1046,9 +1053,9 @@ const FiruappDashboard: React.FC = () => {
 
                   <Box
                     sx={{
-                      mt: 2,
-                      p: 1.65,
-                      borderRadius: 2,
+                      mt: 1.6,
+                      p: 1.45,
+                      borderRadius: 1.8,
                       bgcolor: selectedPetLocationBg,
                       border: `1px solid ${selectedPetLocationBorder}`,
                       display: "flex",
@@ -1075,7 +1082,7 @@ const FiruappDashboard: React.FC = () => {
                     <KeyboardArrowRightIcon sx={{ color: selectedPetLocationColor }} />
                   </Box>
 
-                  <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.2, mt: 1.4 }}>
+                  <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.1, mt: 1.25 }}>
                     <MetricCard icon={<BatteryChargingFullIcon fontSize="small" />} label="Battery" value={formatBatteryPercent(selectedPetBattery)} color={selectedPetBatteryColor} />
                     <MetricCard icon={<WifiIcon fontSize="small" />} label="Signal" value={selectedPetGpsOnline ? selectedPet.signal || "Unknown" : "Offline"} color={selectedPetGpsOnline ? "#1685ff" : firuColors.muted} />
                     <MetricCard icon={<SpeedIcon fontSize="small" />} label="Speed" value={selectedPet.speed || "0.6 km/h"} color="#8b5cf6" />
@@ -1088,14 +1095,14 @@ const FiruappDashboard: React.FC = () => {
                     fullWidth
                     startIcon={<NavigationIcon />}
                     variant="contained"
-                    sx={{ mt: 1.4, height: 50, bgcolor: "#ff3444", borderRadius: 2, textTransform: "none", fontWeight: 950, fontSize: 16, boxShadow: "none", "&:hover": { bgcolor: "#e82735", boxShadow: "none" } }}
+                    sx={{ mt: 1.35, height: 48, bgcolor: "#062346", borderRadius: 2, textTransform: "none", fontWeight: 950, fontSize: 15, boxShadow: "none", "&:hover": { bgcolor: "#0d3762", boxShadow: "none" } }}
                   >
                     Find {selectedPet.name}
                   </Button>
                   <Button
                     fullWidth
                     variant="outlined"
-                    sx={{ mt: 1.2, height: 50, borderRadius: 2, borderColor: "#1685ff", color: "#071735", textTransform: "none", fontWeight: 950, fontSize: 16 }}
+                    sx={{ mt: 1.1, height: 48, borderRadius: 2, borderColor: "#1685ff", color: "#071735", textTransform: "none", fontWeight: 950, fontSize: 15 }}
                   >
                     Open route
                   </Button>

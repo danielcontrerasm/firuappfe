@@ -1,6 +1,6 @@
 // ui/FiruappSidebar.tsx
 import React from "react";
-import { Avatar, Box, Button } from "@mui/material";
+import { Box, Button } from "@mui/material";
 import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import PetsIcon from "@mui/icons-material/Pets";
 import RadarIcon from "@mui/icons-material/Radar";
@@ -13,6 +13,7 @@ import GroupIcon from "@mui/icons-material/Group";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import ContentPasteSearchIcon from "@mui/icons-material/ContentPasteSearch";
 import MobileNavigation from "./MobileNavigation.tsx";
+import FiruBrand from "./FiruBrand.tsx";
 import { firuColors } from "./FiruappStyles.ts";
 
 interface SidebarProps {
@@ -49,14 +50,14 @@ const FiruappSidebar: React.FC<SidebarProps> = ({ onChange }) => {
   const navContent = (
     <Box
       sx={{
-        width: { xs: 284, md: 214 },
+        width: { xs: 284, md: 208 },
         minHeight: "100vh",
-        py: 3,
+        py: 2.25,
         px: 1.75,
         display: "flex",
         flexDirection: "column",
         alignItems: "stretch",
-        gap: 2,
+        gap: 1.25,
         background: "linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%)",
         borderRight: "1px solid rgba(226,232,240,0.9)",
         boxShadow: "8px 0 28px rgba(15,23,42,0.05)",
@@ -64,30 +65,12 @@ const FiruappSidebar: React.FC<SidebarProps> = ({ onChange }) => {
         zIndex: 20,
       }}
     >
-      <Avatar
-      sx={{
-          width: 138,
-          height: 116,
-          mx: "auto",
-          borderRadius: 0,
-          bgcolor: "transparent",
-        }}
-      >
-        <Box
-          component="img"
-          src="/logo_sidebar.png"
-          alt="Firuapp logo"
-          sx={{
-            width: "100%",
-            height: "100%",
-            objectFit: "contain",
-            transform: "scale(1.14)",
-          }}
-        />
-      </Avatar>
+      <Box sx={{ minHeight: 118, display: "grid", placeItems: "center", mb: 1, "& .firu-brand-stacked svg": { width: 104, height: 70 }, "& .firu-brand-stacked > span": { fontSize: 31, letterSpacing: -1.5 } }}>
+        <FiruBrand stacked />
+      </Box>
 
 
-      <Box sx={{ display: "grid", gap: 0.85, width: "100%", mt: 1 }}>
+      <Box sx={{ display: "grid", gap: 0.55, width: "100%", mt: 0.25 }}>
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = location.pathname === item.to;
@@ -100,22 +83,23 @@ const FiruappSidebar: React.FC<SidebarProps> = ({ onChange }) => {
               startIcon={<Icon />}
               onClick={() => handleNavigate(item.section)}
               sx={{
-                minHeight: 55,
+                minHeight: 49,
                 justifyContent: "flex-start",
-                px: 1.75,
-                borderRadius: 2,
+                px: 1.45,
+                borderRadius: 1.8,
                 color: active ? "#ffffff" : "#64748b",
                 background: active ? "#062346" : "transparent",
                 border: active ? "1px solid rgba(15,23,42,0.1)" : "1px solid transparent",
                 boxShadow: active ? "0 14px 28px rgba(6,35,70,0.22)" : "none",
-                fontSize: 14,
+                fontSize: 13.5,
                 fontWeight: 800,
                 lineHeight: 1.2,
                 textAlign: "left",
                 textTransform: "none",
                 whiteSpace: "nowrap",
                 "& .MuiButton-startIcon": {
-                  mr: 1.25,
+                  mr: 1.15,
+                  "& svg": { fontSize: 20 },
                   color: "inherit",
                 },
                 "& .MuiButton-icon": {

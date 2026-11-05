@@ -143,16 +143,16 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
       sx={{
         ...compactPanel,
         position: "absolute",
-        left: { xs: 10, sm: 16 },
-        right: { xs: 10, sm: 16 },
-        bottom: { xs: 12, sm: 16 },
+        left: { xs: 10, sm: 20 },
+        right: { xs: 10, sm: "auto" },
+        bottom: { xs: 12, sm: 20 },
         zIndex: 1000,
-        width: "auto",
         maxHeight: "none",
         overflow: "visible",
         background: "transparent",
         border: "none",
         boxShadow: "none",
+        width: { xs: "auto", md: "calc(100% - 150px)" },
       }}
     >
       <Box
@@ -203,7 +203,8 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
           gridTemplateColumns: { xs: `repeat(${Math.max(pets.length, 1)}, minmax(250px, 1fr))`, md: "repeat(2, minmax(0, 1fr))" },
           gap: 1.2,
           overflowX: "auto",
-          overflowY: "hidden",
+          overflowY: { xs: "hidden", md: "auto" },
+          maxHeight: { xs: "none", md: 94 },
           pb: 0.25,
         }}
       >
@@ -219,8 +220,8 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
               onClick={() => onSelect?.(pet.id)}
               onContextMenu={(e) => handleRightClick(e, pet)}
               sx={{
-                minHeight: 92,
-                borderRadius: 2,
+                minHeight: 82,
+                borderRadius: 2.2,
                 mb: 0,
                 px: { xs: 1.25, sm: 1.6 },
                 py: { xs: 1, sm: 1.15 },
