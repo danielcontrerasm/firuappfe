@@ -32,7 +32,7 @@ export default function ProfilePage() {
     ] },
   ];
   const logout = () => {
-    sessionStorage.removeItem(`firuapp-alerts:${user.sub || user.id || user.userId || 1}`);
+    sessionStorage.removeItem(`firuapp-alerts:${user.ownerId || user.owner_id || user.sub || user.id || user.userId || user.user_id || "anonymous"}`);
     localStorage.removeItem('token');
     navigate('/login', { replace: true });
   };

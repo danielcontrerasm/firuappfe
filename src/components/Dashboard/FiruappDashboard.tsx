@@ -454,7 +454,7 @@ const FiruappDashboard: React.FC = () => {
   });
   const [selectedPetId, setSelectedPetId] = useState<string | undefined>();
   const [section, setSection] = useState<"all" | "geofence" | "route">("all");
-  const { alerts: alertMessages, connected: alertsConnected } = useLiveAlerts();
+  const { alerts: alertMessages, connected: alertsConnected, dismissAlert } = useLiveAlerts();
   const [cityByLocationKey, setCityByLocationKey] = useState<Record<string, string>>({});
   const [guideOpen, setGuideOpen] = useState(false);
   const [guideStepIndex, setGuideStepIndex] = useState(0);
@@ -657,15 +657,17 @@ const FiruappDashboard: React.FC = () => {
       title: alert.message,
       time: alert.receivedAt,
       severity: "critical" as const,
+      onDismiss: () => dismissAlert(alert.id),
     }));
     const petAlerts = lostPets.map((pet, index) => ({
       id: `lost-${pet.id}`,
       title: `${pet.name} has been marked as LOST`,
       time: index === 0 ? "Just now" : "12 min ago",
       severity: "critical" as const,
+      onDismiss: undefined,
     }));
     return [...liveAlerts, ...petAlerts].slice(0, 2);
-  }, [alertMessages, lostPets]);
+  }, [alertMessages, dismissAlert, lostPets]);
   const guideSteps = [
     {
       title: "Welcome to the dashboard",
@@ -1007,6 +1009,16 @@ const FiruappDashboard: React.FC = () => {
                     <Typography variant="caption" sx={{ color: "#6c7c95", fontWeight: 700, whiteSpace: "nowrap" }}>
                       {alert.time}
                     </Typography>
+                    {alert.onDismiss && (
+                      <IconButton
+                        size="small"
+                        aria-label={`Dismiss alert ${alert.title}`}
+                        onClick={alert.onDismiss}
+                        sx={{ color: "#64748b", ml: 0.25, "&:hover": { bgcolor: "#fee2e2", color: "#dc2626" } }}
+                      >
+                        <CloseIcon fontSize="small" />
+                      </IconButton>
+                    )}
                   </Box>
                 ))}
               </Paper>

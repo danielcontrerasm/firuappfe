@@ -46,6 +46,9 @@
 .firu-alerts-heading { font-size: 12px; color: #8b99a8; margin-bottom: 14px; }
 .firu-alerts-heading > span + span { color: #ee4545; font-weight: 650; }
 .firu-alert-row { display: flex; align-items: center; gap: 12px; padding: 18px 4px; border-bottom: 1px solid var(--firu-line); }
+.firu-alert-row > div { flex: 1; min-width: 0; }
+.firu-alert-dismiss.MuiIconButton-root { flex-shrink: 0; color: #94a3b8; }
+.firu-alert-dismiss.MuiIconButton-root:hover { color: #dc2626; background: #fee2e2; }
 .firu-alert-symbol { flex: 0 0 46px; height: 46px; border-radius: 16px; display: grid; place-items: center; color: #ec4848; background: #ffeded; }
 .firu-alert-symbol.is-battery { background: #fff4df; color: #e79518; }
 .firu-alert-row h2 { margin: 0 0 5px; font-size: 15px; font-weight: 700; line-height: 1.4; }
