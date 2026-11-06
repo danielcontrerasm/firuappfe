@@ -12,6 +12,7 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  InputAdornment,
   Paper,
   Snackbar,
   Stack,
@@ -43,6 +44,7 @@ import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import ReportProblemOutlinedIcon from "@mui/icons-material/ReportProblemOutlined";
 import RouteOutlinedIcon from "@mui/icons-material/RouteOutlined";
+import SearchIcon from "@mui/icons-material/Search";
 import ScheduleOutlinedIcon from "@mui/icons-material/ScheduleOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import StarIcon from "@mui/icons-material/Star";
@@ -426,6 +428,7 @@ const WalkerDashboard: React.FC = () => {
   const [routePaused, setRoutePaused] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<WalkerRequest | null>(null);
   const [quote, setQuote] = useState("");
+  const [petSearch, setPetSearch] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeNav, setActiveNav] = useState("inicio");
   const [loading, setLoading] = useState(false);
@@ -464,6 +467,15 @@ const WalkerDashboard: React.FC = () => {
     const combinedRows = [...rows, ...petRows];
     return combinedRows.length ? combinedRows.slice(0, 3) : demoPets.map((pet) => ({ name: pet.name, zone: pet.zone || "Zona por confirmar", status: "Pendiente" }));
   }, [pets, requests]);
+  const petSearchTerm = petSearch.trim().toLowerCase();
+  const visibleRequests = useMemo(() => {
+    if (!petSearchTerm) return requests;
+    return requests.filter((request) => [request.petName, request.zone, request.ownerName].some((value) => value.toLowerCase().includes(petSearchTerm)));
+  }, [petSearchTerm, requests]);
+  const visibleRoutePets = useMemo(() => {
+    if (!petSearchTerm) return routePets;
+    return routePets.filter((pet) => [pet.name, pet.zone].some((value) => value.toLowerCase().includes(petSearchTerm)));
+  }, [petSearchTerm, routePets]);
 
   const loadRemoteData = useCallback(async () => {
     if (typeof window === "undefined" || !window.localStorage.getItem("token")) return;
@@ -731,9 +743,18 @@ const WalkerDashboard: React.FC = () => {
           </Box>
 
           <Box className="walker-header">
-            <Box>
+            <Box className="walker-header-copy">
               <Typography component="h1">Panel del paseador</Typography>
               <Typography className="walker-subtitle">Solicitudes, mensajes, ruta diaria y pagos recibidos.</Typography>
+              <TextField
+                className="walker-pet-search"
+                size="small"
+                value={petSearch}
+                onChange={(event) => setPetSearch(event.target.value)}
+                placeholder="Buscar mascota, zona o cliente"
+                aria-label="Buscar mascota, zona o cliente"
+                InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }}
+              />
             </Box>
             <Stack className="walker-header-actions" direction="row" spacing={1.25} alignItems="center">
               <Button className="walker-availability-button" startIcon={<span className="walker-online-dot" />}>Disponible hoy</Button>
@@ -775,7 +796,7 @@ const WalkerDashboard: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {requests.slice(0, 4).map((request) => (
+                  {visibleRequests.slice(0, 4).map((request) => (
                     <tr key={request.id}>
                       <td>
                         <Box className="walker-client-cell">
@@ -802,6 +823,7 @@ const WalkerDashboard: React.FC = () => {
                       </td>
                     </tr>
                   ))}
+                  {!visibleRequests.length && <tr><td colSpan={6}><Box className="walker-no-results">No encontramos mascotas para “{petSearch}”.</Box></td></tr>}
                 </tbody>
               </table>
             </Box>
@@ -826,7 +848,7 @@ const WalkerDashboard: React.FC = () => {
             <Box className="walker-route-grid">
               <RouteMap points={routePoints} active={routeActive && !routePaused} />
               <Box className="walker-route-pets">
-                {routePets.map((pet, index) => (
+                {visibleRoutePets.map((pet, index) => (
                   <Box className="walker-route-pet" key={`${pet.name}-${index}`}>
                     <PetThumb name={pet.name} size="medium" />
                     <Box className="walker-route-pet-copy">
@@ -841,6 +863,7 @@ const WalkerDashboard: React.FC = () => {
                     </Stack>
                   </Box>
                 ))}
+                {!visibleRoutePets.length && <Box className="walker-no-results walker-route-empty">No encontramos mascotas para “{petSearch}”.</Box>}
                 <Box className="walker-route-summary"><span>Distancia estimada: 8.6 km</span><span>Tiempo estimado: 1 h 45 min</span></Box>
               </Box>
             </Box>

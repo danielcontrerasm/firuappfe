@@ -435,7 +435,8 @@ const DashboardGuideOverlay = ({
 const FiruappDashboard: React.FC = () => {
   const now = useGpsStatusTime();
   const isMobile = useMediaQuery("(max-width:899.95px)");
-  const isAdmin = isCurrentUserAdmin();
+  const [serverIsAdmin, setServerIsAdmin] = useState(false);
+  const isAdmin = isCurrentUserAdmin() || serverIsAdmin;
   const canUseDemoData = isAdmin || !localStorage.getItem("token");
   const [dashboardPets, setDashboardPets] = useState<Pet[]>([]);
   const [databasePets, setDatabasePets] = useState<Pet[]>([]);
@@ -473,6 +474,26 @@ const FiruappDashboard: React.FC = () => {
   const mapPanelRef = useRef<HTMLDivElement | null>(null);
   const petListRef = useRef<HTMLDivElement | null>(null);
 
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return undefined;
+
+    let cancelled = false;
+    axios.get(buildApiUrl("/api/me"), { headers: { Authorization: `Bearer ${token}` } })
+      .then((response) => {
+        const role = response.data?.role || response.data?.user?.role || response.data?.authority;
+        const normalizedRole = String(role || "").replace(/^ROLE[_:\s-]?/i, "").toUpperCase();
+        if (!cancelled) setServerIsAdmin(["ADMIN", "ADMINISTRATOR", "SUPERADMIN", "SUPER_ADMIN"].includes(normalizedRole));
+      })
+      .catch(() => {
+        if (!cancelled) setServerIsAdmin(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const fetchDatabasePets = useCallback(async () => {
     const token = localStorage.getItem("token");
     const response = await axios.get(buildApiUrl("/api/pets"), {
@@ -485,9 +506,9 @@ const FiruappDashboard: React.FC = () => {
       responseKeys: response?.data && typeof response.data === "object" ? Object.keys(response.data) : [],
     });
     return (Array.isArray(petDtos) ? petDtos : [])
-      .filter((petDto: any) => isOwnedByCurrentUser(petDto))
+      .filter((petDto: any) => serverIsAdmin || isOwnedByCurrentUser(petDto))
       .map(mapPetDtoToDashboardPet);
-  }, []);
+  }, [serverIsAdmin]);
 
   useEffect(() => {
     let cancelled = false;

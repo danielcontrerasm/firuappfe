@@ -50,6 +50,13 @@ export const decodeAuthToken = (token = getStoredAuthToken()): AuthClaims => {
 
 export const getAuthRoles = (claims: AuthClaims = decodeAuthToken()): string[] => {
   const values = ROLE_CLAIM_KEYS.flatMap((key) => asStringList(claims[key]));
+  const nestedClaims = ["user", "data", "account", "profile", "principal", "payload"];
+  nestedClaims.forEach((key) => {
+    const nested = claims[key];
+    if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+      values.push(...getAuthRoles(nested as AuthClaims));
+    }
+  });
   return Array.from(
     new Set(
       values
@@ -61,7 +68,7 @@ export const getAuthRoles = (claims: AuthClaims = decodeAuthToken()): string[] =
 
 export const isAdminClaims = (claims: AuthClaims = decodeAuthToken()): boolean => {
   const roles = getAuthRoles(claims);
-  return roles.some((role) => role === "ADMIN" || role === "SUPERADMIN" || role === "SUPER_ADMIN");
+  return roles.some((role) => ["ADMIN", "ADMINISTRATOR", "SUPERADMIN", "SUPER_ADMIN"].includes(role));
 };
 
 export const isCurrentUserAdmin = (): boolean => isAdminClaims(decodeAuthToken());
