@@ -71,7 +71,7 @@ const FiruappSidebar: React.FC<SidebarProps> = ({ onChange }) => {
         zIndex: 20,
       }}
     >
-      <Box sx={{ minHeight: 118, display: "grid", placeItems: "center", mb: 1, "& .firu-brand-stacked svg": { width: 104, height: 70 }, "& .firu-brand-stacked > span": { fontSize: 31, letterSpacing: -1.5 } }}>
+      <Box sx={{ minHeight: 118, display: "grid", placeItems: "center", mb: 1, "& .firu-brand-stacked .firu-brand-image": { width: 104, height: 70 } }}>
         <FiruBrand stacked />
       </Box>
 

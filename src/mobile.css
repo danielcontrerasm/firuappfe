@@ -17,11 +17,9 @@
 .firu-map-error { position: absolute; right: 54px; top: 0; width: 220px; padding: 12px; border-radius: 12px; color: #102640; background: white; box-shadow: 0 4px 20px #10264026; font: 13px/1.5 Inter, sans-serif; }
 .firu-map-error button { margin-left: 8px; border: 0; background: none; cursor: pointer; }
 .firu-brand { display: flex; align-items: center; gap: 6px; color: #09233f; }
-.firu-brand svg { width: 74px; height: 52px; flex-shrink: 0; }
-.firu-brand > span { font-size: 29px; letter-spacing: -1px; font-weight: 800; }
+.firu-brand-image { width: 74px; height: 52px; object-fit: contain; flex-shrink: 0; }
 .firu-brand-stacked { flex-direction: column; gap: 0; }
-.firu-brand-stacked svg { width: 142px; height: 100px; }
-.firu-brand-stacked > span { color: #082e2d; font-size: 43px; letter-spacing: -2px; line-height: 1.1; }
+.firu-brand-stacked .firu-brand-image { width: 142px; height: 100px; }
 .firu-content-page { color: var(--firu-ink); background: white; border-radius: 20px; overflow: hidden; min-height: calc(100dvh - 32px); }
 .firu-page-header { position: relative; min-height: 80px; padding: 22px 60px; display: flex; justify-content: center; align-items: center; border-bottom: 1px solid var(--firu-line); background: white; }
 .firu-page-header h1 { margin: 0; color: var(--firu-ink); font-size: 24px; font-weight: 750; letter-spacing: -.65px; text-align: center; }
