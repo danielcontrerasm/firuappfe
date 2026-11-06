@@ -26,14 +26,15 @@ export default function DashboardControls({ demoEnabled, onDemoToggle, showGeofe
     <Stack
       direction="row"
       spacing={1}
-      flexWrap="wrap"
+      flexWrap={compact ? "nowrap" : "wrap"}
       useFlexGap
       role="group"
       aria-label="Dashboard controls"
       sx={{
         flexShrink: 0,
+        alignItems: "center",
         "& .MuiButton-root": {
-          minHeight: compact ? 36 : 42,
+          minHeight: compact ? 46 : 42,
           px: compact ? 1.15 : 1.6,
           borderRadius: 2,
           textTransform: "none",
