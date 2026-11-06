@@ -31,7 +31,7 @@ import PersonAddAltIcon from "@mui/icons-material/PersonAddAlt";
 import SearchIcon from "@mui/icons-material/Search";
 import { useSearchParams } from "react-router-dom";
 import { buildApiUrl, searchGroupEndpoints } from "../../config/runtime";
-import { getCurrentUserId, isOwnedByCurrentUser } from "../../services/auth.ts";
+import { isOwnedByCurrentUser } from "../../services/auth.ts";
 
 type VolunteerMemberDto = {
   userId: number;
@@ -175,29 +175,33 @@ const mapDtoToSearchGroup = (dto: any): SearchGroupDto => {
   };
 };
 
-const extractCollection = (data: any): any[] =>
-  Array.isArray(data) ? data : data?.content || data?.items || [];
+const extractCollection = (data: any): any[] => {
+  if (Array.isArray(data)) return data;
+  if (!data || typeof data !== "object") return [];
+
+  const collectionKeys = ["content", "items", "groups", "results", "rows", "payload", "records", "data"];
+  for (const key of collectionKeys) {
+    const nested = extractCollection(data[key]);
+    if (nested.length) return nested;
+  }
+
+  return [];
+};
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
   return token ? { Authorization: `Bearer ${token}` } : undefined;
 };
 
-const isGroupVisibleToCurrentUser = (group: SearchGroupDto): boolean => {
-  const currentUserId = getCurrentUserId();
-  const isMember = currentUserId
-    ? group.volunteers.some((volunteer) => String(volunteer.userId) === currentUserId)
-    : false;
-  return isOwnedByCurrentUser(group) || isMember;
-};
-
 const fetchPersistedGroups = async (): Promise<SearchGroupDto[]> => {
   const response = await axios.get(buildApiUrl(searchGroupEndpoints.list), {
     headers: getAuthHeaders(),
   });
+  // /api/search-groups is the discovery list used by the Join action. The
+  // bearer token and backend determine which groups are accessible; filtering
+  // here to owned/member groups hides every group a user could join.
   return extractCollection(response.data)
-    .map((dto: any) => mapDtoToSearchGroup(dto))
-    .filter(isGroupVisibleToCurrentUser);
+    .map((dto: any) => mapDtoToSearchGroup(dto));
 };
 
 const getAuthenticatedUserId = (): number | null => {
@@ -228,7 +232,7 @@ const createDefaultGroupForm = (): NewGroupFormState => ({
 
 const VolunteerGroupsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [groups, setGroups] = useState<SearchGroupDto[]>(() => mockGroups.filter(isGroupVisibleToCurrentUser));
+  const [groups, setGroups] = useState<SearchGroupDto[]>(mockGroups);
   const [pets, setPets] = useState<PetOption[]>([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");

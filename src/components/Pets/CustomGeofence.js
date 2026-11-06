@@ -17,6 +17,7 @@ import { useSearchParams } from "react-router-dom";
 import "./routeMapStyles.css";
 import { buildApiUrl } from "../../config/runtime";
 import { isOwnedByCurrentUser } from "../../services/auth.ts";
+import { extractPetDtos } from "../../services/petData.ts";
 import MapControls from "./MapControls.tsx";
 import PageHeader from "../Dashboard/ui/PageHeader.tsx";
 import AddIcon from "@mui/icons-material/Add";
@@ -36,11 +37,6 @@ const mapStyles = {
     url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   },
-};
-
-const extractPetDtos = (data) => {
-  if (Array.isArray(data)) return data;
-  return data?.content || data?.items || data?.pets || data?.data || data?.results || [];
 };
 
 const normalizeCoordinate = (coordinate) => {

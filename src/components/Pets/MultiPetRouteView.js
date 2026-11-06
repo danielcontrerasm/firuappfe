@@ -9,6 +9,7 @@ import MapControls from "./MapControls.tsx";
 import PageHeader from "../Dashboard/ui/PageHeader.tsx";
 import { buildApiUrl } from "../../config/runtime";
 import { isOwnedByCurrentUser } from "../../services/auth.ts";
+import { extractPetDtos } from "../../services/petData.ts";
 
 const mapStyles = {
   clean: {
@@ -130,11 +131,6 @@ const recentRoutePeriods = [
 const toRouteTimeInput = (date) => {
   const pad = (value) => String(value).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-};
-
-const extractPetDtos = (data) => {
-  if (Array.isArray(data)) return data;
-  return data?.content || data?.items || data?.pets || data?.data || data?.results || data?.rows || data?.payload || [];
 };
 
 const normalizePetStatus = (status) => (String(status || "active").toLowerCase() === "lost" ? "lost" : "active");

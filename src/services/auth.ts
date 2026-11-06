@@ -75,15 +75,17 @@ export const isCurrentUserAdmin = (): boolean => isAdminClaims(decodeAuthToken()
 
 export const getCurrentUserId = (claims: AuthClaims = decodeAuthToken()): string | undefined => {
   const user = claims.user && typeof claims.user === "object" ? claims.user as Record<string, unknown> : undefined;
-  const value = claims.userId ?? claims.user_id ?? claims.id ?? claims.sub ?? claims.uid ?? user?.id ?? user?.userId;
-  return value == null || String(value).trim() === "" ? undefined : String(value);
+  const candidates = [claims.userId, claims.user_id, claims.id, claims.uid, user?.id, user?.userId, claims.sub];
+  const numericId = candidates.find((value) => /^\d+$/.test(String(value ?? "").trim()));
+  return numericId == null ? undefined : String(numericId).trim();
 };
 
 export const getCurrentUserRole = (): string | undefined => getAuthRoles()[0];
 
 export const getCurrentUserEmail = (claims: AuthClaims = decodeAuthToken()): string | undefined => {
   const user = claims.user && typeof claims.user === "object" ? claims.user as Record<string, unknown> : undefined;
-  const value = claims.email ?? claims.mail ?? user?.email ?? user?.mail;
+  const subject = typeof claims.sub === "string" ? claims.sub : undefined;
+  const value = claims.email ?? claims.mail ?? user?.email ?? user?.mail ?? (subject?.includes("@") ? subject : undefined);
   return value == null || String(value).trim() === "" ? undefined : String(value).trim().toLowerCase();
 };
 

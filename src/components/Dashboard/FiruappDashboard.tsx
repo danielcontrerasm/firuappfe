@@ -14,9 +14,11 @@ import {
   Box,
   Button,
   Chip,
+  Divider,
   IconButton,
   InputAdornment,
   InputBase,
+  Menu,
   MenuItem,
   Paper,
   Select,
@@ -43,7 +45,13 @@ import SecurityIcon from "@mui/icons-material/Security";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import { usePetImage } from "../../services/usePetImage.ts";
 import { buildApiUrl } from "../../config/runtime";
-import { isCurrentUserAdmin, isOwnedByCurrentUser } from "../../services/auth.ts";
+import {
+  decodeAuthToken,
+  getAuthRoles,
+  getCurrentUserEmail,
+  getCurrentUserId,
+  isOwnedByCurrentUser,
+} from "../../services/auth.ts";
 
 
 import { useLiveAlerts } from "../../services/useLiveAlerts.ts";
@@ -436,8 +444,7 @@ const FiruappDashboard: React.FC = () => {
   const now = useGpsStatusTime();
   const isMobile = useMediaQuery("(max-width:899.95px)");
   const [serverIsAdmin, setServerIsAdmin] = useState(false);
-  const isAdmin = isCurrentUserAdmin() || serverIsAdmin;
-  const canUseDemoData = isAdmin || !localStorage.getItem("token");
+  const canUseDemoData = true;
   const [dashboardPets, setDashboardPets] = useState<Pet[]>([]);
   const [databasePets, setDatabasePets] = useState<Pet[]>([]);
   const [petLocations, setPetLocations] = useState<DashboardPetLocation[]>([]);
@@ -461,8 +468,31 @@ const FiruappDashboard: React.FC = () => {
     petName: "",
   });
   const [selectedPetId, setSelectedPetId] = useState<string | undefined>();
-  const [showPetCards, setShowPetCards] = useState(true);
   const [detailsPanelOpen, setDetailsPanelOpen] = useState(true);
+  const [accountMenuAnchor, setAccountMenuAnchor] = useState<HTMLElement | null>(null);
+  const initialAccountDetails = useMemo(() => {
+    const claims = decodeAuthToken();
+    const nestedAccounts = [claims.user, claims.profile, claims.account, claims.data, claims.payload]
+      .filter((value) => value && typeof value === "object") as Array<Record<string, unknown>>;
+    const sources = [claims, ...nestedAccounts];
+    const read = (keys: string[]) => {
+      for (const source of sources) {
+        const value = keys
+          .map((key) => source[key])
+          .find((candidate) => candidate != null && String(candidate).trim() !== "");
+        if (value != null) return String(value).trim();
+      }
+      return "";
+    };
+
+    return {
+      name: read(["name", "fullName", "displayName", "username"]) || "Daniel Contreras",
+      email: getCurrentUserEmail(claims) || read(["email", "mail"]) || "demo@example.com",
+      id: getCurrentUserId(claims) || read(["id", "userId", "user_id"]) || "—",
+      role: getAuthRoles(claims)[0] || read(["role", "userRole"]) || "USER",
+    };
+  }, []);
+  const [accountDetails, setAccountDetails] = useState(initialAccountDetails);
   const [section, setSection] = useState<"all" | "geofence" | "route">("all");
   const { alerts: alertMessages, connected: alertsConnected, dismissAlert } = useLiveAlerts();
   const [cityByLocationKey, setCityByLocationKey] = useState<Record<string, string>>({});
@@ -481,9 +511,19 @@ const FiruappDashboard: React.FC = () => {
     let cancelled = false;
     axios.get(buildApiUrl("/api/me"), { headers: { Authorization: `Bearer ${token}` } })
       .then((response) => {
-        const role = response.data?.role || response.data?.user?.role || response.data?.authority;
+        const profile = response.data?.user || response.data;
+        const role = profile?.role || profile?.authority || response.data?.authority;
         const normalizedRole = String(role || "").replace(/^ROLE[_:\s-]?/i, "").toUpperCase();
-        if (!cancelled) setServerIsAdmin(["ADMIN", "ADMINISTRATOR", "SUPERADMIN", "SUPER_ADMIN"].includes(normalizedRole));
+        if (!cancelled) {
+          setServerIsAdmin(["ADMIN", "ADMINISTRATOR", "SUPERADMIN", "SUPER_ADMIN"].includes(normalizedRole));
+          setAccountDetails((current) => ({
+            ...current,
+            name: profile?.name || profile?.fullName || profile?.displayName || profile?.username || current.name,
+            email: profile?.email || profile?.mail || current.email,
+            id: profile?.id || profile?.userId || current.id,
+            role: normalizedRole || current.role,
+          }));
+        }
       })
       .catch(() => {
         if (!cancelled) setServerIsAdmin(false);
@@ -839,14 +879,17 @@ const FiruappDashboard: React.FC = () => {
         >
           <Box
             sx={{
-              width: { xs: "100%", md: 675 },
+              width: { xs: "100%", md: "auto" },
+              maxWidth: 675,
+              minWidth: { md: 240 },
+              flex: { md: "1 1 360px" },
+              height: 46,
               display: "flex",
               alignItems: "center",
               gap: 1.35,
               bgcolor: "#f8fbff",
               border: "1px solid #d8e5f1",
               px: 1.7,
-              py: 1.1,
               borderRadius: 2.2,
               boxShadow: "inset 0 1px 0 rgba(255,255,255,0.92), 0 10px 22px rgba(15,23,42,0.035)",
             }}
@@ -869,22 +912,53 @@ const FiruappDashboard: React.FC = () => {
             <IconButton sx={{ width: 52, height: 52, bgcolor: "#f8fbff", border: "1px solid #d8e5f1", borderRadius: 2 }}>
               <Badge color="primary" badgeContent={3}><MessageOutlinedIcon /></Badge>
             </IconButton>
-            <Avatar sx={{ width: 50, height: 50, bgcolor: "#062346", color: "white", fontWeight: 950, fontSize: 18 }}>DC</Avatar>
+            <IconButton
+              aria-label="Open account details"
+              aria-haspopup="menu"
+              aria-expanded={Boolean(accountMenuAnchor)}
+              onClick={(event) => setAccountMenuAnchor(event.currentTarget)}
+              sx={{ p: 0.25, borderRadius: 2.5 }}
+            >
+              <Avatar sx={{ width: 50, height: 50, bgcolor: "#062346", color: "white", fontWeight: 950, fontSize: 18 }}>DC</Avatar>
+            </IconButton>
             <KeyboardArrowDownIcon sx={{ color: "#3d516e", display: { xs: "none", sm: "block" } }} />
           </Stack>
+          <Menu
+            anchorEl={accountMenuAnchor}
+            open={Boolean(accountMenuAnchor)}
+            onClose={() => setAccountMenuAnchor(null)}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "right" }}
+            PaperProps={{ sx: { mt: 1, minWidth: 270, borderRadius: 2.5, boxShadow: "0 18px 45px rgba(15,23,42,0.16)" } }}
+          >
+            <Box sx={{ px: 2, py: 1.5 }}>
+              <Typography variant="overline" sx={{ color: "#64748b", fontWeight: 900, letterSpacing: 1 }}>
+                Account details
+              </Typography>
+              <Typography sx={{ color: "#071735", fontWeight: 900 }}>{accountDetails.name}</Typography>
+              <Typography variant="body2" sx={{ color: "#64748b", overflowWrap: "anywhere" }}>{accountDetails.email}</Typography>
+            </Box>
+            <Divider />
+            <MenuItem disabled sx={{ opacity: "1 !important", color: "#33445e !important" }}>
+              Role: {accountDetails.role}
+            </MenuItem>
+            <MenuItem disabled sx={{ opacity: "1 !important", color: "#33445e !important" }}>
+              Account ID: {accountDetails.id}
+            </MenuItem>
+          </Menu>
         </Paper>
 
         <Box sx={{ px: { xs: 2, md: 2.75 }, py: { xs: 2, md: 2.25 }, display: "grid", gap: 2.05 }}>
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 2, flexWrap: { xs: "wrap", lg: "nowrap" } }}>
             <Box>
-              <Typography variant="h3" sx={{ fontWeight: 950, color: "#071735", letterSpacing: -1.1, fontSize: { xs: 32, md: 38 }, lineHeight: 1.04, whiteSpace: { lg: "nowrap" } }}>
+              <Typography variant="h3" sx={{ fontWeight: 950, color: "#071735", letterSpacing: -1.1, fontSize: { xs: 27, md: 31 }, lineHeight: 1.08, whiteSpace: { lg: "nowrap" } }}>
                 Good afternoon, Daniel ☀
               </Typography>
-              <Typography variant="body1" sx={{ color: "#6c7c95", mt: 0.4, fontSize: 18, fontWeight: 700 }}>
+              <Typography variant="body1" sx={{ color: "#6c7c95", mt: 0.4, fontSize: 15, fontWeight: 700 }}>
                 Keep an eye on your pets in real time.
               </Typography>
             </Box>
-            <Stack ref={filterBarRef} direction="row" spacing={1.2} flexWrap="wrap" useFlexGap sx={{ justifyContent: "flex-end", flex: 1, minWidth: 0 }}>
+            <Stack ref={filterBarRef} direction="row" spacing={1.2} flexWrap="wrap" useFlexGap sx={{ justifyContent: "flex-end", alignItems: "center", flex: 1, minWidth: 0 }}>
               <Box
                 sx={{
                   width: { xs: "100%", sm: 220, lg: 244 },
@@ -1010,50 +1084,19 @@ const FiruappDashboard: React.FC = () => {
                 }}
                 onLocationsChange={handleLocationsChange}
               />
-              {showPetCards ? (
-                <FiruappPetsList
-                  containerRef={petListRef}
-                  pets={filteredDashboardPets}
-                  selectedId={selectedPet?.id}
-                  onSelect={(petId) => {
-                    setSelectedPetId(petId);
-                    setShowPetCards(false);
-                    setDetailsPanelOpen(false);
-                  }}
-                  onStatusChange={(petId, status) => {
-                    setDatabasePets((currentPets) => currentPets.map((pet) => ((pet.apiId || pet.id) === petId ? { ...pet, status } : pet)));
-                    setDashboardPets((currentPets) => currentPets.map((pet) => ((pet.apiId || pet.id) === petId ? { ...pet, status } : pet)));
-                  }}
-                />
-              ) : (
-                <Button
-                  size="small"
-                  startIcon={<PetsIcon sx={{ fontSize: 18 }} />}
-                  onClick={() => {
-                    setShowPetCards(true);
-                    setDetailsPanelOpen(true);
-                  }}
-                  aria-label="Show pet controls"
-                  sx={{
-                    position: "absolute",
-                    left: { xs: 12, md: 16 },
-                    bottom: { xs: 16, md: 20 },
-                    zIndex: 1100,
-                    minHeight: 42,
-                    px: 1.8,
-                    borderRadius: 2,
-                    bgcolor: "#ffffff",
-                    border: "1px solid #dbe7f3",
-                    color: "#0f1b34",
-                    fontWeight: 900,
-                    textTransform: "none",
-                    boxShadow: "0 12px 26px rgba(15,23,42,0.16)",
-                    "&:hover": { bgcolor: "#f8fbff" },
-                  }}
-                >
-                  Show pet controls
-                </Button>
-              )}
+              <FiruappPetsList
+                containerRef={petListRef}
+                pets={filteredDashboardPets}
+                selectedId={selectedPet?.id}
+                onSelect={(petId) => {
+                  setSelectedPetId(petId);
+                  setDetailsPanelOpen(true);
+                }}
+                onStatusChange={(petId, status) => {
+                  setDatabasePets((currentPets) => currentPets.map((pet) => ((pet.apiId || pet.id) === petId ? { ...pet, status } : pet)));
+                  setDashboardPets((currentPets) => currentPets.map((pet) => ((pet.apiId || pet.id) === petId ? { ...pet, status } : pet)));
+                }}
+              />
             </Paper>
 
             {detailsPanelOpen && <Stack spacing={1.8}>
