@@ -19,13 +19,11 @@ import DoNotDisturbAltOutlinedIcon from "@mui/icons-material/DoNotDisturbAltOutl
 import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
 import MapOutlinedIcon from "@mui/icons-material/MapOutlined";
 import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
-import MyLocationIcon from "@mui/icons-material/MyLocation";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import BatteryFullIcon from "@mui/icons-material/BatteryFull";
 import SignalCellularAltIcon from "@mui/icons-material/SignalCellularAlt";
 import SpeedOutlinedIcon from "@mui/icons-material/SpeedOutlined";
 import WarningAmberOutlinedIcon from "@mui/icons-material/WarningAmberOutlined";
-import TimelineIcon from "@mui/icons-material/Timeline";
 import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
 import ShareOutlinedIcon from "@mui/icons-material/ShareOutlined";
 import DirectionsOutlinedIcon from "@mui/icons-material/DirectionsOutlined";
@@ -132,7 +130,7 @@ const ReferenceSummaryCard = ({ icon, value, label, tone }: { icon: React.ReactN
   </Paper>
 );
 
-const ReferencePetAvatar: React.FC<{ pet: Pet; size?: number }> = ({ pet, size = 66 }) => {
+const ReferencePetAvatar: React.FC<{ pet: Pet; size?: number }> = ({ pet, size = 80 }) => {
   const resolvedSrc = usePetImage(pet.apiId || pet.id, pet.imageUrl || pet.avatarUrl);
   return (
     <Avatar
@@ -406,6 +404,7 @@ const FiruappReferenceDashboard: React.FC<FiruappReferenceDashboardProps> = ({
                 }}
                 onStatusChange={onStatusChange}
                 copy={copy}
+                variant="reference"
               />
             </Paper>
 
@@ -499,11 +498,9 @@ const FiruappReferenceDashboard: React.FC<FiruappReferenceDashboardProps> = ({
                       <ReferenceMetric icon={<BatteryFullIcon />} label={labels.battery} value={selectedPetBatteryValue} tone="green" />
                       <ReferenceMetric icon={<SignalCellularAltIcon />} label={labels.signal} value={selectedPetSignal} tone="green" />
                       <ReferenceMetric icon={<SpeedOutlinedIcon />} label={labels.speed} value={selectedPetSpeed} tone="violet" />
-                      <ReferenceMetric icon={<TimelineIcon />} label={labels.accuracy} value={language === "es" ? "6 metros" : "6 meters"} tone="blue" />
                     </Box>
 
                     <Stack direction="row" spacing={0.8} className="owner-reference-detail-actions">
-                      <Button variant="contained" startIcon={<MyLocationIcon />} onClick={onFocusPet}>{labels.find}</Button>
                       <Button variant="contained" startIcon={<DirectionsOutlinedIcon />} onClick={() => navigate(`/routes/recent?petId=${selectedPet.apiId || selectedPet.id}`)}>{labels.route}</Button>
                       <Button variant="outlined" startIcon={<ShareOutlinedIcon />} onClick={handleShare}>{labels.share}</Button>
                       <Button variant="outlined" color="error" startIcon={<NotificationsActiveOutlinedIcon />} onClick={() => onStatusChange(selectedPet.apiId || selectedPet.id, "lost")}>{labels.alert}</Button>

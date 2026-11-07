@@ -103,7 +103,7 @@ const OwnerReferenceTopbar: React.FC<OwnerReferenceTopbarProps> = ({
   return (
     <Box ref={searchBarRef} component="header" className="owner-reference-topbar">
       <Box component={RouterLink} to="/owner-dashboard" className="owner-reference-brand-link" aria-label="FiruApp">
-        <FiruBrand />
+        <FiruBrand horizontal />
       </Box>
       <Divider orientation="vertical" flexItem className="owner-reference-topbar-divider" />
 

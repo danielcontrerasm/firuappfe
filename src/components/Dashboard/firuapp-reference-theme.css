@@ -29,12 +29,12 @@
 }
 
 .owner-reference-brand-link {
-  width: 258px;
+  width: 326px;
   height: 100%;
-  flex: 0 0 258px;
+  flex: 0 0 326px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   text-decoration: none;
   overflow: visible;
 }
@@ -44,11 +44,37 @@
   height: 100%;
 }
 
-.owner-reference-topbar .firu-brand-image {
-  width: 86px;
-  height: 86px;
+.owner-reference-topbar .firu-brand-horizontal {
+  justify-content: flex-start;
+  gap: 8px;
+  padding-left: 48px;
+}
+
+.owner-reference-topbar .firu-brand-horizontal .firu-brand-mark {
+  position: relative;
+  width: 80px;
+  height: 58px;
+  flex: 0 0 80px;
+  overflow: hidden;
+}
+
+.owner-reference-topbar .firu-brand-horizontal .firu-brand-mark .firu-brand-image {
+  position: absolute;
+  top: -1px;
+  left: -9px;
+  width: 112px;
+  height: 112px;
   max-width: none;
   object-fit: contain;
+}
+
+.owner-reference-topbar .firu-brand-wordmark {
+  color: #102640;
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: -1.2px;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .owner-reference-topbar-divider {
@@ -501,7 +527,7 @@
   grid-template-columns: 328px minmax(0, 1fr) 414px;
   gap: 12px;
   align-items: stretch;
-  margin-top: 16px;
+  margin-top: 32px;
 }
 
 .owner-reference-content-grid.no-details {
@@ -521,7 +547,9 @@
 
 .owner-reference-pet-panel {
   min-width: 0;
-  height: clamp(560px, calc(100vh - 230px), 680px);
+  height: clamp(520px, calc(100vh - 252px), 680px);
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   padding: 18px 12px 10px;
 }
@@ -597,7 +625,9 @@
   inset: auto !important;
   width: 100% !important;
   max-height: none !important;
-  height: calc(100% - 124px);
+  height: auto !important;
+  min-height: 0;
+  flex: 1 1 auto;
   overflow: hidden !important;
   background: transparent !important;
   border: 0 !important;
@@ -623,7 +653,7 @@
 }
 
 .owner-reference-pet-panel .firuapp-pets-list .MuiListItemButton-root {
-  min-height: 88px !important;
+  min-height: 100px !important;
   margin: 0 !important;
   padding: 10px 8px !important;
   border: 0 !important;
@@ -638,11 +668,89 @@
 }
 
 .owner-reference-pet-panel .firuapp-pets-list .MuiListItemButton-root.is-selected {
-  margin: 4px 0 !important;
-  padding: 6px 8px !important;
+  margin: 3px 0 !important;
+  padding: 8px 8px !important;
   border: 1.5px solid var(--owner-reference-blue) !important;
   border-radius: 11px !important;
   background: #eef5ff !important;
+}
+
+.owner-reference-pet-panel .firuapp-pets-list .firuapp-reference-pet-row {
+  align-items: center;
+  gap: 0;
+  padding: 11px 8px !important;
+}
+
+.owner-reference-pet-panel .firuapp-pets-list .firuapp-reference-pet-row .MuiListItemAvatar-root {
+  align-self: center;
+}
+
+.owner-reference-pet-panel .firuapp-pets-list .firuapp-reference-pet-copy {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: grid;
+  gap: 3px;
+}
+
+.owner-reference-pet-panel .firuapp-pets-list .firuapp-reference-pet-name {
+  overflow: hidden;
+  color: var(--owner-reference-ink);
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.owner-reference-pet-panel .firuapp-pets-list .firuapp-reference-pet-status,
+.owner-reference-pet-panel .firuapp-pets-list .firuapp-reference-pet-last-seen {
+  overflow: hidden;
+  color: #61728f;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.owner-reference-pet-panel .firuapp-pets-list .firuapp-reference-pet-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #6f7f96;
+  font-weight: 850;
+}
+
+.owner-reference-pet-panel .firuapp-pets-list .firuapp-reference-pet-status.is-online {
+  color: #0b9b55;
+}
+
+.owner-reference-pet-panel .firuapp-pets-list .firuapp-reference-pet-status span {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.owner-reference-pet-panel .firuapp-pets-list .firuapp-reference-pet-battery {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  margin-left: 8px;
+  color: #13a75c;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.owner-reference-pet-panel .firuapp-pets-list .firuapp-reference-pet-battery.is-lost,
+.owner-reference-pet-panel .firuapp-pets-list .firuapp-reference-pet-battery.is-lost svg {
+  color: #ef4444;
+}
+
+.owner-reference-pet-panel .firuapp-pets-list .firuapp-reference-pet-battery svg {
+  font-size: 20px;
 }
 
 .owner-reference-pet-panel .firuapp-pets-list .MuiListItemAvatar-root {
@@ -711,7 +819,7 @@
 .owner-reference-map-panel {
   position: relative;
   min-width: 0;
-  height: clamp(560px, calc(100vh - 230px), 680px);
+  height: clamp(520px, calc(100vh - 252px), 680px);
   overflow: hidden;
   padding: 0;
 }
@@ -800,7 +908,7 @@
 
 .owner-reference-detail-column {
   min-width: 0;
-  height: clamp(560px, calc(100vh - 230px), 680px);
+  height: clamp(520px, calc(100vh - 252px), 680px);
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   gap: 12px;
@@ -983,7 +1091,7 @@
 
 .owner-reference-detail-actions .MuiButton-root {
   min-width: 0;
-  flex: 1 1 calc(50% - 4px);
+  flex: 1 1 0;
   min-height: 44px;
   padding: 0 8px;
   border-radius: 10px;

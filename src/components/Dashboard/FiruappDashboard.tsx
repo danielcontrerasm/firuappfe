@@ -462,6 +462,7 @@ const FiruappDashboard: React.FC = () => {
   const [demoEnabled, setDemoEnabled] = useState(false);
   const [showGeofences, setShowGeofences] = useState(true);
   const [mapStyle, setMapStyle] = useState<MapStyle>("clean");
+  const [referenceMapStyle, setReferenceMapStyle] = useState<MapStyle>("natural");
   const [language, setLanguage] = useState<DashboardLanguage>(() => (
     typeof window !== "undefined" && window.localStorage.getItem("firuapp-language") === "es" ? "es" : "en"
   ));
@@ -647,6 +648,7 @@ const FiruappDashboard: React.FC = () => {
           city: liveDetails.city || pet.city,
           neighborhood: liveDetails.neighborhood || pet.neighborhood,
           battery: liveDetails.battery ?? pet.battery,
+          lastSeen: liveDetails.timestamp ? formatLocationTimestamp(liveDetails.timestamp) : pet.lastSeen,
           gpsOnline: isGpsOnline(liveDetails.timestamp, now),
         };
       })
@@ -932,8 +934,8 @@ const FiruappDashboard: React.FC = () => {
         petDataMode={petDataMode}
         showGeofences={showGeofences}
         onShowGeofencesChange={setShowGeofences}
-        mapStyle={mapStyle}
-        onMapStyleChange={setMapStyle}
+        mapStyle={referenceMapStyle}
+        onMapStyleChange={setReferenceMapStyle}
         selectedPetGpsCity={selectedPetGpsCity}
         selectedPetLocation={selectedPetLocation}
         selectedPetLastSeen={selectedPetLastSeen}

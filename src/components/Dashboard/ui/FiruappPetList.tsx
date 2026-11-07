@@ -35,6 +35,7 @@ interface PetsListProps {
   onStatusChange?: (id: string, status: Pet["status"]) => void;
   containerRef?: React.Ref<HTMLDivElement>;
   copy?: DashboardCopy;
+  variant?: "default" | "reference";
 }
 
 const getBatteryColor = (battery?: number) => {
@@ -66,7 +67,7 @@ const FiruappPetAvatar: React.FC<{ pet: Pet; petStatus: string }> = ({ pet, petS
   );
 };
 
-const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, onStatusChange, containerRef, copy = getDashboardCopy("en") }) => {
+const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, onStatusChange, containerRef, copy = getDashboardCopy("en"), variant = "default" }) => {
   const [menuAnchor, setMenuAnchor] = useState<{ mouseX: number; mouseY: number } | null>(null);
   const [menuPet, setMenuPet] = useState<Pet | null>(null);
   const navigate = useNavigate();
@@ -217,14 +218,15 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
           const isSelected = pet.id === selectedId;
           const gpsOnline = pet.gpsOnline === true;
           const details = [pet.race || pet.breed, pet.age, pet.weight].filter(Boolean).join(" · ");
+          const referenceLastSeen = pet.lastSeen || (gpsOnline ? "Actualizado recientemente" : "Última conexión no disponible");
 
           return (
             <ListItemButton
               key={pet.id}
-              className={isSelected ? "is-selected" : undefined}
+              className={`${variant === "reference" ? "firuapp-reference-pet-row" : ""}${isSelected ? " is-selected" : ""}`.trim()}
               onClick={() => onSelect?.(pet.id)}
               onContextMenu={(e) => handleRightClick(e, pet)}
-              sx={{
+              sx={variant === "reference" ? undefined : {
                 minHeight: 82,
                 borderRadius: 2.2,
                 mb: 0,
@@ -238,84 +240,103 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
                 "&:hover": { background: "#ffffff", boxShadow: "0 16px 32px rgba(15,23,42,0.16)" },
               }}
             >
-              <ListItemAvatar sx={{ minWidth: { xs: 54, sm: 62 } }}>
+              <ListItemAvatar sx={{ minWidth: variant === "reference" ? 64 : { xs: 54, sm: 62 } }}>
                 <FiruappPetAvatar pet={pet} petStatus={petStatus} />
               </ListItemAvatar>
-              <ListItemText
-                sx={{ minWidth: 0, mr: 1 }}
-                primary={
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, minWidth: 0 }}>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontWeight: 900,
-                        color: firuColors.dark,
-                        lineHeight: 1.15,
-                        fontSize: { xs: 12.5, sm: 14 },
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {pet.name}
+              {variant === "reference" ? (
+                <>
+                  <Box className="firuapp-reference-pet-copy">
+                    <Typography className="firuapp-reference-pet-name">{pet.name}</Typography>
+                    <Typography className={`firuapp-reference-pet-status${gpsOnline ? " is-online" : ""}`}>
+                      <span aria-hidden="true" />
+                      {gpsOnline ? copy.onlineLabel : copy.offlineLabel}
                     </Typography>
-                    <Chip
-                      className={`firu-pet-status-chip ${gpsOnline ? "is-online" : "is-offline"}`}
-                      label={gpsOnline ? copy.onlineLabel : copy.offlineLabel}
-                      size="small"
-                      sx={{
-                        height: { xs: 22, sm: 24 },
-                        bgcolor: gpsOnline ? firuColors.green : firuColors.muted,
-                        color: "white",
-                        fontSize: { xs: 9.5, sm: 10.5 },
-                        fontWeight: 900,
-                        "& .MuiChip-label": { px: { xs: 0.55, sm: 0.75 } },
-                      }}
-                    />
-                    {petStatus === "lost" && (
-                      <Chip label={copy.lostLabel} size="small" sx={{ bgcolor: firuColors.red, color: "white", fontWeight: 900 }} />
-                    )}
+                    <Typography className="firuapp-reference-pet-last-seen">{referenceLastSeen}</Typography>
                   </Box>
-                }
-                secondary={
-                  <Box sx={{ mt: { xs: 0.25, sm: 0.45 } }}>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        color: firuColors.muted,
-                        fontWeight: 700,
-                        lineHeight: 1.2,
-                        fontSize: { xs: 10, sm: 12 },
-                        display: "block",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {details || copy.breedAgeWeight}
-                    </Typography>
+                  <Box className={`firuapp-reference-pet-battery${petStatus === "lost" ? " is-lost" : ""}`}>
+                    <BatteryChargingFullIcon />
+                    <span>{pet.battery == null ? "--%" : `${pet.battery}%`}</span>
                   </Box>
-                }
-              />
-              <Chip
-                icon={<BatteryChargingFullIcon sx={{ fontSize: { xs: 14, sm: 15 } }} />}
-                label={pet.battery == null ? "--%" : `${pet.battery}%`}
-                size="small"
-                sx={{
-                  height: { xs: 24, sm: 26 },
-                  alignSelf: "center",
-                  borderRadius: 999,
-                  bgcolor: "#f8fbff",
-                  border: `1px solid ${getBatteryColor(pet.battery)}`,
-                  color: getBatteryColor(pet.battery),
-                  fontSize: { xs: 10, sm: 11 },
-                  fontWeight: 950,
-                  flexShrink: 0,
-                  "& .MuiChip-icon": { color: "inherit", ml: 0.65 },
-                  "& .MuiChip-label": { px: { xs: 0.55, sm: 0.75 } },
-                }}
-              />
-              <MoreVertIcon sx={{ color: petStatus === "lost" ? "#ff3444" : "#6b7c95", fontSize: { xs: 20, sm: 22 } }} />
+                </>
+              ) : (
+                <>
+                  <ListItemText
+                    sx={{ minWidth: 0, mr: 1 }}
+                    primary={
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, minWidth: 0 }}>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontWeight: 900,
+                            color: firuColors.dark,
+                            lineHeight: 1.15,
+                            fontSize: { xs: 12.5, sm: 14 },
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {pet.name}
+                        </Typography>
+                        <Chip
+                          className={`firu-pet-status-chip ${gpsOnline ? "is-online" : "is-offline"}`}
+                          label={gpsOnline ? copy.onlineLabel : copy.offlineLabel}
+                          size="small"
+                          sx={{
+                            height: { xs: 22, sm: 24 },
+                            bgcolor: gpsOnline ? firuColors.green : firuColors.muted,
+                            color: "white",
+                            fontSize: { xs: 9.5, sm: 10.5 },
+                            fontWeight: 900,
+                            "& .MuiChip-label": { px: { xs: 0.55, sm: 0.75 } },
+                          }}
+                        />
+                        {petStatus === "lost" && (
+                          <Chip label={copy.lostLabel} size="small" sx={{ bgcolor: firuColors.red, color: "white", fontWeight: 900 }} />
+                        )}
+                      </Box>
+                    }
+                    secondary={
+                      <Box sx={{ mt: { xs: 0.25, sm: 0.45 } }}>
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: firuColors.muted,
+                            fontWeight: 700,
+                            lineHeight: 1.2,
+                            fontSize: { xs: 10, sm: 12 },
+                            display: "block",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {details || copy.breedAgeWeight}
+                        </Typography>
+                      </Box>
+                    }
+                  />
+                  <Chip
+                    icon={<BatteryChargingFullIcon sx={{ fontSize: { xs: 14, sm: 15 } }} />}
+                    label={pet.battery == null ? "--%" : `${pet.battery}%`}
+                    size="small"
+                    sx={{
+                      height: { xs: 24, sm: 26 },
+                      alignSelf: "center",
+                      borderRadius: 999,
+                      bgcolor: "#f8fbff",
+                      border: `1px solid ${getBatteryColor(pet.battery)}`,
+                      color: getBatteryColor(pet.battery),
+                      fontSize: { xs: 10, sm: 11 },
+                      fontWeight: 950,
+                      flexShrink: 0,
+                      "& .MuiChip-icon": { color: "inherit", ml: 0.65 },
+                      "& .MuiChip-label": { px: { xs: 0.55, sm: 0.75 } },
+                    }}
+                  />
+                  <MoreVertIcon sx={{ color: petStatus === "lost" ? "#ff3444" : "#6b7c95", fontSize: { xs: 20, sm: 22 } }} />
+                </>
+              )}
             </ListItemButton>
           );
         })}
