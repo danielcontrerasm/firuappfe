@@ -128,6 +128,14 @@ const OwnerReferenceTopbar: React.FC<OwnerReferenceTopbarProps> = ({
       </Box>
 
       <Stack direction="row" alignItems="center" spacing={0.4} className="owner-reference-topbar-actions">
+        <IconButton
+          aria-label={`${labels.switchTheme}: ${dashboardTheme === "reference" ? "current" : "reference"}`}
+          title={`${labels.switchTheme}: ${dashboardTheme === "reference" ? "current" : "reference"}`}
+          onClick={onToggleTheme}
+          className="owner-reference-header-icon"
+        >
+          <PaletteOutlinedIcon />
+        </IconButton>
         <IconButton component={RouterLink} to="/alerts" aria-label={labels.alerts} className="owner-reference-header-icon">
           <Badge color="error" badgeContent={3} max={9}>
             <NotificationsNoneIcon />

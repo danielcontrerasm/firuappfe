@@ -288,7 +288,16 @@ const mapWalkerPet = (item: any, index: number): WalkerPet => ({
   status: String(item.status || item.pet?.status || "active").toLowerCase(),
 });
 
-const isPersistableId = (id: string | number) => /^\d+$/.test(String(id));
+const isPersistableId = (id: string | number) => {
+  const value = String(id ?? "").trim();
+  if (!value || ["undefined", "null"].includes(value.toLowerCase())) return false;
+  // Demo/fallback rows are intentionally local. Real API IDs can be numeric or UUIDs.
+  return !/^(demo|remote)-/i.test(value);
+};
+
+const apiDecisionStatus = (status: RequestStatus) => (
+  status === "CONFIRMED" ? "ACCEPTED" : status
+);
 
 const scrollToSection = (id: string) => {
   if (typeof document === "undefined") return;
@@ -583,7 +592,7 @@ const WalkerDashboard: React.FC = () => {
     setLoading(true);
     try {
       if (isPersistableId(request.id)) {
-        await api("PUT", `/api/walk-requests/${request.id}/decision`, { status });
+        await api("PUT", `/api/walk-requests/${request.id}/decision`, { status: apiDecisionStatus(status) });
       }
       setRequests((current) => current.map((item) => item.id === request.id ? { ...item, status } : item));
       setSelectedRequest((current) => current?.id === request.id ? { ...current, status } : current);
