@@ -1,0 +1,92 @@
+.firu-reference-theme {
+  --reference-blue: #0f5de7;
+  --reference-ink: #14233f;
+  --reference-muted: #5f6f88;
+  --reference-border: #dbe6f3;
+  background: #f4f8fc !important;
+  color: var(--reference-ink) !important;
+}
+
+.firu-reference-theme > aside > div {
+  width: 258px !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%) !important;
+  border-right: 1px solid var(--reference-border) !important;
+  box-shadow: 8px 0 28px rgba(20, 45, 85, 0.06) !important;
+}
+
+.firu-reference-theme .MuiButton-root {
+  letter-spacing: -0.01em;
+}
+
+.firu-reference-theme > aside .MuiButton-root {
+  color: var(--reference-ink) !important;
+  border-radius: 12px !important;
+  font-size: 15px !important;
+  min-height: 50px !important;
+}
+
+.firu-reference-theme > aside .MuiButton-root:hover {
+  background: #edf4ff !important;
+}
+
+.firu-reference-theme > aside .MuiButton-root[href="/owner-dashboard"] {
+  background: var(--reference-blue) !important;
+  color: #fff !important;
+  box-shadow: 0 12px 24px rgba(15, 93, 231, 0.22) !important;
+}
+
+.firu-reference-theme > aside .MuiButton-root:last-child {
+  color: #e53935 !important;
+  background: #fff1f1 !important;
+}
+
+.firu-reference-theme > div > .MuiPaper-root:first-child {
+  background: rgba(255, 255, 255, 0.98) !important;
+  border-bottom: 1px solid var(--reference-border) !important;
+  box-shadow: 0 8px 24px rgba(20, 45, 85, 0.05) !important;
+}
+
+.firu-reference-theme > div > .MuiPaper-root:first-child .MuiIconButton-root,
+.firu-reference-theme > div > .MuiPaper-root:first-child [class*="MuiBox-root"] {
+  border-color: var(--reference-border) !important;
+}
+
+.firu-reference-theme .MuiPaper-root {
+  border-color: var(--reference-border) !important;
+  box-shadow: 0 14px 34px rgba(20, 45, 85, 0.07) !important;
+}
+
+.firu-reference-theme .MuiTypography-root {
+  color: var(--reference-ink);
+}
+
+.firu-reference-theme .MuiTypography-body1,
+.firu-reference-theme .MuiTypography-body2,
+.firu-reference-theme .MuiTypography-caption {
+  color: var(--reference-muted);
+}
+
+.firu-reference-theme .MuiChip-root {
+  background: #17b653 !important;
+}
+
+.firu-reference-theme .MuiButton-contained {
+  background: var(--reference-blue) !important;
+  box-shadow: 0 10px 20px rgba(15, 93, 231, 0.2) !important;
+}
+
+.firu-reference-theme .MuiButton-outlined {
+  border-color: #b8cdf3 !important;
+  color: var(--reference-blue) !important;
+}
+
+.firu-reference-theme .MuiOutlinedInput-root,
+.firu-reference-theme .MuiSelect-select {
+  border-radius: 12px !important;
+}
+
+@media (max-width: 899.95px) {
+  .firu-reference-theme > aside > div {
+    width: 284px !important;
+  }
+}

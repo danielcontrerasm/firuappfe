@@ -43,6 +43,8 @@ import NavigationIcon from "@mui/icons-material/Navigation";
 import PetsIcon from "@mui/icons-material/Pets";
 import SecurityIcon from "@mui/icons-material/Security";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import PaletteOutlinedIcon from "@mui/icons-material/PaletteOutlined";
+import CheckIcon from "@mui/icons-material/Check";
 import { usePetImage } from "../../services/usePetImage.ts";
 import { buildApiUrl } from "../../config/runtime";
 import {
@@ -55,6 +57,7 @@ import {
 
 
 import { useLiveAlerts } from "../../services/useLiveAlerts.ts";
+import "./firuapp-dashboard-theme.css";
 const MobileTrackingDashboard = React.lazy(() => import("./MobileTrackingDashboard.tsx"));
 
 const GUIDE_PENDING_KEY = "firuapp-guide-pending";
@@ -451,6 +454,10 @@ const FiruappDashboard: React.FC = () => {
   const [demoEnabled, setDemoEnabled] = useState(false);
   const [showGeofences, setShowGeofences] = useState(true);
   const [mapStyle, setMapStyle] = useState<MapStyle>("clean");
+  const [dashboardTheme, setDashboardTheme] = useState<"current" | "reference">(() => {
+    if (typeof window === "undefined") return "reference";
+    return window.localStorage.getItem("firuapp-dashboard-theme") === "current" ? "current" : "reference";
+  });
   const petDataMode: PetDataMode = demoEnabled ? "mixed" : "database";
   const dashboardControls = {
     demoEnabled,
@@ -460,6 +467,13 @@ const FiruappDashboard: React.FC = () => {
     mapStyle,
     onMapStyleChange: setMapStyle,
     canUseDemoData,
+  };
+  const toggleDashboardTheme = () => {
+    setDashboardTheme((current) => {
+      const next = current === "reference" ? "current" : "reference";
+      window.localStorage.setItem("firuapp-dashboard-theme", next);
+      return next;
+    });
   };
   const [petFilters, setPetFilters] = useState<DashboardPetFilters>({
     city: "",
@@ -855,7 +869,7 @@ const FiruappDashboard: React.FC = () => {
   /></React.Suspense>;
 
   return (
-    <Box className="firu-dashboard-shell" sx={{ minHeight: "100vh", display: "flex", bgcolor: "#f7fbff", color: firuColors.text }}>
+    <Box className={`firu-dashboard-shell ${dashboardTheme === "reference" ? "firu-reference-theme" : ""}`} sx={{ minHeight: "100vh", display: "flex", bgcolor: "#f7fbff", color: firuColors.text }}>
       <FiruappSidebar current={section} onChange={setSection} />
 
       <Box sx={{ flexGrow: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
@@ -906,6 +920,14 @@ const FiruappDashboard: React.FC = () => {
           <DashboardControls {...dashboardControls} compact />
 
           <Stack direction="row" spacing={1.35} alignItems="center" sx={{ ml: "auto" }}>
+            <IconButton
+              aria-label={`Switch to ${dashboardTheme === "reference" ? "current" : "reference"} dashboard theme`}
+              title={`Switch to ${dashboardTheme === "reference" ? "current" : "reference"} theme`}
+              onClick={toggleDashboardTheme}
+              sx={{ width: 52, height: 52, bgcolor: "#f8fbff", border: "1px solid #d8e5f1", borderRadius: 2 }}
+            >
+              {dashboardTheme === "reference" ? <CheckIcon sx={{ color: "#0f5de7" }} /> : <PaletteOutlinedIcon />}
+            </IconButton>
             <IconButton sx={{ width: 52, height: 52, bgcolor: "#f8fbff", border: "1px solid #d8e5f1", borderRadius: 2 }}>
               <Badge color="error" variant="dot"><NotificationsNoneIcon /></Badge>
             </IconButton>
