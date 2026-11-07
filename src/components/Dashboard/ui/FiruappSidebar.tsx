@@ -76,8 +76,8 @@ const FiruappSidebar: React.FC<SidebarProps & { copy?: DashboardCopy; language?:
         zIndex: 20,
       }}
     >
-      <Box sx={{ minHeight: 118, display: "grid", placeItems: "center", mb: 1, "& .firu-brand-stacked .firu-brand-image": { width: 104, height: 70 } }}>
-        <FiruBrand stacked />
+      <Box sx={{ minHeight: 118, display: "grid", placeItems: "center", mb: 1 }}>
+        <FiruBrand />
       </Box>
 
 

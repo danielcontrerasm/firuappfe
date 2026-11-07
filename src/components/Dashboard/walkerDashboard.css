@@ -850,9 +850,12 @@
   box-shadow: 8px 0 28px rgba(20, 45, 85, 0.06);
 }
 .walker-firu-theme .walker-sidebar-top { min-height: 94px; }
-.walker-firu-theme .walker-brand-logo { display: block; width: 142px; height: auto; object-fit: contain; }
-.walker-firu-theme .walker-brand-mark { display: none; }
-.walker-firu-theme .walker-brand > span { display: none; }
+.walker-firu-theme .walker-brand { gap: 8px; transform: none; }
+.walker-firu-theme .walker-brand-mark { display: grid; width: 52px; height: 52px; border-radius: 14px; background: #eef6ff; }
+.walker-firu-theme .walker-brand-mark img { width: 48px; height: 42px; object-fit: contain; }
+.walker-firu-theme .walker-brand > span { display: block; font-size: 28px; letter-spacing: -1.5px; }
+.walker-firu-theme .walker-brand > span strong { color: #14233f; }
+.walker-firu-theme .walker-brand > span em { color: #0f5de7; }
 .walker-firu-theme .walker-profile-card {
   min-height: 74px;
   padding: 11px 10px;

@@ -354,7 +354,8 @@ const RouteMap: React.FC<{ points: RoutePoint[]; active: boolean }> = ({ points,
 
 const WalkerBrand = () => (
   <Box className="walker-brand">
-    <img src="/logo_sidebar.png" alt="FiruApp" className="walker-brand-logo" />
+    <Box className="walker-brand-mark"><img src="/logo-head.png" alt="" /></Box>
+    <Box component="span"><strong>Firu</strong><em>App</em></Box>
   </Box>
 );
 
