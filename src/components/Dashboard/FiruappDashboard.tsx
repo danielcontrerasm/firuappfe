@@ -4,6 +4,7 @@ import axios from "axios";
 import FiruappSidebar from "./ui/FiruappSidebar.tsx";
 import FiruappMapView from "./ui/FiruappMapView.tsx";
 import FiruappPetsList from "./ui/FiruappPetList.tsx";
+import FiruappReferenceDashboard from "./FiruappReferenceDashboard.tsx";
 import DashboardControls from "./ui/DashboardControls.tsx";
 import { demoPets } from "./ui/dashboardDemoData.ts";
 import { MapStyle, Pet, PetDataMode, firuColors } from "./ui/FiruappStyles.ts";
@@ -884,6 +885,72 @@ const FiruappDashboard: React.FC = () => {
     controls={dashboardControls}
     petDataMode={petDataMode}
   /></React.Suspense>;
+
+  if (dashboardTheme === "reference") {
+    return (
+      <FiruappReferenceDashboard
+        language={language}
+        copy={copy}
+        dashboardTheme={dashboardTheme}
+        accountDetails={accountDetails}
+        accountMenuAnchor={accountMenuAnchor}
+        onAccountMenuOpen={(event) => setAccountMenuAnchor(event.currentTarget)}
+        onAccountMenuClose={() => setAccountMenuAnchor(null)}
+        onToggleTheme={() => {
+          setAccountMenuAnchor(null);
+          toggleDashboardTheme();
+        }}
+        onToggleLanguage={() => {
+          setAccountMenuAnchor(null);
+          toggleLanguage();
+        }}
+        onLogout={() => {
+          setAccountMenuAnchor(null);
+          localStorage.removeItem("token");
+          window.location.href = "/login";
+        }}
+        filteredDashboardPets={filteredDashboardPets}
+        selectedPet={selectedPet}
+        selectedPetId={selectedPetId}
+        onSelectPet={setSelectedPetId}
+        onStatusChange={(petId, status) => {
+          setDatabasePets((currentPets) => currentPets.map((pet) => ((pet.apiId || pet.id) === petId ? { ...pet, status } : pet)));
+          setDashboardPets((currentPets) => currentPets.map((pet) => ((pet.apiId || pet.id) === petId ? { ...pet, status } : pet)));
+        }}
+        petDataMode={petDataMode}
+        showGeofences={showGeofences}
+        onShowGeofencesChange={setShowGeofences}
+        mapStyle={mapStyle}
+        onMapStyleChange={setMapStyle}
+        selectedPetGpsCity={selectedPetGpsCity}
+        selectedPetLocation={selectedPetLocation}
+        selectedPetLastSeen={selectedPetLastSeen}
+        selectedPetLocationLabel={selectedPetLocationLabel}
+        selectedPetCoordinates={selectedPetCoordinates}
+        selectedPetBattery={selectedPetBattery}
+        selectedPetBatteryColor={selectedPetBatteryColor}
+        selectedPetIsLost={selectedPetIsLost}
+        selectedPetGpsOnline={selectedPetGpsOnline}
+        selectedPetLocationColor={selectedPetLocationColor}
+        selectedPetLocationBg={selectedPetLocationBg}
+        selectedPetLocationBorder={selectedPetLocationBorder}
+        onlinePets={onlinePets}
+        lostPets={lostPets}
+        recentAlertItems={recentAlertItems}
+        alertsConnected={alertsConnected}
+        onLocationsChange={handleLocationsChange}
+        petFilters={petFilters}
+        onPetFiltersChange={setPetFilters}
+        cityOptions={cityOptions}
+        detailsPanelOpen={detailsPanelOpen}
+        onDetailsPanelChange={setDetailsPanelOpen}
+        searchBarRef={searchBarRef}
+        filterBarRef={filterBarRef}
+        mapPanelRef={mapPanelRef}
+        petListRef={petListRef}
+      />
+    );
+  }
 
   return (
     <Box className={`firu-dashboard-shell ${dashboardTheme === "reference" ? "firu-reference-theme" : ""}`} sx={{ minHeight: "100vh", display: "flex", bgcolor: "#f7fbff", color: firuColors.text }}>

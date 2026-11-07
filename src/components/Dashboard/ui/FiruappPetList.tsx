@@ -142,6 +142,7 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
   return (
     <Box
       ref={containerRef}
+      className="firuapp-pets-list"
       sx={{
         ...compactPanel,
         position: "absolute",
@@ -220,6 +221,7 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
           return (
             <ListItemButton
               key={pet.id}
+              className={isSelected ? "is-selected" : undefined}
               onClick={() => onSelect?.(pet.id)}
               onContextMenu={(e) => handleRightClick(e, pet)}
               sx={{
@@ -258,6 +260,7 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
                       {pet.name}
                     </Typography>
                     <Chip
+                      className={`firu-pet-status-chip ${gpsOnline ? "is-online" : "is-offline"}`}
                       label={gpsOnline ? copy.onlineLabel : copy.offlineLabel}
                       size="small"
                       sx={{
