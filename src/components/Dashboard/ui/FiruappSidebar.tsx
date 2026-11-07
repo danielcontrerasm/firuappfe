@@ -18,6 +18,7 @@ import MobileNavigation from "./MobileNavigation.tsx";
 import FiruBrand from "./FiruBrand.tsx";
 import { firuColors } from "./FiruappStyles.ts";
 import { isCurrentUserAdmin } from "../../../services/auth.ts";
+import { DashboardCopy, DashboardLanguage, getDashboardCopy } from "./dashboardI18n.ts";
 
 interface SidebarProps {
   current: "all" | "geofence" | "route" | "walks" | "walker";
@@ -39,7 +40,7 @@ const navItems = [
   { label: "Alerts", icon: NotificationsActiveIcon, to: "/alerts" },
 ];
 
-const FiruappSidebar: React.FC<SidebarProps> = ({ onChange }) => {
+const FiruappSidebar: React.FC<SidebarProps & { copy?: DashboardCopy; language?: DashboardLanguage }> = ({ onChange, copy = getDashboardCopy("en") }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const isAdmin = isCurrentUserAdmin();
@@ -52,6 +53,10 @@ const FiruappSidebar: React.FC<SidebarProps> = ({ onChange }) => {
   const handleNavigate = (section?: SidebarProps["current"]) => {
     if (section) onChange?.(section);
   };
+
+  const translatedNavItems = navItems.map((item) => ({ ...item, label: ({
+    Dashboard: copy.dashboard, "Panel paseador": copy.walker, "Recent Routes": copy.routes, "Dog Walks": copy.walks, Geofences: copy.geofences, "My Pets": copy.pets, "Volunteer Groups": copy.volunteers, "Lost Pets Wall": copy.lostPets, "GPS Sensors": copy.sensors, Users: copy.users, "Mi perfil": copy.profile, Alerts: copy.alerts,
+  } as Record<string, string>)[item.label] || item.label }));
 
   const navContent = (
     <Box
@@ -77,7 +82,7 @@ const FiruappSidebar: React.FC<SidebarProps> = ({ onChange }) => {
 
 
       <Box sx={{ display: "grid", gap: 0.55, width: "100%", mt: 0.25 }}>
-        {navItems.filter((item) => !item.adminOnly || isAdmin).map((item) => {
+        {translatedNavItems.filter((item) => !item.adminOnly || isAdmin).map((item) => {
           const Icon = item.icon;
           const active = location.pathname === item.to;
 
@@ -145,7 +150,7 @@ const FiruappSidebar: React.FC<SidebarProps> = ({ onChange }) => {
           "&:hover": { background: "#ffe4e6" },
         }}
       >
-        Logout
+        {copy.logout}
       </Button>
     </Box>
   );

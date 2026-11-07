@@ -5,6 +5,7 @@ import RadarIcon from "@mui/icons-material/Radar";
 import MapOutlinedIcon from "@mui/icons-material/MapOutlined";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { MapStyle } from "./FiruappStyles.ts";
+import { DashboardCopy, DashboardLanguage } from "./dashboardI18n.ts";
 
 export interface DashboardControlsProps {
   demoEnabled: boolean;
@@ -15,9 +16,12 @@ export interface DashboardControlsProps {
   onMapStyleChange: (style: MapStyle) => void;
   canUseDemoData?: boolean;
   compact?: boolean;
+  copy?: DashboardCopy;
+  language?: DashboardLanguage;
 }
 
-export default function DashboardControls({ demoEnabled, onDemoToggle, showGeofences, onShowGeofencesChange, mapStyle, onMapStyleChange, canUseDemoData = true, compact = false }: DashboardControlsProps) {
+export default function DashboardControls({ demoEnabled, onDemoToggle, showGeofences, onShowGeofencesChange, mapStyle, onMapStyleChange, canUseDemoData = true, compact = false, copy, language = "en" }: DashboardControlsProps) {
+  const labels = copy || (language === "es" ? { demoData: "Datos de demostración", geofencesToggle: "Geocercas", maps: "Mapas", clearMap: "Mapa limpio", detailedMap: "Mapa detallado", controls: "Controles del panel" } : { demoData: "Demo data", geofencesToggle: "Geofences", maps: "Maps", clearMap: "Clear map", detailedMap: "Detailed map", controls: "Dashboard controls" });
   const [mapMenuAnchor, setMapMenuAnchor] = useState<HTMLElement | null>(null);
   const menuId = useId();
   const mapMenuOpen = Boolean(mapMenuAnchor);
@@ -29,7 +33,7 @@ export default function DashboardControls({ demoEnabled, onDemoToggle, showGeofe
       flexWrap={compact ? "nowrap" : "wrap"}
       useFlexGap
       role="group"
-      aria-label="Dashboard controls"
+      aria-label={labels.controls}
       sx={{
         flexShrink: 0,
         alignItems: "center",
@@ -54,7 +58,7 @@ export default function DashboardControls({ demoEnabled, onDemoToggle, showGeofe
           aria-pressed={demoEnabled}
           onClick={onDemoToggle}
         >
-          Demo Data
+          {labels.demoData}
         </Button>
       )}
       <Button
@@ -63,7 +67,7 @@ export default function DashboardControls({ demoEnabled, onDemoToggle, showGeofe
         aria-pressed={showGeofences}
         onClick={() => onShowGeofencesChange(!showGeofences)}
       >
-        Geofences
+        {labels.geofencesToggle}
       </Button>
       <Button
         variant="outlined"
@@ -72,13 +76,13 @@ export default function DashboardControls({ demoEnabled, onDemoToggle, showGeofe
         aria-haspopup="menu"
         aria-expanded={mapMenuOpen}
         aria-controls={mapMenuOpen ? menuId : undefined}
-        title={`Map style: ${mapStyle === "clean" ? "Clear" : "Detailed"}`}
+        title={`${labels.maps}: ${mapStyle === "clean" ? labels.clearMap : labels.detailedMap}`}
         onClick={(event) => setMapMenuAnchor(event.currentTarget)}
       >
-        Maps
+        {labels.maps}
       </Button>
       <Menu id={menuId} anchorEl={mapMenuAnchor} open={mapMenuOpen} onClose={() => setMapMenuAnchor(null)}>
-        {([{ value: "clean", label: "Clear map" }, { value: "natural", label: "Detailed map" }] as const).map(({ value, label }) => (
+        {([{ value: "clean", label: labels.clearMap }, { value: "natural", label: labels.detailedMap }] as const).map(({ value, label }) => (
           <MenuItem
             key={value}
             role="menuitemradio"

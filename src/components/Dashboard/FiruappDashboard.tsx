@@ -45,6 +45,7 @@ import SecurityIcon from "@mui/icons-material/Security";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import PaletteOutlinedIcon from "@mui/icons-material/PaletteOutlined";
 import CheckIcon from "@mui/icons-material/Check";
+import LanguageIcon from "@mui/icons-material/Language";
 import { usePetImage } from "../../services/usePetImage.ts";
 import { buildApiUrl } from "../../config/runtime";
 import {
@@ -58,6 +59,7 @@ import {
 
 import { useLiveAlerts } from "../../services/useLiveAlerts.ts";
 import "./firuapp-dashboard-theme.css";
+import { DashboardLanguage, getDashboardCopy } from "./ui/dashboardI18n.ts";
 const MobileTrackingDashboard = React.lazy(() => import("./MobileTrackingDashboard.tsx"));
 
 const GUIDE_PENDING_KEY = "firuapp-guide-pending";
@@ -328,6 +330,7 @@ const DashboardGuideOverlay = ({
   onBack,
   onNext,
   onClose,
+  copy,
 }: {
   open: boolean;
   title: string;
@@ -338,6 +341,7 @@ const DashboardGuideOverlay = ({
   onBack: () => void;
   onNext: () => void;
   onClose: () => void;
+  copy: ReturnType<typeof getDashboardCopy>;
 }) => {
   if (!open) return null;
 
@@ -406,11 +410,11 @@ const DashboardGuideOverlay = ({
         <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1} sx={{ mb: 1.25 }}>
           <Chip
             size="small"
-            label={`Guide ${stepIndex + 1}/${totalSteps}`}
+            label={`${copy.guideNext === "Siguiente" ? "Guía" : "Guide"} ${stepIndex + 1}/${totalSteps}`}
             sx={{ bgcolor: "#ecfeff", color: "#0e7490", fontWeight: 900 }}
           />
           <Button onClick={onClose} size="small" sx={{ minWidth: "auto", color: "#64748b", fontWeight: 800, textTransform: "none" }}>
-            Skip
+            {copy.guideClose}
           </Button>
         </Stack>
 
@@ -428,14 +432,14 @@ const DashboardGuideOverlay = ({
             disabled={stepIndex === 0}
             sx={{ borderRadius: 3, textTransform: "none", fontWeight: 900 }}
           >
-            Back
+            {copy.guideBack}
           </Button>
           <Button
             onClick={onNext}
             variant="contained"
             sx={{ bgcolor: firuColors.dark, borderRadius: 3, textTransform: "none", fontWeight: 900, "&:hover": { bgcolor: "#111827" } }}
           >
-            {isLastStep ? "Finish" : "Next"}
+            {isLastStep ? copy.guideFinish : copy.guideNext}
           </Button>
         </Stack>
       </Paper>
@@ -454,6 +458,10 @@ const FiruappDashboard: React.FC = () => {
   const [demoEnabled, setDemoEnabled] = useState(false);
   const [showGeofences, setShowGeofences] = useState(true);
   const [mapStyle, setMapStyle] = useState<MapStyle>("clean");
+  const [language, setLanguage] = useState<DashboardLanguage>(() => (
+    typeof window !== "undefined" && window.localStorage.getItem("firuapp-language") === "es" ? "es" : "en"
+  ));
+  const copy = getDashboardCopy(language);
   const [dashboardTheme, setDashboardTheme] = useState<"current" | "reference">(() => {
     if (typeof window === "undefined") return "reference";
     return window.localStorage.getItem("firuapp-dashboard-theme") === "current" ? "current" : "reference";
@@ -467,6 +475,15 @@ const FiruappDashboard: React.FC = () => {
     mapStyle,
     onMapStyleChange: setMapStyle,
     canUseDemoData,
+    copy,
+    language,
+  };
+  const toggleLanguage = () => {
+    setLanguage((current) => {
+      const next = current === "es" ? "en" : "es";
+      window.localStorage.setItem("firuapp-language", next);
+      return next;
+    });
   };
   const toggleDashboardTheme = () => {
     setDashboardTheme((current) => {
@@ -651,7 +668,7 @@ const FiruappDashboard: React.FC = () => {
   }, [petLocations, selectedPet]);
   const selectedPetLastSeen = selectedPetLocation?.timestamp
     ? formatLocationTimestamp(selectedPetLocation.timestamp)
-    : selectedPet?.lastSeen || "Unknown";
+    : selectedPet?.lastSeen || copy.unknown;
   const selectedPetLocationKey = selectedPetLocation ? locationCacheKey(selectedPetLocation) : undefined;
   const selectedPetGpsCity =
     selectedPetLocation?.city ||
@@ -676,8 +693,8 @@ const FiruappDashboard: React.FC = () => {
   }, [dashboardPets, petLocations, selectedPetGpsCity, petFilters.city]);
   const selectedPetLocationLabel =
     selectedPetLocation
-      ? [selectedPetCity, selectedPetLocation.address || "GPS coordinates"].filter(Boolean).join(" · ")
-      : "No live location available";
+      ? [selectedPetCity, selectedPetLocation.address || copy.gpsCoordinates].filter(Boolean).join(" · ")
+      : copy.noLiveLocation;
   const selectedPetCoordinates = formatCoordinates(selectedPetLocation);
   const selectedPetBattery = selectedPetLocation?.batteryPercent ?? selectedPet?.battery;
   const selectedPetBatteryColor = selectedPetBattery != null && selectedPetBattery <= 20 ? "#ef4444" : firuColors.green;
@@ -773,32 +790,32 @@ const FiruappDashboard: React.FC = () => {
   }, [alertMessages, dismissAlert, lostPets]);
   const guideSteps = [
     {
-      title: "Welcome to the dashboard",
+      title: language === "es" ? "Bienvenido al panel" : "Welcome to the dashboard",
       description:
-        "This guide points out the controls you will use most often. The left navigation moves between dashboard views, routes, safe zones, pets, users, and alerts.",
+        language === "es" ? "Esta guía muestra los controles que usarás con más frecuencia. La navegación izquierda permite cambiar entre el panel, rutas, zonas seguras, mascotas, usuarios y alertas." : "This guide points out the controls you will use most often. The left navigation moves between dashboard views, routes, safe zones, pets, users, and alerts.",
     },
     {
-      title: "Search bar",
+      title: language === "es" ? "Barra de búsqueda" : "Search bar",
       description:
-        "Use this search bar to quickly look for pets, places, or geofences before you narrow the view with the detailed filters below.",
+        language === "es" ? "Usa esta barra para buscar rápidamente mascotas, lugares o geocercas antes de limitar la vista con los filtros detallados." : "Use this search bar to quickly look for pets, places, or geofences before you narrow the view with the detailed filters below.",
       targetRef: searchBarRef,
     },
     {
-      title: "Quick filters",
+      title: language === "es" ? "Filtros rápidos" : "Quick filters",
       description:
-        "These filters let you focus the dashboard by city, neighborhood, owner, or pet name so the map and list only show the records you need.",
+        language === "es" ? "Estos filtros te permiten enfocar el panel por ciudad, barrio, dueño o nombre de mascota para mostrar solo los registros que necesitas." : "These filters let you focus the dashboard by city, neighborhood, owner, or pet name so the map and list only show the records you need.",
       targetRef: filterBarRef,
     },
     {
-      title: "Live map",
+      title: language === "es" ? "Mapa en vivo" : "Live map",
       description:
-        "The map shows live pet locations and safe zones. Select a marker to focus a pet and open the detail panel on the right.",
+        language === "es" ? "El mapa muestra las ubicaciones en vivo de las mascotas y las zonas seguras. Selecciona un marcador para enfocar una mascota y abrir sus detalles." : "The map shows live pet locations and safe zones. Select a marker to focus a pet and open the detail panel on the right.",
       targetRef: mapPanelRef,
     },
     {
-      title: "Pet list",
+      title: language === "es" ? "Lista de mascotas" : "Pet list",
       description:
-        "This floating list shows the pets currently visible on the dashboard. Click one to center your attention on that pet and review its status.",
+        language === "es" ? "Esta lista flotante muestra las mascotas visibles actualmente. Haz clic en una para centrarte en ella y revisar su estado." : "This floating list shows the pets currently visible on the dashboard. Click one to center your attention on that pet and review its status.",
       targetRef: petListRef,
     },
   ];
@@ -870,7 +887,7 @@ const FiruappDashboard: React.FC = () => {
 
   return (
     <Box className={`firu-dashboard-shell ${dashboardTheme === "reference" ? "firu-reference-theme" : ""}`} sx={{ minHeight: "100vh", display: "flex", bgcolor: "#f7fbff", color: firuColors.text }}>
-      <FiruappSidebar current={section} onChange={setSection} />
+      <FiruappSidebar current={section} onChange={setSection} copy={copy} language={language} />
 
       <Box sx={{ flexGrow: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
         <Paper
@@ -910,7 +927,7 @@ const FiruappDashboard: React.FC = () => {
           >
             <SearchIcon sx={{ color: "#607491", fontSize: 25 }} />
             <InputBase
-              placeholder="Search pets, places, geofences..."
+              placeholder={copy.search}
               value={petFilters.petName}
               onChange={(event) => setPetFilters((current) => ({ ...current, petName: event.target.value }))}
               sx={{ flex: 1, fontSize: 16, color: "#1f3350", fontWeight: 600 }}
@@ -928,6 +945,15 @@ const FiruappDashboard: React.FC = () => {
             >
               {dashboardTheme === "reference" ? <CheckIcon sx={{ color: "#0f5de7" }} /> : <PaletteOutlinedIcon />}
             </IconButton>
+            <Button
+              onClick={toggleLanguage}
+              startIcon={<LanguageIcon />}
+              aria-label={copy.switchLanguage}
+              title={copy.switchLanguage}
+              sx={{ minWidth: 74, height: 52, bgcolor: "#f8fbff", border: "1px solid #d8e5f1", borderRadius: 2, color: "#1f3350", fontWeight: 900 }}
+            >
+              {language.toUpperCase()}
+            </Button>
             <IconButton sx={{ width: 52, height: 52, bgcolor: "#f8fbff", border: "1px solid #d8e5f1", borderRadius: 2 }}>
               <Badge color="error" variant="dot"><NotificationsNoneIcon /></Badge>
             </IconButton>
@@ -955,17 +981,17 @@ const FiruappDashboard: React.FC = () => {
           >
             <Box sx={{ px: 2, py: 1.5 }}>
               <Typography variant="overline" sx={{ color: "#64748b", fontWeight: 900, letterSpacing: 1 }}>
-                Account details
+                {copy.account}
               </Typography>
               <Typography sx={{ color: "#071735", fontWeight: 900 }}>{accountDetails.name}</Typography>
               <Typography variant="body2" sx={{ color: "#64748b", overflowWrap: "anywhere" }}>{accountDetails.email}</Typography>
             </Box>
             <Divider />
             <MenuItem disabled sx={{ opacity: "1 !important", color: "#33445e !important" }}>
-              Role: {accountDetails.role}
+              {copy.role}: {accountDetails.role}
             </MenuItem>
             <MenuItem disabled sx={{ opacity: "1 !important", color: "#33445e !important" }}>
-              Account ID: {accountDetails.id}
+              {copy.accountId}: {accountDetails.id}
             </MenuItem>
           </Menu>
         </Paper>
@@ -974,10 +1000,10 @@ const FiruappDashboard: React.FC = () => {
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 2, flexWrap: { xs: "wrap", lg: "nowrap" } }}>
             <Box>
               <Typography variant="h3" sx={{ fontWeight: 950, color: "#071735", letterSpacing: -1.1, fontSize: { xs: 27, md: 31 }, lineHeight: 1.08, whiteSpace: { lg: "nowrap" } }}>
-                Good afternoon, Daniel ☀
+                {copy.greeting}
               </Typography>
               <Typography variant="body1" sx={{ color: "#6c7c95", mt: 0.4, fontSize: 15, fontWeight: 700 }}>
-                Keep an eye on your pets in real time.
+                {copy.subtitle}
               </Typography>
             </Box>
             <Stack ref={filterBarRef} direction="row" spacing={1.2} flexWrap="wrap" useFlexGap sx={{ justifyContent: "flex-end", alignItems: "center", flex: 1, minWidth: 0 }}>
@@ -1015,9 +1041,9 @@ const FiruappDashboard: React.FC = () => {
                     "& .MuiSelect-select": { py: 0 },
                     "& .MuiSelect-icon": { color: "#3d516e" },
                   }}
-                  renderValue={(value) => value || "All cities"}
+                  renderValue={(value) => value || copy.allCities}
                 >
-                  <MenuItem value="">All cities</MenuItem>
+                  <MenuItem value="">{copy.allCities}</MenuItem>
                   {cityOptions.map((city) => {
                     const isGpsCity = selectedPetGpsCity && normalizeCityName(city) === normalizeCityName(selectedPetGpsCity);
                     return (
@@ -1029,7 +1055,7 @@ const FiruappDashboard: React.FC = () => {
                 </Select>
               </Box>
               <TextField
-                placeholder="Search by neighborhood"
+                placeholder={copy.neighborhood}
                 value={petFilters.neighborhood}
                 onChange={(event) => setPetFilters((current) => ({ ...current, neighborhood: event.target.value }))}
                 size="small"
@@ -1047,7 +1073,7 @@ const FiruappDashboard: React.FC = () => {
                 }}
               />
               <TextField
-                placeholder="Search by owner name"
+                placeholder={copy.owner}
                 value={petFilters.ownerName}
                 onChange={(event) => setPetFilters((current) => ({ ...current, ownerName: event.target.value }))}
                 size="small"
@@ -1074,11 +1100,11 @@ const FiruappDashboard: React.FC = () => {
               gap: 1.6,
             }}
           >
-            <SummaryCard icon={<PetsIcon />} label="Pets" value={filteredDashboardPets.length} color="#0284c7" bg="#e0f2fe" />
-            <SummaryCard icon={<WifiIcon />} label="GPS Online" value={onlinePets.length} color="#16a34a" bg="#d9fbe8" />
-            <SummaryCard icon={<SecurityIcon />} label="Safe Zones" value={3} color="#0284c7" bg="#e0f2fe" />
-            <SummaryCard icon={<WarningAmberIcon />} label="Alerts" value={recentAlertItems.length} color="#f97316" bg="#fff2dc" />
-            <SummaryCard icon={<WarningAmberIcon />} label="Lost Pets" value={lostPets.length} color="#ef4444" bg="#ffe4e8" />
+            <SummaryCard icon={<PetsIcon />} label={copy.petsCount} value={filteredDashboardPets.length} color="#0284c7" bg="#e0f2fe" />
+            <SummaryCard icon={<WifiIcon />} label={copy.online} value={onlinePets.length} color="#16a34a" bg="#d9fbe8" />
+            <SummaryCard icon={<SecurityIcon />} label={copy.safeZones} value={3} color="#0284c7" bg="#e0f2fe" />
+            <SummaryCard icon={<WarningAmberIcon />} label={copy.alertsCount} value={recentAlertItems.length} color="#f97316" bg="#fff2dc" />
+            <SummaryCard icon={<WarningAmberIcon />} label={copy.lostCount} value={lostPets.length} color="#ef4444" bg="#ffe4e8" />
           </Box>
 
           <Box
@@ -1118,6 +1144,7 @@ const FiruappDashboard: React.FC = () => {
                   setDatabasePets((currentPets) => currentPets.map((pet) => ((pet.apiId || pet.id) === petId ? { ...pet, status } : pet)));
                   setDashboardPets((currentPets) => currentPets.map((pet) => ((pet.apiId || pet.id) === petId ? { ...pet, status } : pet)));
                 }}
+                copy={copy}
               />
             </Paper>
 
@@ -1125,17 +1152,17 @@ const FiruappDashboard: React.FC = () => {
               <Paper elevation={0} sx={{ bgcolor: "#ffffff", border: "1px solid #dbe7f3", borderRadius: 2.2, overflow: "hidden", boxShadow: "0 16px 42px rgba(15,23,42,0.07)" }}>
                 <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2, py: 1.15, minHeight: 52 }}>
                   <Typography variant="subtitle2" sx={{ color: "#071735", fontWeight: 950 }}>
-                    Recent Alerts
+                    {copy.recentAlerts}
                   </Typography>
                   <Stack direction="row" spacing={1} alignItems="center">
                     <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: alertsConnected ? "#17c964" : "#ff970f" }} />
                     {!recentAlertItems.length && (
                       <Typography variant="caption" sx={{ color: "#17a957", fontWeight: 850, whiteSpace: "nowrap" }}>
-                        No recent alerts
+                        {copy.noRecentAlerts}
                       </Typography>
                     )}
                     <Button size="small" sx={{ color: "#1685ff", fontWeight: 850, textTransform: "none", minWidth: 0, px: 0.5 }}>
-                      View all
+                      {copy.viewAll}
                     </Button>
                   </Stack>
                 </Stack>
@@ -1164,7 +1191,7 @@ const FiruappDashboard: React.FC = () => {
                     {alert.onDismiss && (
                       <IconButton
                         size="small"
-                        aria-label={`Dismiss alert ${alert.title}`}
+                        aria-label={`${copy.dismiss} ${alert.title}`}
                         onClick={alert.onDismiss}
                         sx={{ color: "#64748b", ml: 0.25, "&:hover": { bgcolor: "#fee2e2", color: "#dc2626" } }}
                       >
@@ -1187,7 +1214,7 @@ const FiruappDashboard: React.FC = () => {
                           </Typography>
                           <Chip
                             size="small"
-                            label={selectedPetGpsOnline ? "ONLINE" : "OFFLINE"}
+                            label={selectedPetGpsOnline ? copy.onlineLabel : copy.offlineLabel}
                             sx={{
                               height: 28,
                               borderRadius: 999,
@@ -1197,11 +1224,11 @@ const FiruappDashboard: React.FC = () => {
                             }}
                           />
                           {selectedPetIsLost && (
-                            <Chip size="small" label="LOST" sx={{ bgcolor: "#ff3444", color: "#ffffff", fontWeight: 950 }} />
+                            <Chip size="small" label={copy.lostLabel} sx={{ bgcolor: "#ff3444", color: "#ffffff", fontWeight: 950 }} />
                           )}
                         </Stack>
                         <Typography variant="body2" sx={{ color: "#61728f", mt: 0.55, fontWeight: 700 }}>
-                          {[selectedPet.breed || selectedPet.race || "Mixed Breed", selectedPet.age || "6 years", selectedPet.weight || "22 kg"].join("  ·  ")}
+                          {[selectedPet.breed || selectedPet.race || copy.mixedBreed, selectedPet.age || (language === "es" ? "6 años" : "6 years"), selectedPet.weight || "22 kg"].join("  ·  ")}
                         </Typography>
                       </Box>
                     </Stack>
@@ -1234,7 +1261,7 @@ const FiruappDashboard: React.FC = () => {
                     )}
                     <Box sx={{ minWidth: 0, flex: 1 }}>
                       <Typography variant="subtitle2" sx={{ color: selectedPetLocationColor, fontWeight: 950 }}>
-                        Last seen
+                        {copy.lastSeen}
                       </Typography>
                       <Typography variant="body2" sx={{ color: selectedPetLocationColor, fontWeight: 900 }}>
                         {selectedPetLastSeen}
@@ -1247,12 +1274,12 @@ const FiruappDashboard: React.FC = () => {
                   </Box>
 
                   <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.1, mt: 1.25 }}>
-                    <MetricCard icon={<BatteryChargingFullIcon fontSize="small" />} label="Battery" value={formatBatteryPercent(selectedPetBattery)} color={selectedPetBatteryColor} />
-                    <MetricCard icon={<WifiIcon fontSize="small" />} label="Signal" value={selectedPetGpsOnline ? selectedPet.signal || "Unknown" : "Offline"} color={selectedPetGpsOnline ? "#1685ff" : firuColors.muted} />
-                    <MetricCard icon={<SpeedIcon fontSize="small" />} label="Speed" value={selectedPet.speed || "0.6 km/h"} color="#8b5cf6" />
-                    <MetricCard icon={<MyLocationIcon fontSize="small" />} label="GPS accuracy" value="6 meters" color="#1685ff" />
-                    <MetricCard icon={<AccessTimeIcon fontSize="small" />} label="Last update" value={selectedPetLastSeen} color="#64748b" />
-                    <MetricCard icon={<PlaceIcon fontSize="small" />} label="Coordinates" value={selectedPetCoordinates} color="#1685ff" />
+                    <MetricCard icon={<BatteryChargingFullIcon fontSize="small" />} label={copy.battery} value={formatBatteryPercent(selectedPetBattery)} color={selectedPetBatteryColor} />
+                    <MetricCard icon={<WifiIcon fontSize="small" />} label={copy.signal} value={selectedPetGpsOnline ? selectedPet.signal || copy.unknown : copy.offlineLabel} color={selectedPetGpsOnline ? "#1685ff" : firuColors.muted} />
+                    <MetricCard icon={<SpeedIcon fontSize="small" />} label={copy.speed} value={selectedPet.speed || "0.6 km/h"} color="#8b5cf6" />
+                    <MetricCard icon={<MyLocationIcon fontSize="small" />} label={copy.gpsAccuracy} value={language === "es" ? "6 metros" : "6 meters"} color="#1685ff" />
+                    <MetricCard icon={<AccessTimeIcon fontSize="small" />} label={copy.lastUpdate} value={selectedPetLastSeen} color="#64748b" />
+                    <MetricCard icon={<PlaceIcon fontSize="small" />} label={copy.coordinates} value={selectedPetCoordinates} color="#1685ff" />
                   </Box>
 
                   <Button
@@ -1261,14 +1288,14 @@ const FiruappDashboard: React.FC = () => {
                     variant="contained"
                     sx={{ mt: 1.35, height: 48, bgcolor: "#062346", borderRadius: 2, textTransform: "none", fontWeight: 950, fontSize: 15, boxShadow: "none", "&:hover": { bgcolor: "#0d3762", boxShadow: "none" } }}
                   >
-                    Find {selectedPet.name}
+                    {copy.find} {selectedPet.name}
                   </Button>
                   <Button
                     fullWidth
                     variant="outlined"
                     sx={{ mt: 1.1, height: 48, borderRadius: 2, borderColor: "#1685ff", color: "#071735", textTransform: "none", fontWeight: 950, fontSize: 15 }}
                   >
-                    Open route
+                    {copy.openRoute}
                   </Button>
                 </Paper>
               )}
@@ -1287,6 +1314,7 @@ const FiruappDashboard: React.FC = () => {
         onBack={() => setGuideStepIndex((current) => Math.max(current - 1, 0))}
         onNext={goToNextGuideStep}
         onClose={closeGuide}
+        copy={copy}
       />
     </Box>
   );

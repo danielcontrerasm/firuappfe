@@ -26,6 +26,7 @@ import { useNavigate } from "react-router-dom";
 import { compactPanel, firuColors, Pet } from "./FiruappStyles.ts";
 import { usePetImage } from "../../../services/usePetImage.ts";
 import { buildApiUrl } from "../../../config/runtime";
+import { DashboardCopy, getDashboardCopy } from "./dashboardI18n.ts";
 
 interface PetsListProps {
   pets: Pet[];
@@ -33,6 +34,7 @@ interface PetsListProps {
   onSelect?: (id: string) => void;
   onStatusChange?: (id: string, status: Pet["status"]) => void;
   containerRef?: React.Ref<HTMLDivElement>;
+  copy?: DashboardCopy;
 }
 
 const getBatteryColor = (battery?: number) => {
@@ -64,7 +66,7 @@ const FiruappPetAvatar: React.FC<{ pet: Pet; petStatus: string }> = ({ pet, petS
   );
 };
 
-const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, onStatusChange, containerRef }) => {
+const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, onStatusChange, containerRef, copy = getDashboardCopy("en") }) => {
   const [menuAnchor, setMenuAnchor] = useState<{ mouseX: number; mouseY: number } | null>(null);
   const [menuPet, setMenuPet] = useState<Pet | null>(null);
   const navigate = useNavigate();
@@ -110,7 +112,7 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
     } catch (error: any) {
       console.error(`Error marking pet as ${status}:`, error);
       const message = error?.response?.data?.message || error?.response?.data?.error || error?.message || "Unknown error";
-      alert(`Could not mark ${menuPet.name} as ${status}. ${message}`);
+      alert(`${status === "lost" ? copy.markLost : copy.markFound}: ${menuPet.name}. ${message}`);
     }
   };
 
@@ -171,17 +173,17 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
             variant="overline"
             sx={{ color: firuColors.muted, fontWeight: 900, letterSpacing: 1.1, fontSize: { xs: 10, sm: 12 } }}
           >
-            Tracked pets
+            {copy.trackedPets}
           </Typography>
           <Typography
             variant="h6"
             sx={{ fontWeight: 900, color: firuColors.dark, lineHeight: 1.1, fontSize: { xs: 16, sm: 20 } }}
           >
-            My Pets
+            {copy.myPets}
           </Typography>
         </Box>
         <Chip
-          label={`${pets.filter((pet) => pet.gpsOnline).length} online`}
+          label={`${pets.filter((pet) => pet.gpsOnline).length} ${copy.online.toLowerCase()}`}
           size="small"
           sx={{
             height: { xs: 22, sm: 24 },
@@ -256,7 +258,7 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
                       {pet.name}
                     </Typography>
                     <Chip
-                      label={gpsOnline ? "ONLINE" : "OFFLINE"}
+                      label={gpsOnline ? copy.onlineLabel : copy.offlineLabel}
                       size="small"
                       sx={{
                         height: { xs: 22, sm: 24 },
@@ -268,7 +270,7 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
                       }}
                     />
                     {petStatus === "lost" && (
-                      <Chip label="LOST" size="small" sx={{ bgcolor: firuColors.red, color: "white", fontWeight: 900 }} />
+                      <Chip label={copy.lostLabel} size="small" sx={{ bgcolor: firuColors.red, color: "white", fontWeight: 900 }} />
                     )}
                   </Box>
                 }
@@ -287,7 +289,7 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
                         whiteSpace: "nowrap",
                       }}
                     >
-                      {details || "Breed · Age · Weight"}
+                      {details || copy.breedAgeWeight}
                     </Typography>
                   </Box>
                 }
@@ -333,23 +335,23 @@ const FiruappPetsList: React.FC<PetsListProps> = ({ pets, selectedId, onSelect, 
       >
         <MenuItem onClick={handleCreateGeofence} disabled={isDemoPet}>
           <ListItemIcon><AddLocationAltIcon fontSize="small" /></ListItemIcon>
-          Create Geofence
+          {copy.createGeofence}
         </MenuItem>
         <MenuItem onClick={handleViewReport}>
           <ListItemIcon><AssessmentIcon fontSize="small" /></ListItemIcon>
-          View Daily Report
+          {copy.report}
         </MenuItem>
         <MenuItem onClick={handleCreateSearchGroup} disabled={isDemoPet}>
           <ListItemIcon><GroupsIcon fontSize="small" /></ListItemIcon>
-          Create Search Group
+          {copy.searchGroup}
         </MenuItem>
         <MenuItem onClick={() => updatePetStatus("lost")} disabled={isDemoPet}>
           <ListItemIcon><ReportProblemIcon fontSize="small" color="warning" /></ListItemIcon>
-          Mark as Lost
+          {copy.markLost}
         </MenuItem>
         <MenuItem onClick={() => updatePetStatus("active")} disabled={isDemoPet}>
           <ListItemIcon><CheckCircleIcon fontSize="small" color="success" /></ListItemIcon>
-          Mark as Found
+          {copy.markFound}
         </MenuItem>
       </Menu>
     </Box>
