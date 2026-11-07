@@ -1,6 +1,7 @@
 // pages/FiruappDashboard.tsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import FiruappSidebar from "./ui/FiruappSidebar.tsx";
 import FiruappMapView from "./ui/FiruappMapView.tsx";
 import FiruappPetsList from "./ui/FiruappPetList.tsx";
@@ -47,6 +48,7 @@ import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import PaletteOutlinedIcon from "@mui/icons-material/PaletteOutlined";
 import CheckIcon from "@mui/icons-material/Check";
 import LanguageIcon from "@mui/icons-material/Language";
+import LogoutIcon from "@mui/icons-material/Logout";
 import { usePetImage } from "../../services/usePetImage.ts";
 import { buildApiUrl } from "../../config/runtime";
 import {
@@ -449,6 +451,7 @@ const DashboardGuideOverlay = ({
 };
 
 const FiruappDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const now = useGpsStatusTime();
   const isMobile = useMediaQuery("(max-width:899.95px)");
   const [serverIsAdmin, setServerIsAdmin] = useState(false);
@@ -500,6 +503,7 @@ const FiruappDashboard: React.FC = () => {
     petName: "",
   });
   const [selectedPetId, setSelectedPetId] = useState<string | undefined>();
+  const [mapFocusKey, setMapFocusKey] = useState(0);
   const [detailsPanelOpen, setDetailsPanelOpen] = useState(true);
   const [accountMenuAnchor, setAccountMenuAnchor] = useState<HTMLElement | null>(null);
   const initialAccountDetails = useMemo(() => {
@@ -662,6 +666,12 @@ const FiruappDashboard: React.FC = () => {
       filteredDashboardPets[0],
     [filteredDashboardPets, selectedPetId]
   );
+  const focusSelectedPet = useCallback(() => {
+    if (!selectedPet) return;
+    setSelectedPetId(selectedPet.id);
+    setDetailsPanelOpen(true);
+    setMapFocusKey((current) => current + 1);
+  }, [selectedPet]);
   const selectedPetLocation = useMemo(() => {
     if (!selectedPet) return undefined;
     const selectedIds = new Set([selectedPet.apiId, selectedPet.id].filter(Boolean).map(String));
@@ -913,6 +923,8 @@ const FiruappDashboard: React.FC = () => {
         selectedPet={selectedPet}
         selectedPetId={selectedPetId}
         onSelectPet={setSelectedPetId}
+        mapFocusKey={mapFocusKey}
+        onFocusPet={focusSelectedPet}
         onStatusChange={(petId, status) => {
           setDatabasePets((currentPets) => currentPets.map((pet) => ((pet.apiId || pet.id) === petId ? { ...pet, status } : pet)));
           setDashboardPets((currentPets) => currentPets.map((pet) => ((pet.apiId || pet.id) === petId ? { ...pet, status } : pet)));
@@ -1060,6 +1072,18 @@ const FiruappDashboard: React.FC = () => {
             <MenuItem disabled sx={{ opacity: "1 !important", color: "#33445e !important" }}>
               {copy.accountId}: {accountDetails.id}
             </MenuItem>
+            <Divider />
+            <MenuItem
+              onClick={() => {
+                setAccountMenuAnchor(null);
+                localStorage.removeItem("token");
+                window.location.href = "/login";
+              }}
+              sx={{ color: "#e53935", fontWeight: 800, gap: 1 }}
+            >
+              <LogoutIcon fontSize="small" />
+              {copy.logout}
+            </MenuItem>
           </Menu>
         </Paper>
 
@@ -1192,6 +1216,8 @@ const FiruappDashboard: React.FC = () => {
                 mapStyle={mapStyle}
                 onMapStyleChange={setMapStyle}
                 locationCity={selectedPetGpsCity}
+                selectedPetId={selectedPet?.id}
+                mapFocusKey={mapFocusKey}
                 mapResizeKey={detailsPanelOpen ? "details" : "full-map"}
                 onSelectPet={(petId) => {
                   setSelectedPetId(petId);
@@ -1353,6 +1379,7 @@ const FiruappDashboard: React.FC = () => {
                     fullWidth
                     startIcon={<NavigationIcon />}
                     variant="contained"
+                    onClick={focusSelectedPet}
                     sx={{ mt: 1.35, height: 48, bgcolor: "#062346", borderRadius: 2, textTransform: "none", fontWeight: 950, fontSize: 15, boxShadow: "none", "&:hover": { bgcolor: "#0d3762", boxShadow: "none" } }}
                   >
                     {copy.find} {selectedPet.name}
@@ -1360,6 +1387,7 @@ const FiruappDashboard: React.FC = () => {
                   <Button
                     fullWidth
                     variant="outlined"
+                    onClick={() => selectedPet && navigate(`/routes/recent?petId=${selectedPet.apiId || selectedPet.id}`)}
                     sx={{ mt: 1.1, height: 48, borderRadius: 2, borderColor: "#1685ff", color: "#071735", textTransform: "none", fontWeight: 950, fontSize: 15 }}
                   >
                     {copy.openRoute}

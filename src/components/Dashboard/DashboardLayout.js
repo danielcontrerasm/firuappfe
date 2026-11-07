@@ -3,6 +3,7 @@ import React from "react";
 import { Box } from "@mui/material";
 import { Outlet, useLocation } from "react-router-dom";
 import FiruappSidebar from "./ui/FiruappSidebar.tsx";
+import FiruBrand from "./ui/FiruBrand.tsx";
 
 const DashboardLayout = () => {
   const location = useLocation();
@@ -37,6 +38,9 @@ const DashboardLayout = () => {
             "linear-gradient(180deg, #f4f8fb 0%, #eefbf8 100%)",
         }}
       >
+        <Box className="firu-mobile-option-header" aria-label="FiruApp">
+          <FiruBrand />
+        </Box>
         <Box
           sx={{
             maxWidth: isMapPage ? "none" : 1180,

@@ -91,52 +91,6 @@ const currentUser: VolunteerMemberDto = {
   phone: "+57 300 555 0120",
 };
 
-const mockGroups: SearchGroupDto[] = [
-  {
-    id: 1,
-    groupName: "North Zone Rescue",
-    description: "Search support around Laureles parks and nearby creek paths.",
-    status: "active",
-    area: "Laureles",
-    city: "Medellin",
-    membersCount: 2,
-    leaderName: "Maria Gomez",
-    leaderPhone: "+57 300 700 1199",
-    coverageRadiusKm: 5,
-    createdAt: "2026-05-24T15:20:00Z",
-    petId: 3,
-    petName: "Rocky",
-    petStatus: "lost",
-    createdById: 101,
-    createdByName: "Laura Perez",
-    createdByEmail: "laura@example.com",
-    volunteers: [
-      { userId: 107, name: "Maria Gomez", email: "maria@example.com", phone: "+57 300 700 1199" },
-      { userId: 106, name: "Carlos Rios", email: "carlos@example.com", phone: "+57 302 410 7788" },
-    ],
-  },
-  {
-    id: 2,
-    groupName: "Poblado Evening Watch",
-    description: "Evening volunteers checking high-traffic streets and dog parks.",
-    status: "standby",
-    area: "El Poblado",
-    city: "Medellin",
-    membersCount: 1,
-    leaderName: "Daniel Contreras",
-    leaderPhone: "+57 300 555 0120",
-    coverageRadiusKm: 3.5,
-    createdAt: "2026-05-22T18:45:00Z",
-    petId: 2,
-    petName: "Bella",
-    petStatus: "active",
-    createdById: 104,
-    createdByName: "Daniel Contreras",
-    createdByEmail: "daniel@example.com",
-    volunteers: [currentUser],
-  },
-];
-
 const statusColor = (status: string) => {
   if (status.toLowerCase() === "active") return "success";
   if (status.toLowerCase() === "closed") return "default";
@@ -232,7 +186,8 @@ const createDefaultGroupForm = (): NewGroupFormState => ({
 
 const VolunteerGroupsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [groups, setGroups] = useState<SearchGroupDto[]>(mockGroups);
+  const [groups, setGroups] = useState<SearchGroupDto[]>([]);
+  const [groupsLoadError, setGroupsLoadError] = useState("");
   const [pets, setPets] = useState<PetOption[]>([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
@@ -280,7 +235,12 @@ const VolunteerGroupsPage: React.FC = () => {
         ]);
 
         if (!cancelled && groupsResponse.status === "fulfilled") {
+          setGroupsLoadError("");
           setGroups(groupsResponse.value);
+        }
+        if (!cancelled && groupsResponse.status === "rejected") {
+          setGroups([]);
+          setGroupsLoadError("No fue posible cargar los grupos reales desde el servidor.");
         }
 
         if (!cancelled && petsResponse.status === "fulfilled") {
@@ -294,7 +254,11 @@ const VolunteerGroupsPage: React.FC = () => {
           );
         }
       } catch (error) {
-        console.warn("Falling back to local mock groups because /api/search-groups could not be loaded.", error);
+        console.warn("Could not load real search groups from /api/search-groups.", error);
+        if (!cancelled) {
+          setGroups([]);
+          setGroupsLoadError("No fue posible cargar los grupos reales desde el servidor.");
+        }
       }
     };
 
@@ -553,6 +517,23 @@ const VolunteerGroupsPage: React.FC = () => {
           <option value="closed">Closed</option>
         </TextField>
       </Box>
+
+      {!filteredGroups.length && (
+        <Box
+          sx={{
+            p: 3,
+            mb: 2,
+            borderRadius: 3,
+            textAlign: "center",
+            bgcolor: "rgba(255,255,255,0.9)",
+            border: "1px solid rgba(226,232,240,0.95)",
+          }}
+        >
+          <Typography sx={{ color: "#64748b", fontWeight: 700 }}>
+            {groupsLoadError || (groups.length ? "No hay grupos que coincidan con la búsqueda." : "No hay grupos reales registrados todavía.")}
+          </Typography>
+        </Box>
+      )}
 
       <Stack spacing={2}>
         {filteredGroups.map((group) => {

@@ -19,8 +19,8 @@ import DoNotDisturbAltOutlinedIcon from "@mui/icons-material/DoNotDisturbAltOutl
 import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
 import MapOutlinedIcon from "@mui/icons-material/MapOutlined";
 import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
+import MyLocationIcon from "@mui/icons-material/MyLocation";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
 import BatteryFullIcon from "@mui/icons-material/BatteryFull";
 import SignalCellularAltIcon from "@mui/icons-material/SignalCellularAlt";
 import SpeedOutlinedIcon from "@mui/icons-material/SpeedOutlined";
@@ -86,6 +86,8 @@ interface FiruappReferenceDashboardProps {
   selectedPet?: Pet;
   selectedPetId?: string;
   onSelectPet: (id: string) => void;
+  mapFocusKey: number;
+  onFocusPet: () => void;
   onStatusChange: (id: string, status: Pet["status"]) => void;
   petDataMode: PetDataMode;
   showGeofences: boolean;
@@ -176,6 +178,8 @@ const FiruappReferenceDashboard: React.FC<FiruappReferenceDashboardProps> = ({
   selectedPet,
   selectedPetId,
   onSelectPet,
+  mapFocusKey,
+  onFocusPet,
   onStatusChange,
   petDataMode,
   showGeofences,
@@ -244,6 +248,7 @@ const FiruappReferenceDashboard: React.FC<FiruappReferenceDashboardProps> = ({
         lastMovement: "Último movimiento",
         today: "Hoy",
         noAlerts: "No hay alertas recientes",
+        find: "Buscar mascota",
         route: "Ver ruta",
         share: "Compartir",
         alert: "Alertar",
@@ -280,6 +285,7 @@ const FiruappReferenceDashboard: React.FC<FiruappReferenceDashboardProps> = ({
         lastMovement: "Last movement",
         today: "Today",
         noAlerts: "No recent alerts",
+        find: "Find pet",
         route: "View route",
         share: "Share",
         alert: "Alert",
@@ -412,6 +418,8 @@ const FiruappReferenceDashboard: React.FC<FiruappReferenceDashboardProps> = ({
                 mapStyle={mapStyle}
                 onMapStyleChange={onMapStyleChange}
                 locationCity={selectedPetGpsCity}
+                selectedPetId={selectedPetId}
+                mapFocusKey={mapFocusKey}
                 mapResizeKey={detailsPanelOpen ? "reference-details" : "reference-map"}
                 onSelectPet={(petId) => {
                   onSelectPet(petId);
@@ -451,12 +459,26 @@ const FiruappReferenceDashboard: React.FC<FiruappReferenceDashboardProps> = ({
                           </Typography>
                         </Box>
                       </Stack>
-                      <IconButton size="small" aria-label={language === "es" ? "Más opciones" : "More options"}>
-                        <MoreVertIcon />
+                      <IconButton
+                        size="small"
+                        aria-label={language === "es" ? "Cerrar detalles de mascota" : "Close pet details"}
+                        title={language === "es" ? "Cerrar detalles" : "Close details"}
+                        onClick={() => onDetailsPanelChange(false)}
+                      >
+                        <CloseIcon />
                       </IconButton>
                     </Stack>
 
-                    <Box className="owner-reference-location-card">
+                    <Box
+                      className="owner-reference-location-card"
+                      role="button"
+                      tabIndex={0}
+                      title={labels.find}
+                      onClick={onFocusPet}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") onFocusPet();
+                      }}
+                    >
                       <PlaceOutlinedIcon />
                       <Box sx={{ minWidth: 0, flex: 1 }}>
                         <Typography variant="body2" className="owner-reference-location-title">{selectedPetLocationLabel || labels.address}</Typography>
@@ -481,6 +503,7 @@ const FiruappReferenceDashboard: React.FC<FiruappReferenceDashboardProps> = ({
                     </Box>
 
                     <Stack direction="row" spacing={0.8} className="owner-reference-detail-actions">
+                      <Button variant="contained" startIcon={<MyLocationIcon />} onClick={onFocusPet}>{labels.find}</Button>
                       <Button variant="contained" startIcon={<DirectionsOutlinedIcon />} onClick={() => navigate(`/routes/recent?petId=${selectedPet.apiId || selectedPet.id}`)}>{labels.route}</Button>
                       <Button variant="outlined" startIcon={<ShareOutlinedIcon />} onClick={handleShare}>{labels.share}</Button>
                       <Button variant="outlined" color="error" startIcon={<NotificationsActiveOutlinedIcon />} onClick={() => onStatusChange(selectedPet.apiId || selectedPet.id, "lost")}>{labels.alert}</Button>

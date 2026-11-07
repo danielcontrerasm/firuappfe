@@ -51,6 +51,8 @@ interface MapViewProps {
   onMapStyleChange?: (style: MapStyle) => void;
   locationCity?: string;
   onSelectPet?: (id: string) => void;
+  selectedPetId?: string;
+  mapFocusKey?: string | number;
   onLocationsChange?: (locations: PetLocation[]) => void;
   containerRef?: React.Ref<HTMLDivElement>;
   mapResizeKey?: string | number;
@@ -225,16 +227,28 @@ const normalizeGeofences = (data: any, pet: { id: string; name: string }): PetGe
     .filter(Boolean) as PetGeofence[];
 };
 
-export const CenterMap: React.FC<{ markers: PetLocation[]; selectionKey: string }> = ({ markers, selectionKey }) => {
+export const CenterMap: React.FC<{ markers: PetLocation[]; selectionKey: string; selectedPetId?: string }> = ({ markers, selectionKey, selectedPetId }) => {
   const map = useMap();
   const fittedSelection = useRef<string | null>(null);
 
   useEffect(() => {
     if (!markers.length || fittedSelection.current === selectionKey) return;
-    const bounds = L.latLngBounds(markers.map((pet) => [pet.latitude, pet.longitude]));
-    map.fitBounds(bounds, { padding: [80, 80], maxZoom: 14 });
+    const normalizedSelectedId = selectedPetId ? String(selectedPetId).replace(/^db-/, "") : "";
+    const selectedMarker = normalizedSelectedId
+      ? markers.find((marker) => {
+          const markerId = String(marker.petId ?? marker.id);
+          return markerId === String(selectedPetId) || markerId === normalizedSelectedId;
+        })
+      : undefined;
+
+    if (selectedMarker) {
+      map.flyTo([selectedMarker.latitude, selectedMarker.longitude], Math.max(map.getZoom(), 15), { duration: 0.55 });
+    } else {
+      const bounds = L.latLngBounds(markers.map((pet) => [pet.latitude, pet.longitude]));
+      map.fitBounds(bounds, { padding: [80, 80], maxZoom: 14 });
+    }
     fittedSelection.current = selectionKey;
-  }, [markers, map, selectionKey]);
+  }, [markers, map, selectedPetId, selectionKey]);
 
   return null;
 };
@@ -313,6 +327,8 @@ const FiruappMapView: React.FC<MapViewProps> = ({
   petDataMode = "database",
   locationCity,
   onSelectPet,
+  selectedPetId,
+  mapFocusKey,
   onLocationsChange,
   containerRef,
   mapResizeKey,
@@ -375,7 +391,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
     [pets]
   );
   // Metadata and GPS refreshes keep the same selection, preserving manual zoom and panning.
-  const selectionKey = JSON.stringify([petDataMode, Array.from(visiblePetIds).sort()]);
+  const selectionKey = JSON.stringify([petDataMode, selectedPetId || null, mapFocusKey || null, Array.from(visiblePetIds).sort()]);
 
   useEffect(() => {
     const fetchPetLocations = async () => {
@@ -778,7 +794,7 @@ const FiruappMapView: React.FC<MapViewProps> = ({
             attribution={activeMapStyle.attribution}
           />
           <MapResizeSync resizeKey={mapResizeKey} />
-          <CenterMap markers={displayMarkers} selectionKey={selectionKey} />
+          <CenterMap markers={displayMarkers} selectionKey={selectionKey} selectedPetId={selectedPetId} />
           <MapControls coordinates={displayMarkers.map(pet => [pet.latitude, pet.longitude])} cleanLayer={mapStyle === "clean"} onToggleLayer={() => setMapStyle(mapStyle === "natural" ? "clean" : "natural")} />
 
           {/*

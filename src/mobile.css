@@ -17,9 +17,10 @@
 .firu-map-error { position: absolute; right: 54px; top: 0; width: 220px; padding: 12px; border-radius: 12px; color: #102640; background: white; box-shadow: 0 4px 20px #10264026; font: 13px/1.5 Inter, sans-serif; }
 .firu-map-error button { margin-left: 8px; border: 0; background: none; cursor: pointer; }
 .firu-brand { display: inline-flex; align-items: center; justify-content: center; color: #09233f; }
-.firu-brand-image { display: block; width: 142px; height: 78px; max-width: 100%; object-fit: contain; flex-shrink: 0; }
+.firu-brand-image { display: block; width: 132px; height: 132px; max-width: 100%; object-fit: contain; flex-shrink: 0; }
 .firu-brand-stacked { flex-direction: column; }
-.firu-brand-stacked .firu-brand-image { width: 166px; height: 116px; }
+.firu-brand-stacked .firu-brand-image { width: 166px; height: 166px; }
+.firu-mobile-option-header { display: none; }
 .firu-content-page { color: var(--firu-ink); background: white; border-radius: 20px; overflow: hidden; min-height: calc(100dvh - 32px); }
 .firu-page-header { position: relative; min-height: 80px; padding: 22px 60px; display: flex; justify-content: center; align-items: center; border-bottom: 1px solid var(--firu-line); background: white; }
 .firu-page-header h1 { margin: 0; color: var(--firu-ink); font-size: 24px; font-weight: 750; letter-spacing: -.65px; text-align: center; }
@@ -92,6 +93,9 @@
   .firu-page-content { padding: 18px 20px 26px; }
   .firu-mobile-tracking { padding-top: env(safe-area-inset-top, 0px); padding-bottom: var(--firu-nav-height); min-height: 100dvh; background: white; color: var(--firu-ink); }
   .firu-tracking-header { height: 70px; display: flex; align-items: center; justify-content: space-between; padding: 8px 20px 0; }
+  .firu-tracking-header .firu-brand-image { width: 62px; height: 62px; }
+  .firu-mobile-option-header { height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 4px; }
+  .firu-mobile-option-header .firu-brand-image { width: 62px; height: 62px; }
   .firu-notification-button.MuiIconButton-root { color: #0a213e; width: 44px; height: 44px; }
   .firu-notification-button > .MuiBadge-root > svg { font-size: 30px; }
   .firu-pet-chips { display: flex; gap: 10px; align-items: center; overflow-x: auto; scrollbar-width: none; padding: 10px 16px 16px; min-height: 83px; }
@@ -133,12 +137,12 @@
   .firu-mobile-filters label { display: grid; gap: 5px; font-size: 12px; }
   .firu-mobile-filters input { width: 100%; border: 1px solid #dbe7e2; border-radius: 8px; font-size: 16px; padding: 9px; }
   .firu-text-button { color: #008c75; border: 0; background: none; font-weight: 600; padding: 8px; cursor: pointer; }
-  .firu-mobile-pet-row { display: flex; align-items: center; width: 100%; min-height: 76px; padding: 10px 0; gap: 9px; border: 0; border-bottom: 1px solid #edf0f3; background: white; text-align: left; color: var(--firu-ink); cursor: pointer; }
-  .firu-mobile-pet-row .firu-pet-photo { flex-shrink: 0; }
-  .firu-pet-name { display: grid; gap: 3px; min-width: 0; flex: 1; }
+  .firu-mobile-pet-row { display: flex; align-items: center; width: 100%; min-height: 64px; padding: 7px 0; gap: 7px; border: 0; border-bottom: 1px solid #edf0f3; background: white; text-align: left; color: var(--firu-ink); cursor: pointer; }
+  .firu-mobile-pet-row .firu-pet-photo { width: 40px; height: 40px; flex-shrink: 0; }
+  .firu-pet-name { display: grid; gap: 2px; min-width: 0; flex: 1; }
   .firu-pet-name strong { font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: -.5px; }
   .firu-pet-name small { font-size: 11px; color: #69778c; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .firu-status-badge { display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 6px 7px; border-radius: 999px; background: #f1f3f5; color: #83909c; white-space: nowrap; font-size: 10px; }
+  .firu-status-badge { display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 5px 6px; border-radius: 999px; background: #f1f3f5; color: #83909c; white-space: nowrap; font-size: 10px; }
   .firu-status-badge.is-online { background: #edf9ec; color: #0c9c20; }
   .firu-status-badge.is-lost { background: #fff0ed; color: #ed5147; }
   .firu-battery { display: flex; align-items: center; gap: 2px; color: #0e223e; font-size: 12px; font-weight: 650; white-space: nowrap; }
@@ -204,8 +208,8 @@
   .firu-history-page .firu-route-map-shell { padding-bottom: 24px; }
   .firu-history-pets { order: 0; padding: 0 20px 14px; }
   .firu-history-pets > .MuiBox-root { position: static; }
-  .firu-history-pets .MuiList-root { display: flex; gap: 10px; padding-bottom: 3px; }
-  .firu-history-pets .MuiListItemButton-root { min-width: 235px; }
+  .firu-history-pets .MuiList-root { display: flex; gap: 6px; padding-bottom: 3px; }
+  .firu-history-pets .MuiListItemButton-root { min-width: 235px; min-height: 68px !important; padding-top: 8px !important; padding-bottom: 8px !important; }
   .firu-history-page .firu-map-canvas { height: clamp(350px, 50dvh, 570px); width: 100%; margin: 0; border-radius: 0; }
   .firu-route-mobile-stats { display: flex; order: 2; justify-content: space-around; padding: 16px; margin: -30px 20px 16px; position: relative; z-index: 1000; background: white; border-radius: 16px; box-shadow: 0 4px 16px #10264015; }
   .firu-route-mobile-stats > div { display: grid; text-align: center; gap: 4px; flex: 1; }
@@ -246,12 +250,12 @@
   .firu-pet-marker-shell::before, .firu-geofence-alert, .firu-marker-pulse { animation: none !important; }
 }
 @media (max-width: 899.95px) {
-  .firu-managed-pet-list { display: grid; gap: 14px; }
+  .firu-managed-pet-list { display: grid; gap: 8px; }
   .firu-managed-pet-card { border: 1px solid #e2e8ed; border-radius: 18px; box-shadow: 0 5px 15px #10264006; overflow: hidden; }
-  .firu-managed-pet-main { display: flex; align-items: center; gap: 14px; padding: 18px; }
+  .firu-managed-pet-main { display: flex; align-items: center; gap: 10px; padding: 12px; }
   .firu-managed-pet-main h2 { margin: 0; color: #102640; font-size: 20px; letter-spacing: -.5px; }
   .firu-managed-pet-main p { margin: 5px 0 8px; color: #81909e; font-size: 13px; }
-  .firu-managed-pet-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 8px 12px; border-top: 1px solid #edf0f3; }
+  .firu-managed-pet-actions { display: flex; justify-content: flex-end; gap: 6px; padding: 6px 10px; border-top: 1px solid #edf0f3; }
   .firu-managed-pet-actions .MuiButton-root { font-weight: 600; font-size: 12px; }
 }
 
