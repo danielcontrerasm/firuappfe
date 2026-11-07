@@ -11,10 +11,8 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Divider,
   IconButton,
   InputAdornment,
-  Menu,
   Paper,
   Snackbar,
   Stack,
@@ -37,11 +35,7 @@ import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import LocationOnOutlinedIcon from "@mui/icons-material/LocationOnOutlined";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import LogoutIcon from "@mui/icons-material/Logout";
-import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
-import PaletteOutlinedIcon from "@mui/icons-material/PaletteOutlined";
-import CheckIcon from "@mui/icons-material/Check";
 import MenuIcon from "@mui/icons-material/Menu";
-import MenuItem from "@mui/material/MenuItem";
 import MessageOutlinedIcon from "@mui/icons-material/MessageOutlined";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import PauseIcon from "@mui/icons-material/Pause";
@@ -354,8 +348,8 @@ const RouteMap: React.FC<{ points: RoutePoint[]; active: boolean }> = ({ points,
 
 const WalkerBrand = () => (
   <Box className="walker-brand">
-    <Box className="walker-brand-mark"><img src="/logo-head.png" alt="" style={{ width: 58, height: 48, objectFit: "contain", display: "block" }} /></Box>
-    <Box component="span"><strong>Firu</strong><em>App</em></Box>
+    <Box className="walker-brand-mark"><img src="/logo-head.png" alt="" /></Box>
+    <Box component="span"><strong>Firu</strong><em>Paseos</em></Box>
   </Box>
 );
 
@@ -436,11 +430,6 @@ const WalkerDashboard: React.FC = () => {
   const [quote, setQuote] = useState("");
   const [petSearch, setPetSearch] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [userMenuAnchor, setUserMenuAnchor] = useState<HTMLElement | null>(null);
-  const [dashboardTheme, setDashboardTheme] = useState<"reference" | "current">(() => {
-    if (typeof window === "undefined") return "reference";
-    return window.localStorage.getItem("firuapp-dashboard-theme") === "current" ? "current" : "reference";
-  });
   const [activeNav, setActiveNav] = useState("inicio");
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState("");
@@ -687,23 +676,14 @@ const WalkerDashboard: React.FC = () => {
   };
 
   const handleLogout = () => {
-    setUserMenuAnchor(null);
     window.localStorage.removeItem("token");
     navigate("/login", { replace: true });
-  };
-
-  const toggleDashboardTheme = () => {
-    setDashboardTheme((current) => {
-      const next = current === "reference" ? "current" : "reference";
-      window.localStorage.setItem("firuapp-dashboard-theme", next);
-      return next;
-    });
   };
 
   const showHelp = () => setNotice("Te escribiremos por WhatsApp para ayudarte.");
 
   return (
-    <Box className={`walker-dashboard ${dashboardTheme === "reference" ? "walker-firu-theme" : ""}`}>
+    <Box className="walker-dashboard">
       <Box className={`walker-app${menuOpen ? " is-menu-open" : ""}`}>
         <aside className="walker-sidebar" aria-label="Panel del paseador">
           <Box className="walker-sidebar-top">
@@ -756,66 +736,6 @@ const WalkerDashboard: React.FC = () => {
         </aside>
 
         <main className="walker-main">
-          <Box className="walker-topbar">
-            <Box className="walker-topbar-brand"><WalkerBrand /><span>Panel de paseador</span></Box>
-            <Box className="walker-topbar-nav" component="nav" aria-label="Menú principal">
-              <Button className={activeNav === "inicio" ? "is-active" : ""} onClick={() => navigateFromSidebar("inicio", "/walker-dashboard")}>Panel</Button>
-              <Button className={activeNav === "requests" ? "is-active" : ""} onClick={() => navigateFromSidebar("requests")}>Solicitudes</Button>
-              <Button className={activeNav === "route" ? "is-active" : ""} onClick={() => navigateFromSidebar("route")}>Rutas</Button>
-              <Button className={activeNav === "payments" ? "is-active" : ""} onClick={() => navigateFromSidebar("payments")}>Pagos</Button>
-            </Box>
-            <Stack className="walker-topbar-actions" direction="row" spacing={1} alignItems="center">
-              <IconButton
-                aria-label="Cambiar tema"
-                title="Cambiar tema"
-                onClick={toggleDashboardTheme}
-                className="walker-topbar-icon"
-              >
-                {dashboardTheme === "reference" ? <CheckIcon /> : <PaletteOutlinedIcon />}
-              </IconButton>
-              <IconButton aria-label="Notificaciones" className="walker-topbar-icon">
-                <Badge color="error" variant="dot"><NotificationsNoneIcon /></Badge>
-              </IconButton>
-              <Button
-                className="walker-user-button"
-                onClick={(event) => setUserMenuAnchor(event.currentTarget)}
-                aria-haspopup="menu"
-                aria-expanded={Boolean(userMenuAnchor)}
-                endIcon={<KeyboardArrowDownIcon />}
-              >
-                <Avatar>{initials(profileName)}</Avatar>
-                <Box className="walker-user-copy">
-                  <strong>{profileName}</strong>
-                  <span>Paseador verificado</span>
-                </Box>
-              </Button>
-              <Menu
-                anchorEl={userMenuAnchor}
-                open={Boolean(userMenuAnchor)}
-                onClose={() => setUserMenuAnchor(null)}
-                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                transformOrigin={{ vertical: "top", horizontal: "right" }}
-                PaperProps={{ className: "walker-user-menu" }}
-              >
-                <Box className="walker-user-menu-heading">
-                  <Typography variant="overline">Cuenta</Typography>
-                  <Typography>{profileName}</Typography>
-                  <Typography variant="body2">Paseador verificado</Typography>
-                </Box>
-                <Divider />
-                <MenuItem onClick={() => { setUserMenuAnchor(null); navigate("/profile"); }}>
-                  <PersonOutlineIcon fontSize="small" /> Mi perfil
-                </MenuItem>
-                <MenuItem onClick={toggleDashboardTheme}>
-                  {dashboardTheme === "reference" ? <CheckIcon fontSize="small" /> : <PaletteOutlinedIcon fontSize="small" />} Tema FiruApp
-                </MenuItem>
-                <Divider />
-                <MenuItem onClick={handleLogout} className="walker-user-menu-logout">
-                  <LogoutIcon fontSize="small" /> Cerrar sesión
-                </MenuItem>
-              </Menu>
-            </Stack>
-          </Box>
           <Box className="walker-mobile-header">
             <IconButton onClick={() => setMenuOpen(true)} aria-label="Abrir menú"><MenuIcon /></IconButton>
             <WalkerBrand />

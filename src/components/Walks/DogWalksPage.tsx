@@ -836,7 +836,7 @@ const DogWalksPage: React.FC = () => {
   const selectedWalkIsPaused = Boolean(selectedWalk && (selectedWalk.status === "PAUSED" || locallyPausedWalkIds[String(selectedWalk.id)]));
 
   return (
-    <Box className="firu-walks-page" sx={{ pb: 4 }}>
+    <Box sx={{ pb: 4 }}>
       <PageHeader
         title="Dog walks"
         action={
