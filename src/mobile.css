@@ -16,16 +16,16 @@
 .firu-map-controls > button svg { font-size: 25px; }
 .firu-map-error { position: absolute; right: 54px; top: 0; width: 220px; padding: 12px; border-radius: 12px; color: #102640; background: white; box-shadow: 0 4px 20px #10264026; font: 13px/1.5 Inter, sans-serif; }
 .firu-map-error button { margin-left: 8px; border: 0; background: none; cursor: pointer; }
-.firu-brand { display: inline-flex; align-items: center; gap: 9px; color: #09233f; }
-.firu-brand-mark { display: grid; place-items: center; width: 48px; height: 48px; flex-shrink: 0; border-radius: 14px; background: #eef6ff; }
-.firu-brand-icon { width: 45px; height: 39px; object-fit: contain; }
-.firu-brand-wordmark { color: #14233f; font-size: 27px; font-weight: 850; letter-spacing: -1.5px; line-height: 1; white-space: nowrap; }
+.firu-brand { display: inline-flex; align-items: center; gap: 10px; color: #09233f; }
+.firu-brand-mark { display: grid; place-items: center; width: 58px; height: 58px; flex-shrink: 0; border-radius: 0; background: transparent; }
+.firu-brand-icon { width: 58px; height: 48px; object-fit: contain; mix-blend-mode: multiply; }
+.firu-brand-wordmark { color: #14233f; font-size: 32px; font-weight: 850; letter-spacing: -1.8px; line-height: 1; white-space: nowrap; }
 .firu-brand-wordmark strong { color: #14233f; }
 .firu-brand-wordmark em { color: #0f5de7; font-style: normal; }
 .firu-brand-stacked { flex-direction: column; gap: 10px; }
-.firu-brand-stacked .firu-brand-mark { width: 86px; height: 86px; border-radius: 24px; }
-.firu-brand-stacked .firu-brand-icon { width: 80px; height: 68px; }
-.firu-brand-stacked .firu-brand-wordmark { font-size: 34px; }
+.firu-brand-stacked .firu-brand-mark { width: 104px; height: 104px; }
+.firu-brand-stacked .firu-brand-icon { width: 104px; height: 84px; }
+.firu-brand-stacked .firu-brand-wordmark { font-size: 38px; }
 .firu-content-page { color: var(--firu-ink); background: white; border-radius: 20px; overflow: hidden; min-height: calc(100dvh - 32px); }
 .firu-page-header { position: relative; min-height: 80px; padding: 22px 60px; display: flex; justify-content: center; align-items: center; border-bottom: 1px solid var(--firu-line); background: white; }
 .firu-page-header h1 { margin: 0; color: var(--firu-ink); font-size: 24px; font-weight: 750; letter-spacing: -.65px; text-align: center; }
