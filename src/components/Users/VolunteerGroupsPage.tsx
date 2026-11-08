@@ -27,7 +27,9 @@ import {
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import GroupAddIcon from "@mui/icons-material/GroupAdd";
+import LogoutIcon from "@mui/icons-material/Logout";
 import PersonAddAltIcon from "@mui/icons-material/PersonAddAlt";
+import PersonRemoveIcon from "@mui/icons-material/PersonRemove";
 import SearchIcon from "@mui/icons-material/Search";
 import { useSearchParams } from "react-router-dom";
 import { buildApiUrl, searchGroupEndpoints } from "../../config/runtime";
@@ -200,7 +202,9 @@ const VolunteerGroupsPage: React.FC = () => {
   const [newGroupForm, setNewGroupForm] = useState<NewGroupFormState>(createDefaultGroupForm);
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const [joiningGroupId, setJoiningGroupId] = useState<number | null>(null);
+  const [leavingGroupId, setLeavingGroupId] = useState<number | null>(null);
   const [addingVolunteerId, setAddingVolunteerId] = useState<number | null>(null);
+  const [removingVolunteerKey, setRemovingVolunteerKey] = useState<string | null>(null);
   const currentUserId = useMemo(getAuthenticatedUserId, []);
 
   const refreshGroups = useCallback(async () => {
@@ -362,6 +366,64 @@ const VolunteerGroupsPage: React.FC = () => {
       alert(`Failed to join the volunteer group. ${message}`);
     } finally {
       setJoiningGroupId(null);
+    }
+  };
+
+  const handleLeaveGroup = async (groupId: number) => {
+    if (!window.confirm("Are you sure you want to leave this volunteer group?")) return;
+
+    setLeavingGroupId(groupId);
+    try {
+      await axios.post(
+        buildApiUrl(searchGroupEndpoints.leave(groupId)),
+        {},
+        {
+          headers: getAuthHeaders(),
+        }
+      );
+      await refreshGroups();
+      setActiveGroup((current) => (current?.id === groupId ? null : current));
+    } catch (error: any) {
+      console.error(`Error leaving search group ${groupId}:`, error);
+      const message =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.response?.data ||
+        error?.message ||
+        "Unknown error";
+      alert(`Failed to leave the volunteer group. ${message}`);
+    } finally {
+      setLeavingGroupId(null);
+    }
+  };
+
+  const handleRemoveVolunteer = async (groupId: number, userId: number, volunteerName: string) => {
+    if (!window.confirm(`Remove ${volunteerName} from this volunteer group?`)) return;
+
+    const volunteerKey = `${groupId}:${userId}`;
+    setRemovingVolunteerKey(volunteerKey);
+    try {
+      await axios.delete(
+        buildApiUrl(searchGroupEndpoints.removeVolunteer(groupId, userId)),
+        { headers: getAuthHeaders() }
+      );
+      const persistedGroups = await refreshGroups();
+      setActiveGroup((current) =>
+        current?.id === groupId
+          ? persistedGroups.find((group) => group.id === groupId) ?? null
+          : current
+      );
+    } catch (error: any) {
+      console.error(`Error removing volunteer ${userId} from search group ${groupId}:`, error);
+      const message =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.response?.data ||
+        error?.message ||
+        "Unknown error";
+      alert(`Failed to remove the volunteer. ${message}`);
+    } finally {
+      setRemovingVolunteerKey(null);
     }
   };
 
@@ -538,6 +600,7 @@ const VolunteerGroupsPage: React.FC = () => {
       <Stack spacing={2}>
         {filteredGroups.map((group) => {
           const hasJoined = currentUserId != null && group.volunteers.some((volunteer) => volunteer.userId === currentUserId);
+          const canManageMembers = currentUserId != null && group.createdById === currentUserId;
 
           return (
             <Box
@@ -610,6 +673,18 @@ const VolunteerGroupsPage: React.FC = () => {
                   >
                     {hasJoined ? "Joined" : joiningGroupId === group.id ? "Joining..." : "Join group"}
                   </Button>
+                  {hasJoined && (
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      startIcon={leavingGroupId === group.id ? <CircularProgress size={18} /> : <LogoutIcon />}
+                      disabled={leavingGroupId === group.id}
+                      onClick={() => handleLeaveGroup(group.id)}
+                      sx={{ borderRadius: 999, textTransform: "none", fontWeight: 900 }}
+                    >
+                      {leavingGroupId === group.id ? "Leaving..." : "Leave group"}
+                    </Button>
+                  )}
                   <Button
                     variant="outlined"
                     startIcon={<PersonAddAltIcon />}
@@ -639,6 +714,7 @@ const VolunteerGroupsPage: React.FC = () => {
                     <TableRow>
                       <TableCell sx={{ fontWeight: 900 }}>Volunteer</TableCell>
                       <TableCell sx={{ fontWeight: 900 }}>Phone</TableCell>
+                      {canManageMembers && <TableCell sx={{ fontWeight: 900, width: 56 }} />}
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -660,6 +736,28 @@ const VolunteerGroupsPage: React.FC = () => {
                           </Box>
                         </TableCell>
                         <TableCell sx={{ color: "#64748b" }}>{volunteer.phone}</TableCell>
+                        {canManageMembers && (
+                          <TableCell align="right">
+                            {volunteer.userId !== currentUserId && (
+                              <Tooltip title="Remove from group">
+                                <span>
+                                  <IconButton
+                                    color="error"
+                                    aria-label={`Remove ${volunteer.name} from group`}
+                                    disabled={removingVolunteerKey === `${group.id}:${volunteer.userId}`}
+                                    onClick={() => handleRemoveVolunteer(group.id, volunteer.userId, volunteer.name)}
+                                  >
+                                    {removingVolunteerKey === `${group.id}:${volunteer.userId}` ? (
+                                      <CircularProgress size={20} />
+                                    ) : (
+                                      <PersonRemoveIcon />
+                                    )}
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+                            )}
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
