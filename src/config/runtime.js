@@ -53,4 +53,5 @@ export const searchGroupEndpoints = Object.freeze({
   addVolunteer: (searchGroupId, userId) => `/api/search-groups/${searchGroupId}/volunteers/${userId}`,
   removeVolunteer: (searchGroupId, userId) => `/api/search-groups/${searchGroupId}/volunteers/${userId}`,
   memberCandidates: (searchGroupId) => `/api/search-groups/${searchGroupId}/member-candidates`,
+  messages: (searchGroupId) => `/api/search-groups/${searchGroupId}/messages`,
 });

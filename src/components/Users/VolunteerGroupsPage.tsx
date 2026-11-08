@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { jwtDecode } from "jwt-decode";
 import {
   Avatar,
   Box,
@@ -26,14 +25,19 @@ import {
   Typography,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
+import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import GroupAddIcon from "@mui/icons-material/GroupAdd";
+import LinkIcon from "@mui/icons-material/Link";
 import LogoutIcon from "@mui/icons-material/Logout";
+import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
 import PersonAddAltIcon from "@mui/icons-material/PersonAddAlt";
 import PersonRemoveIcon from "@mui/icons-material/PersonRemove";
 import SearchIcon from "@mui/icons-material/Search";
+import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import { useSearchParams } from "react-router-dom";
-import { buildApiUrl, searchGroupEndpoints } from "../../config/runtime";
-import { isOwnedByCurrentUser } from "../../services/auth.ts";
+import { buildApiUrl, buildAssetUrl, searchGroupEndpoints } from "../../config/runtime";
+import { getCurrentUserEmail, getCurrentUserId, isOwnedByCurrentUser } from "../../services/auth.ts";
+import GroupChatDialog from "./GroupChatDialog.tsx";
 
 type VolunteerMemberDto = {
   userId: number;
@@ -66,6 +70,8 @@ type SearchGroupDto = {
   createdById: number;
   createdByName: string;
   createdByEmail: string;
+  photoUrl: string;
+  whatsappGroupLink: string;
   volunteers: VolunteerMemberDto[];
 };
 
@@ -79,6 +85,9 @@ type NewGroupFormState = {
   petId: string;
   leaderName: string;
   leaderPhone: string;
+  whatsappGroupLink: string;
+  photoFile: File | null;
+  photoPreviewUrl: string;
 };
 
 type PetOption = {
@@ -99,15 +108,44 @@ const statusColor = (status: string) => {
   return "warning";
 };
 
+const normalizeGroupPhotoUrl = (value: unknown): string => {
+  if (typeof value !== "string" || !value.trim()) return "";
+  const trimmed = value.trim();
+  if (/^(https?:)?\/\//.test(trimmed) || trimmed.startsWith("data:") || trimmed.startsWith("blob:")) {
+    return trimmed;
+  }
+
+  return buildAssetUrl(trimmed) ?? trimmed;
+};
+
+const normalizeWhatsAppGroupLink = (value: string): string => {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+
+  try {
+    const url = new URL(/^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`);
+    return /^https?:$/.test(url.protocol) ? url.toString() : "";
+  } catch {
+    return "";
+  }
+};
+
+const normalizeWhatsAppPhone = (value: string): string => {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length === 10 && digits.startsWith("3")) return `57${digits}`;
+  return digits;
+};
+
 const mapDtoToVolunteer = (dto: any): VolunteerMemberDto => ({
-  userId: Number(dto.userId ?? dto.id ?? 0),
+  userId: Number(dto.userId ?? dto.user_id ?? dto.id ?? 0),
   name: dto.name ?? dto.fullName ?? dto.username ?? "Unknown volunteer",
   email: dto.email ?? "",
   phone: dto.phone ?? dto.phoneNumber ?? "",
 });
 
 const mapDtoToSearchGroup = (dto: any): SearchGroupDto => {
-  const volunteers = Array.isArray(dto.volunteers) ? dto.volunteers.map(mapDtoToVolunteer) : [];
+  const memberDtos = dto.volunteers ?? dto.members ?? dto.participants ?? [];
+  const volunteers = Array.isArray(memberDtos) ? memberDtos.map(mapDtoToVolunteer) : [];
 
   return {
     id: Number(dto.id ?? 0),
@@ -124,9 +162,15 @@ const mapDtoToSearchGroup = (dto: any): SearchGroupDto => {
     petId: Number(dto.petId ?? dto.pet?.id ?? 0),
     petName: dto.petName ?? dto.pet?.name ?? "",
     petStatus: dto.petStatus ?? dto.pet?.status ?? "active",
-    createdById: Number(dto.createdById ?? dto.createdBy?.id ?? 0),
+    createdById: Number(
+      dto.createdById ?? dto.created_by_id ?? dto.creatorId ?? dto.ownerId ?? dto.createdBy?.userId ?? dto.createdBy?.id ?? 0
+    ),
     createdByName: dto.createdByName ?? dto.createdBy?.name ?? "",
     createdByEmail: dto.createdByEmail ?? dto.createdBy?.email ?? "",
+    photoUrl: normalizeGroupPhotoUrl(
+      dto.photoUrl ?? dto.groupPhotoUrl ?? dto.groupImageUrl ?? dto.imageUrl ?? dto.image ?? dto.imagePath
+    ),
+    whatsappGroupLink: dto.whatsappGroupLink ?? dto.whatsappLink ?? dto.whatsappUrl ?? "",
     volunteers,
   };
 };
@@ -161,17 +205,8 @@ const fetchPersistedGroups = async (): Promise<SearchGroupDto[]> => {
 };
 
 const getAuthenticatedUserId = (): number | null => {
-  const token = localStorage.getItem("token");
-  if (!token) return null;
-
-  try {
-    const claims = jwtDecode<Record<string, unknown>>(token);
-    const value = claims.userId ?? claims.id ?? claims.sub;
-    const userId = Number(value);
-    return Number.isInteger(userId) && userId > 0 ? userId : null;
-  } catch {
-    return null;
-  }
+  const userId = Number(getCurrentUserId());
+  return Number.isInteger(userId) && userId > 0 ? userId : null;
 };
 
 const createDefaultGroupForm = (): NewGroupFormState => ({
@@ -184,6 +219,9 @@ const createDefaultGroupForm = (): NewGroupFormState => ({
   petId: "",
   leaderName: currentUser.name,
   leaderPhone: currentUser.phone,
+  whatsappGroupLink: "",
+  photoFile: null,
+  photoPreviewUrl: "",
 });
 
 const VolunteerGroupsPage: React.FC = () => {
@@ -198,6 +236,9 @@ const VolunteerGroupsPage: React.FC = () => {
   const [memberSearchError, setMemberSearchError] = useState("");
   const [isSearchingMembers, setIsSearchingMembers] = useState(false);
   const [activeGroup, setActiveGroup] = useState<SearchGroupDto | null>(null);
+  const [chatGroup, setChatGroup] = useState<SearchGroupDto | null>(null);
+  const [whatsappGroup, setWhatsappGroup] = useState<SearchGroupDto | null>(null);
+  const [whatsappMessage, setWhatsappMessage] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newGroupForm, setNewGroupForm] = useState<NewGroupFormState>(createDefaultGroupForm);
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
@@ -206,6 +247,7 @@ const VolunteerGroupsPage: React.FC = () => {
   const [addingVolunteerId, setAddingVolunteerId] = useState<number | null>(null);
   const [removingVolunteerKey, setRemovingVolunteerKey] = useState<string | null>(null);
   const currentUserId = useMemo(getAuthenticatedUserId, []);
+  const currentUserEmail = useMemo(() => getCurrentUserEmail() ?? "", []);
 
   const refreshGroups = useCallback(async () => {
     const persistedGroups = await fetchPersistedGroups();
@@ -484,12 +526,21 @@ const VolunteerGroupsPage: React.FC = () => {
       petId,
       leaderName,
       leaderPhone,
+      whatsappGroupLink: newGroupForm.whatsappGroupLink.trim(),
       volunteerUserIds: currentUserId ? [currentUserId] : [],
     };
 
     setIsCreatingGroup(true);
     try {
-      await axios.post(buildApiUrl(searchGroupEndpoints.create), payload, {
+      let body: FormData | typeof payload = payload;
+      if (newGroupForm.photoFile) {
+        const formData = new FormData();
+        formData.append("group", new Blob([JSON.stringify(payload)], { type: "application/json" }));
+        formData.append("image", newGroupForm.photoFile);
+        body = formData;
+      }
+
+      await axios.post(buildApiUrl(searchGroupEndpoints.create), body, {
         headers: getAuthHeaders(),
       });
       setIsCreateDialogOpen(false);
@@ -512,6 +563,55 @@ const VolunteerGroupsPage: React.FC = () => {
     } finally {
       setIsCreatingGroup(false);
     }
+  };
+
+  const handleGroupPhotoUpload = (file?: File) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image file.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setNewGroupForm((current) => ({
+          ...current,
+          photoFile: file,
+          photoPreviewUrl: reader.result as string,
+        }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleOpenWhatsAppGroup = (group: SearchGroupDto) => {
+    const link = normalizeWhatsAppGroupLink(group.whatsappGroupLink);
+    if (!link) {
+      alert("This group does not have a valid WhatsApp link.");
+      return;
+    }
+    window.open(link, "_blank", "noopener,noreferrer");
+  };
+
+  const handlePrepareWhatsAppMessage = (group: SearchGroupDto) => {
+    if (!normalizeWhatsAppPhone(group.leaderPhone)) {
+      alert("This group does not have a valid leader phone number.");
+      return;
+    }
+    setWhatsappMessage(`Hola${group.leaderName ? ` ${group.leaderName}` : ""}, te escribo por el grupo ${group.groupName}.`);
+    setWhatsappGroup(group);
+  };
+
+  const handleSendWhatsAppMessage = () => {
+    if (!whatsappGroup) return;
+    const phone = normalizeWhatsAppPhone(whatsappGroup.leaderPhone);
+    const message = whatsappMessage.trim();
+    if (!phone || !message) return;
+
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
+    setWhatsappGroup(null);
+    setWhatsappMessage("");
   };
 
   return (
@@ -599,8 +699,17 @@ const VolunteerGroupsPage: React.FC = () => {
 
       <Stack spacing={2}>
         {filteredGroups.map((group) => {
-          const hasJoined = currentUserId != null && group.volunteers.some((volunteer) => volunteer.userId === currentUserId);
-          const canManageMembers = currentUserId != null && group.createdById === currentUserId;
+          const matchesCurrentUser = (userId: number, email: string) =>
+            (currentUserId != null && String(userId) === String(currentUserId)) ||
+            (Boolean(currentUserEmail) && email.trim().toLowerCase() === currentUserEmail.toLowerCase());
+          const isCurrentUserVolunteer = group.volunteers.some((volunteer) =>
+            matchesCurrentUser(volunteer.userId, volunteer.email)
+          );
+          const isGroupCreator =
+            (currentUserId != null && String(group.createdById) === String(currentUserId)) ||
+            (Boolean(currentUserEmail) && group.createdByEmail.trim().toLowerCase() === currentUserEmail.toLowerCase());
+          const hasJoined = isCurrentUserVolunteer || isGroupCreator;
+          const canManageMembers = isGroupCreator;
 
           return (
             <Box
@@ -618,13 +727,23 @@ const VolunteerGroupsPage: React.FC = () => {
             >
               <Box>
                 <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 2 }}>
-                  <Box>
-                    <Typography variant="h6" sx={{ color: "#0f172a", fontWeight: 900 }}>
-                      {group.groupName}
-                    </Typography>
-                    <Typography variant="body2" sx={{ mt: 0.5, color: "#64748b" }}>
-                      {group.description}
-                    </Typography>
+                  <Box sx={{ display: "flex", gap: 1.5, minWidth: 0 }}>
+                    <Avatar
+                      variant="rounded"
+                      src={group.photoUrl || undefined}
+                      alt={group.groupName}
+                      sx={{ width: 64, height: 64, bgcolor: "#0f172a", flexShrink: 0 }}
+                    >
+                      {group.groupName.charAt(0).toUpperCase()}
+                    </Avatar>
+                    <Box>
+                      <Typography variant="h6" sx={{ color: "#0f172a", fontWeight: 900 }}>
+                        {group.groupName}
+                      </Typography>
+                      <Typography variant="body2" sx={{ mt: 0.5, color: "#64748b" }}>
+                        {group.description}
+                      </Typography>
+                    </Box>
                   </Box>
                   <Chip size="small" label={group.status.toUpperCase()} color={statusColor(group.status)} />
                 </Box>
@@ -663,7 +782,7 @@ const VolunteerGroupsPage: React.FC = () => {
                   </Box>
                 </Box>
 
-                <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 2 }}>
                   <Button
                     variant={hasJoined ? "outlined" : "contained"}
                     startIcon={<GroupAddIcon />}
@@ -685,6 +804,38 @@ const VolunteerGroupsPage: React.FC = () => {
                       {leavingGroupId === group.id ? "Leaving..." : "Leave group"}
                     </Button>
                   )}
+                  {hasJoined && (
+                    <Button
+                      variant="outlined"
+                      startIcon={<ChatBubbleOutlineIcon />}
+                      onClick={() => setChatGroup(group)}
+                      sx={{ borderRadius: 999, textTransform: "none", fontWeight: 900 }}
+                    >
+                      Chat
+                    </Button>
+                  )}
+                  {group.whatsappGroupLink && normalizeWhatsAppGroupLink(group.whatsappGroupLink) && (
+                    <Button
+                      variant="outlined"
+                      color="success"
+                      startIcon={<WhatsAppIcon />}
+                      onClick={() => handleOpenWhatsAppGroup(group)}
+                      sx={{ borderRadius: 999, textTransform: "none", fontWeight: 900 }}
+                    >
+                      WhatsApp group
+                    </Button>
+                  )}
+                  {group.leaderPhone && (
+                    <Button
+                      variant="outlined"
+                      color="success"
+                      startIcon={<WhatsAppIcon />}
+                      onClick={() => handlePrepareWhatsAppMessage(group)}
+                      sx={{ borderRadius: 999, textTransform: "none", fontWeight: 900 }}
+                    >
+                      Message leader
+                    </Button>
+                  )}
                   <Button
                     variant="outlined"
                     startIcon={<PersonAddAltIcon />}
@@ -703,13 +854,14 @@ const VolunteerGroupsPage: React.FC = () => {
 
               <Box
                 sx={{
-                  overflow: "hidden",
+                  overflowX: "auto",
+                  overflowY: "hidden",
                   borderRadius: 2,
                   border: "1px solid rgba(226,232,240,0.95)",
                   bgcolor: "#ffffff",
                 }}
               >
-                <Table size="small">
+                <Table size="small" sx={{ minWidth: canManageMembers ? 430 : 360 }}>
                   <TableHead>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 900 }}>Volunteer</TableCell>
@@ -738,7 +890,7 @@ const VolunteerGroupsPage: React.FC = () => {
                         <TableCell sx={{ color: "#64748b" }}>{volunteer.phone}</TableCell>
                         {canManageMembers && (
                           <TableCell align="right">
-                            {volunteer.userId !== currentUserId && (
+                            {!matchesCurrentUser(volunteer.userId, volunteer.email) && (
                               <Tooltip title="Remove from group">
                                 <span>
                                   <IconButton
@@ -852,6 +1004,60 @@ const VolunteerGroupsPage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
+      {chatGroup && (
+        <GroupChatDialog
+          groupId={chatGroup.id}
+          groupName={chatGroup.groupName}
+          onClose={() => setChatGroup(null)}
+        />
+      )}
+
+      <Dialog
+        open={Boolean(whatsappGroup)}
+        onClose={() => {
+          setWhatsappGroup(null);
+          setWhatsappMessage("");
+        }}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle sx={{ fontWeight: 900, color: "#0f172a" }}>
+          Message group leader on WhatsApp
+        </DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <TextField
+            autoFocus
+            fullWidth
+            multiline
+            minRows={4}
+            label="Message"
+            value={whatsappMessage}
+            onChange={(event) => setWhatsappMessage(event.target.value)}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={() => {
+              setWhatsappGroup(null);
+              setWhatsappMessage("");
+            }}
+            sx={{ textTransform: "none" }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="success"
+            startIcon={<WhatsAppIcon />}
+            onClick={handleSendWhatsAppMessage}
+            disabled={!whatsappMessage.trim()}
+            sx={{ textTransform: "none", fontWeight: 900 }}
+          >
+            Open WhatsApp
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog
         open={isCreateDialogOpen}
         onClose={() => {
@@ -880,6 +1086,46 @@ const VolunteerGroupsPage: React.FC = () => {
             multiline
             minRows={3}
             required
+          />
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap" }}>
+            <Avatar
+              variant="rounded"
+              src={newGroupForm.photoPreviewUrl || undefined}
+              alt="Group preview"
+              sx={{ width: 72, height: 72, bgcolor: "#0f172a" }}
+            >
+              <PhotoCameraIcon />
+            </Avatar>
+            <Box>
+              <Button component="label" variant="outlined" startIcon={<PhotoCameraIcon />} sx={{ textTransform: "none" }}>
+                Add group photo
+                <input
+                  hidden
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => handleGroupPhotoUpload(event.target.files?.[0])}
+                />
+              </Button>
+              <Typography variant="caption" display="block" sx={{ mt: 0.5, color: "#64748b" }}>
+                Optional. JPG, PNG or another image format.
+              </Typography>
+            </Box>
+          </Box>
+          <TextField
+            label="WhatsApp group link"
+            value={newGroupForm.whatsappGroupLink}
+            onChange={(event) => setNewGroupForm((current) => ({ ...current, whatsappGroupLink: event.target.value }))}
+            fullWidth
+            size="small"
+            placeholder="https://chat.whatsapp.com/..."
+            helperText="Members can open this link from the group card."
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <LinkIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
           />
           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
             <TextField
