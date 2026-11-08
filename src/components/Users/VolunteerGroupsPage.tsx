@@ -33,6 +33,7 @@ import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
 import PersonAddAltIcon from "@mui/icons-material/PersonAddAlt";
 import PersonRemoveIcon from "@mui/icons-material/PersonRemove";
 import SearchIcon from "@mui/icons-material/Search";
+import ShareIcon from "@mui/icons-material/Share";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import { useSearchParams } from "react-router-dom";
 import { buildApiUrl, buildAssetUrl, searchGroupEndpoints } from "../../config/runtime";
@@ -134,6 +135,11 @@ const normalizeWhatsAppPhone = (value: string): string => {
   const digits = value.replace(/\D/g, "");
   if (digits.length === 10 && digits.startsWith("3")) return `57${digits}`;
   return digits;
+};
+
+const buildGroupJoinLink = (groupId: number): string => {
+  if (typeof window === "undefined") return `/volunteers?joinGroup=${groupId}`;
+  return new URL(`/volunteers?joinGroup=${groupId}`, window.location.origin).toString();
 };
 
 const mapDtoToVolunteer = (dto: any): VolunteerMemberDto => ({
@@ -246,6 +252,8 @@ const VolunteerGroupsPage: React.FC = () => {
   const [leavingGroupId, setLeavingGroupId] = useState<number | null>(null);
   const [addingVolunteerId, setAddingVolunteerId] = useState<number | null>(null);
   const [removingVolunteerKey, setRemovingVolunteerKey] = useState<string | null>(null);
+  const [sharedGroupId, setSharedGroupId] = useState<number | null>(null);
+  const [inviteJoinPrompted, setInviteJoinPrompted] = useState<string | null>(null);
   const currentUserId = useMemo(getAuthenticatedUserId, []);
   const currentUserEmail = useMemo(() => getCurrentUserEmail() ?? "", []);
 
@@ -381,7 +389,7 @@ const VolunteerGroupsPage: React.FC = () => {
     });
   }, [groups, search, status]);
 
-  const handleJoinGroup = async (groupId: number) => {
+  const handleJoinGroup = useCallback(async (groupId: number) => {
     setJoiningGroupId(groupId);
     try {
       await axios.post(
@@ -408,6 +416,29 @@ const VolunteerGroupsPage: React.FC = () => {
       alert(`Failed to join the volunteer group. ${message}`);
     } finally {
       setJoiningGroupId(null);
+    }
+  }, [refreshGroups]);
+
+  const handleShareJoinLink = async (group: SearchGroupDto) => {
+    const url = buildGroupJoinLink(group.id);
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `Join ${group.groupName}`,
+          text: `Join the volunteer group ${group.groupName}.`,
+          url,
+        });
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        window.prompt("Copy this group invite link:", url);
+      }
+      setSharedGroupId(group.id);
+      window.setTimeout(() => setSharedGroupId((current) => (current === group.id ? null : current)), 2500);
+    } catch (error: any) {
+      if (error?.name !== "AbortError") {
+        window.prompt("Copy this group invite link:", url);
+      }
     }
   };
 
@@ -468,6 +499,29 @@ const VolunteerGroupsPage: React.FC = () => {
       setRemovingVolunteerKey(null);
     }
   };
+
+  useEffect(() => {
+    const inviteGroupParam = searchParams.get("joinGroup");
+    if (!inviteGroupParam || !groups.length || inviteJoinPrompted === inviteGroupParam) return;
+
+    const groupId = Number(inviteGroupParam);
+    const invitedGroup = groups.find((group) => group.id === groupId);
+    if (!invitedGroup) return;
+
+    setInviteJoinPrompted(inviteGroupParam);
+    const params = new URLSearchParams(searchParams);
+    params.delete("joinGroup");
+    setSearchParams(params, { replace: true });
+
+    const alreadyJoined = invitedGroup.volunteers.some((volunteer) => {
+      const sameId = currentUserId != null && String(volunteer.userId) === String(currentUserId);
+      const sameEmail = currentUserEmail && volunteer.email.toLowerCase() === currentUserEmail.toLowerCase();
+      return sameId || sameEmail;
+    });
+    if (!alreadyJoined && window.confirm(`Do you want to join ${invitedGroup.groupName}?`)) {
+      handleJoinGroup(invitedGroup.id);
+    }
+  }, [currentUserEmail, currentUserId, groups, handleJoinGroup, inviteJoinPrompted, searchParams, setSearchParams]);
 
   const handleAddVolunteer = async (userId: number) => {
     if (!activeGroup) return;
@@ -714,6 +768,7 @@ const VolunteerGroupsPage: React.FC = () => {
           return (
             <Box
               key={group.id}
+              id={`search-group-${group.id}`}
               sx={{
                 display: "grid",
                 gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 1.2fr) minmax(360px, 0.8fr)" },
@@ -812,6 +867,16 @@ const VolunteerGroupsPage: React.FC = () => {
                       sx={{ borderRadius: 999, textTransform: "none", fontWeight: 900 }}
                     >
                       Chat
+                    </Button>
+                  )}
+                  {hasJoined && (
+                    <Button
+                      variant="outlined"
+                      startIcon={<ShareIcon />}
+                      onClick={() => handleShareJoinLink(group)}
+                      sx={{ borderRadius: 999, textTransform: "none", fontWeight: 900 }}
+                    >
+                      {sharedGroupId === group.id ? "Link copied" : "Share join link"}
                     </Button>
                   )}
                   {group.whatsappGroupLink && normalizeWhatsAppGroupLink(group.whatsappGroupLink) && (
