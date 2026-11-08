@@ -241,6 +241,7 @@ const FiruappReferenceDashboard: React.FC<FiruappReferenceDashboardProps> = ({
         accuracy: "Precisión GPS",
         movement: "Movimientos",
         alerts: "Alertas",
+        dismiss: "Descartar alerta",
         currentPosition: "Posición actual",
         enteredGeofence: "Entró a geocerca: Casa",
         lastMovement: "Último movimiento",
@@ -278,6 +279,7 @@ const FiruappReferenceDashboard: React.FC<FiruappReferenceDashboardProps> = ({
         accuracy: "GPS accuracy",
         movement: "Movement",
         alerts: "Alerts",
+        dismiss: "Dismiss alert",
         currentPosition: "Current position",
         enteredGeofence: "Entered geofence: Home",
         lastMovement: "Last movement",
@@ -534,7 +536,17 @@ const FiruappReferenceDashboard: React.FC<FiruappReferenceDashboardProps> = ({
                           <WarningAmberOutlinedIcon color="error" />
                           <Typography variant="body2">{alert.title}</Typography>
                           <Typography variant="caption">{alert.time}</Typography>
-                          {alert.onDismiss && <IconButton size="small" onClick={alert.onDismiss}><CloseIcon fontSize="small" /></IconButton>}
+                          {alert.onDismiss && (
+                            <IconButton
+                              className="owner-reference-alert-dismiss"
+                              size="small"
+                              aria-label={`${labels.dismiss}: ${alert.title}`}
+                              title={labels.dismiss}
+                              onClick={alert.onDismiss}
+                            >
+                              <CloseIcon fontSize="small" />
+                            </IconButton>
+                          )}
                         </Stack>
                       )) : (
                         <Typography variant="body2" className="owner-reference-no-alerts">

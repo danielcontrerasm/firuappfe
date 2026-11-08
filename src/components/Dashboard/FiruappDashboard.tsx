@@ -532,6 +532,14 @@ const FiruappDashboard: React.FC = () => {
   const [accountDetails, setAccountDetails] = useState(initialAccountDetails);
   const [section, setSection] = useState<"all" | "geofence" | "route">("all");
   const { alerts: alertMessages, connected: alertsConnected, dismissAlert } = useLiveAlerts();
+  const [dismissedPetAlertIds, setDismissedPetAlertIds] = useState<Set<string>>(() => new Set());
+  const dismissPetAlert = useCallback((alertId: string) => {
+    setDismissedPetAlertIds((current) => {
+      const next = new Set(current);
+      next.add(alertId);
+      return next;
+    });
+  }, []);
   const [cityByLocationKey, setCityByLocationKey] = useState<Record<string, string>>({});
   const [guideOpen, setGuideOpen] = useState(false);
   const [guideStepIndex, setGuideStepIndex] = useState(0);
@@ -792,15 +800,20 @@ const FiruappDashboard: React.FC = () => {
       severity: "critical" as const,
       onDismiss: () => dismissAlert(alert.id),
     }));
-    const petAlerts = lostPets.map((pet, index) => ({
-      id: `lost-${pet.id}`,
-      title: `${pet.name} has been marked as LOST`,
-      time: index === 0 ? "Just now" : "12 min ago",
-      severity: "critical" as const,
-      onDismiss: undefined,
-    }));
+    const petAlerts = lostPets
+      .map((pet, index) => {
+        const id = `lost-${pet.id}`;
+        return {
+          id,
+          title: `${pet.name} has been marked as LOST`,
+          time: index === 0 ? "Just now" : "12 min ago",
+          severity: "critical" as const,
+          onDismiss: () => dismissPetAlert(id),
+        };
+      })
+      .filter((alert) => !dismissedPetAlertIds.has(alert.id));
     return [...liveAlerts, ...petAlerts].slice(0, 2);
-  }, [alertMessages, dismissAlert, lostPets]);
+  }, [alertMessages, dismissAlert, dismissedPetAlertIds, dismissPetAlert, lostPets]);
   const guideSteps = [
     {
       title: language === "es" ? "Bienvenido al panel" : "Welcome to the dashboard",

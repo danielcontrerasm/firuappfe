@@ -1243,6 +1243,18 @@
   white-space: nowrap;
 }
 
+.owner-reference-alert-dismiss.MuiIconButton-root {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  color: #71829a;
+}
+
+.owner-reference-alert-dismiss.MuiIconButton-root:hover {
+  color: #dc2626;
+  background: #fee2e2;
+}
+
 .owner-reference-no-alerts {
   display: flex;
   align-items: center;
