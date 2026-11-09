@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import {
+  Alert,
   Avatar,
   Box,
   Button,
@@ -234,6 +235,8 @@ const VolunteerGroupsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [groups, setGroups] = useState<SearchGroupDto[]>([]);
   const [groupsLoadError, setGroupsLoadError] = useState("");
+  const [groupsLoadFinished, setGroupsLoadFinished] = useState(false);
+  const [inviteGroupError, setInviteGroupError] = useState("");
   const [pets, setPets] = useState<PetOption[]>([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
@@ -313,6 +316,8 @@ const VolunteerGroupsPage: React.FC = () => {
           setGroups([]);
           setGroupsLoadError("No fue posible cargar los grupos reales desde el servidor.");
         }
+      } finally {
+        if (!cancelled) setGroupsLoadFinished(true);
       }
     };
 
@@ -501,27 +506,76 @@ const VolunteerGroupsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    const inviteGroupParam = searchParams.get("joinGroup");
-    if (!inviteGroupParam || !groups.length || inviteJoinPrompted === inviteGroupParam) return;
+    let cancelled = false;
 
-    const groupId = Number(inviteGroupParam);
-    const invitedGroup = groups.find((group) => group.id === groupId);
-    if (!invitedGroup) return;
+    const processInvite = async () => {
+      const inviteGroupParam = searchParams.get("joinGroup");
+      if (!inviteGroupParam || !groupsLoadFinished || inviteJoinPrompted === inviteGroupParam) return;
 
-    setInviteJoinPrompted(inviteGroupParam);
-    const params = new URLSearchParams(searchParams);
-    params.delete("joinGroup");
-    setSearchParams(params, { replace: true });
+      const groupId = Number(inviteGroupParam);
+      if (!Number.isInteger(groupId) || groupId <= 0) {
+        setInviteGroupError("This group invite link is invalid.");
+        setInviteJoinPrompted(inviteGroupParam);
+        return;
+      }
 
-    const alreadyJoined = invitedGroup.volunteers.some((volunteer) => {
-      const sameId = currentUserId != null && String(volunteer.userId) === String(currentUserId);
-      const sameEmail = currentUserEmail && volunteer.email.toLowerCase() === currentUserEmail.toLowerCase();
-      return sameId || sameEmail;
-    });
-    if (!alreadyJoined && window.confirm(`Do you want to join ${invitedGroup.groupName}?`)) {
-      handleJoinGroup(invitedGroup.id);
-    }
-  }, [currentUserEmail, currentUserId, groups, handleJoinGroup, inviteJoinPrompted, searchParams, setSearchParams]);
+      let invitedGroup = groups.find((group) => group.id === groupId);
+      if (!invitedGroup) {
+        try {
+          const response = await axios.get(buildApiUrl(searchGroupEndpoints.byId(groupId)), {
+            headers: getAuthHeaders(),
+          });
+          const responseData = response.data;
+          const directDto =
+            extractCollection(responseData)[0] ??
+            responseData?.group ??
+            responseData?.data ??
+            responseData?.payload ??
+            responseData;
+          if (directDto && typeof directDto === "object" && directDto.id != null) {
+            invitedGroup = mapDtoToSearchGroup(directDto);
+          }
+        } catch (error) {
+          console.warn(`Could not load invited search group ${groupId}.`, error);
+        }
+      }
+
+      if (cancelled) return;
+
+      setInviteJoinPrompted(inviteGroupParam);
+      const params = new URLSearchParams(searchParams);
+      params.delete("joinGroup");
+      setSearchParams(params, { replace: true });
+
+      if (!invitedGroup) {
+        setInviteGroupError(
+          `Group ${groupId} could not be found. The server must expose this group through /api/search-groups/${groupId}.`
+        );
+        return;
+      }
+
+      setInviteGroupError("");
+      window.setTimeout(() => {
+        document.getElementById(`search-group-${groupId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 0);
+
+      const alreadyJoined =
+        invitedGroup.volunteers.some((volunteer) => {
+          const sameId = currentUserId != null && String(volunteer.userId) === String(currentUserId);
+          const sameEmail = currentUserEmail && volunteer.email.toLowerCase() === currentUserEmail.toLowerCase();
+          return sameId || sameEmail;
+        }) ||
+        (currentUserEmail && invitedGroup.createdByEmail.toLowerCase() === currentUserEmail.toLowerCase());
+      if (!alreadyJoined && window.confirm(`Do you want to join ${invitedGroup.groupName}?`)) {
+        handleJoinGroup(invitedGroup.id);
+      }
+    };
+
+    processInvite();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUserEmail, currentUserId, groups, groupsLoadFinished, handleJoinGroup, inviteJoinPrompted, searchParams, setSearchParams]);
 
   const handleAddVolunteer = async (userId: number) => {
     if (!activeGroup) return;
@@ -702,6 +756,12 @@ const VolunteerGroupsPage: React.FC = () => {
           New group
         </Button>
       </Toolbar>
+
+      {inviteGroupError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {inviteGroupError}
+        </Alert>
+      )}
 
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mb: 2 }}>
         <TextField

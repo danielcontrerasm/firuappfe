@@ -44,6 +44,7 @@ export const buildWsUrl = (path = "/ws") => {
 export const searchGroupEndpoints = Object.freeze({
   list: "/api/search-groups",
   create: "/api/search-groups",
+  byId: (searchGroupId) => `/api/search-groups/${searchGroupId}`,
   byPet: (petId) => `/api/search-groups/pet/${petId}`,
   mine: "/api/search-groups/my",
   volunteers: (searchGroupId) => `/api/search-groups/${searchGroupId}/volunteers`,
