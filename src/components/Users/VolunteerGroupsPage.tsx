@@ -97,6 +97,11 @@ type PetOption = {
   name: string;
 };
 
+type JoinFeedback = {
+  severity: "success" | "error" | "info";
+  message: string;
+};
+
 const currentUser: VolunteerMemberDto = {
   userId: 104,
   name: "Daniel Contreras",
@@ -270,6 +275,7 @@ const VolunteerGroupsPage: React.FC = () => {
   const [groupsLoadError, setGroupsLoadError] = useState("");
   const [groupsLoadFinished, setGroupsLoadFinished] = useState(false);
   const [inviteGroupError, setInviteGroupError] = useState("");
+  const [joinFeedback, setJoinFeedback] = useState<JoinFeedback | null>(null);
   const [pets, setPets] = useState<PetOption[]>([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
@@ -429,20 +435,36 @@ const VolunteerGroupsPage: React.FC = () => {
 
   const handleJoinGroup = useCallback(async (groupId: number) => {
     setJoiningGroupId(groupId);
+    setJoinFeedback(null);
     try {
-      await axios.post(
+      const response = await axios.post(
         buildApiUrl(searchGroupEndpoints.join(groupId)),
         {},
         {
           headers: getAuthHeaders(),
         }
       );
-      const persistedGroups = await refreshGroups();
-      setActiveGroup((current) =>
-        current?.id === groupId
-          ? persistedGroups.find((group) => group.id === groupId) ?? null
-          : current
-      );
+
+      let refreshMessage = "";
+      try {
+        const persistedGroups = await refreshGroups();
+        setActiveGroup((current) =>
+          current?.id === groupId
+            ? persistedGroups.find((group) => group.id === groupId) ?? null
+            : current
+        );
+      } catch (refreshError) {
+        console.error("Joined the search group, but the list could not be refreshed:", refreshError);
+        refreshMessage = " The group list could not be refreshed.";
+      }
+
+      const responseMessage = response?.data?.message;
+      setJoinFeedback({
+        severity: "success",
+        message: responseMessage
+          ? String(responseMessage)
+          : `You joined the volunteer group successfully.${refreshMessage} If you were already a member, no duplicate was created.`,
+      });
     } catch (error: any) {
       console.error(`Error joining search group ${groupId}:`, error);
       const message =
@@ -451,7 +473,10 @@ const VolunteerGroupsPage: React.FC = () => {
         error?.response?.data ||
         error?.message ||
         "Unknown error";
-      alert(`Failed to join the volunteer group. ${message}`);
+      setJoinFeedback({
+        severity: "error",
+        message: `Failed to join the volunteer group. ${String(message)}`,
+      });
     } finally {
       setJoiningGroupId(null);
     }
@@ -598,7 +623,12 @@ const VolunteerGroupsPage: React.FC = () => {
           return sameId || sameEmail;
         }) ||
         (currentUserEmail && invitedGroup.createdByEmail.toLowerCase() === currentUserEmail.toLowerCase());
-      if (!alreadyJoined && window.confirm(`Do you want to join ${invitedGroup.groupName}?`)) {
+      if (alreadyJoined) {
+        setJoinFeedback({
+          severity: "info",
+          message: `You are already a member of ${invitedGroup.groupName}.`,
+        });
+      } else if (window.confirm(`Do you want to join ${invitedGroup.groupName}?`)) {
         handleJoinGroup(invitedGroup.id);
       }
     };
@@ -792,6 +822,12 @@ const VolunteerGroupsPage: React.FC = () => {
       {inviteGroupError && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {inviteGroupError}
+        </Alert>
+      )}
+
+      {joinFeedback && (
+        <Alert severity={joinFeedback.severity} onClose={() => setJoinFeedback(null)} sx={{ mb: 2 }}>
+          {joinFeedback.message}
         </Alert>
       )}
 
