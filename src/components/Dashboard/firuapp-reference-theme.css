@@ -28,6 +28,12 @@
   box-shadow: 0 8px 24px rgba(20, 45, 85, 0.045);
 }
 
+.dashboard-global-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
 .owner-reference-brand-link {
   width: 326px;
   height: 100%;
@@ -1350,6 +1356,69 @@
 
 @media (max-width: 899.95px) {
   .owner-reference-dashboard {
+    display: none;
+  }
+
+  .dashboard-global-header .owner-reference-topbar {
+    height: 64px;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .dashboard-global-header .owner-reference-brand-link {
+    width: 150px;
+    flex: 0 1 150px;
+    min-width: 0;
+  }
+
+  .dashboard-global-header .owner-reference-topbar .firu-brand-horizontal {
+    gap: 4px;
+    padding-left: 12px;
+  }
+
+  .dashboard-global-header .owner-reference-topbar .firu-brand-horizontal .firu-brand-mark {
+    width: 52px;
+    height: 48px;
+    flex-basis: 52px;
+  }
+
+  .dashboard-global-header .owner-reference-topbar .firu-brand-horizontal .firu-brand-mark .firu-brand-image {
+    top: 0;
+    left: -5px;
+    width: 70px;
+    height: 70px;
+  }
+
+  .dashboard-global-header .owner-reference-wordmark,
+  .dashboard-global-header .owner-reference-topbar .firu-brand-wordmark {
+    font-size: 22px;
+    letter-spacing: -0.8px;
+  }
+
+  .dashboard-global-header .owner-reference-topbar-divider {
+    height: 40px;
+    margin: 0 4px 0 0;
+  }
+
+  .dashboard-global-header .owner-reference-topbar-actions {
+    min-width: 0;
+    padding: 0 6px 0 0;
+    gap: 0;
+  }
+
+  .dashboard-global-header .owner-reference-header-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .dashboard-global-header .owner-reference-account-button .MuiAvatar-root {
+    width: 38px;
+    height: 38px;
+    font-size: 13px;
+  }
+
+  .dashboard-global-header .owner-reference-account-chevron,
+  .dashboard-global-header .owner-reference-topbar-actions .owner-reference-header-icon:nth-child(3) {
     display: none;
   }
 }

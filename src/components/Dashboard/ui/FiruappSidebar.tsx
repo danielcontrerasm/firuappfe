@@ -12,8 +12,6 @@ import AssessmentIcon from "@mui/icons-material/Assessment";
 import GroupIcon from "@mui/icons-material/Group";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import ContentPasteSearchIcon from "@mui/icons-material/ContentPasteSearch";
-import DirectionsWalkIcon from "@mui/icons-material/DirectionsWalk";
-import DashboardCustomizeOutlinedIcon from "@mui/icons-material/DashboardCustomizeOutlined";
 import MobileNavigation from "./MobileNavigation.tsx";
 import FiruBrand from "./FiruBrand.tsx";
 import { firuColors } from "./FiruappStyles.ts";
@@ -27,9 +25,7 @@ interface SidebarProps {
 
 const navItems = [
   { label: "Dashboard", icon: DashboardRoundedIcon, to: "/owner-dashboard", section: "all" as const },
-  { label: "Panel paseador", icon: DashboardCustomizeOutlinedIcon, to: "/walker-dashboard", section: "walker" as const },
   { label: "Recent Routes", icon: AssessmentIcon, to: "/routes/recent" },
-  { label: "Dog Walks", icon: DirectionsWalkIcon, to: "/walks", section: "walks" as const },
   { label: "Geofences", icon: RadarIcon, to: "/geofence", section: "geofence" as const },
   { label: "My Pets", icon: PetsIcon, to: "/pets" },
   { label: "Volunteer Groups", icon: GroupIcon, to: "/volunteers" },

@@ -5,14 +5,12 @@ import PetsOutlinedIcon from "@mui/icons-material/PetsOutlined";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
-import DirectionsWalkIcon from "@mui/icons-material/DirectionsWalk";
 
 const tabs = [
   { to: "/owner-dashboard", label: "Mapa", Icon: PlaceOutlinedIcon },
   { to: "/pets", label: "Mascotas", Icon: PetsOutlinedIcon },
   { to: "/geofence", label: "Zonas", Icon: FavoriteBorderIcon },
   { to: "/alerts", label: "Alertas", Icon: NotificationsNoneIcon },
-  { to: "/walks", label: "Paseos", Icon: DirectionsWalkIcon },
   { to: "/profile", label: "Más", Icon: MoreHorizIcon },
 ];
 

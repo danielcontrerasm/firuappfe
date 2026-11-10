@@ -275,7 +275,7 @@ const VolunteerGroupsPage: React.FC = () => {
   const [groupsLoadError, setGroupsLoadError] = useState("");
   const [groupsLoadFinished, setGroupsLoadFinished] = useState(false);
   const [inviteGroupError, setInviteGroupError] = useState("");
-  const [joinFeedback, setJoinFeedback] = useState<JoinFeedback | null>(null);
+  const [groupFeedback, setGroupFeedback] = useState<JoinFeedback | null>(null);
   const [joinConfirmationGroup, setJoinConfirmationGroup] = useState<SearchGroupDto | null>(null);
   const [pets, setPets] = useState<PetOption[]>([]);
   const [search, setSearch] = useState("");
@@ -436,7 +436,7 @@ const VolunteerGroupsPage: React.FC = () => {
 
   const handleJoinGroup = useCallback(async (groupId: number) => {
     setJoiningGroupId(groupId);
-    setJoinFeedback(null);
+    setGroupFeedback(null);
     try {
       const response = await axios.post(
         buildApiUrl(searchGroupEndpoints.join(groupId)),
@@ -460,7 +460,7 @@ const VolunteerGroupsPage: React.FC = () => {
       }
 
       const responseMessage = response?.data?.message;
-      setJoinFeedback({
+      setGroupFeedback({
         severity: "success",
         message: responseMessage
           ? String(responseMessage)
@@ -474,7 +474,7 @@ const VolunteerGroupsPage: React.FC = () => {
         error?.response?.data ||
         error?.message ||
         "Unknown error";
-      setJoinFeedback({
+      setGroupFeedback({
         severity: "error",
         message: `Failed to join the volunteer group. ${String(message)}`,
       });
@@ -510,6 +510,7 @@ const VolunteerGroupsPage: React.FC = () => {
     if (!window.confirm("Are you sure you want to leave this volunteer group?")) return;
 
     setLeavingGroupId(groupId);
+    setGroupFeedback(null);
     try {
       await axios.post(
         buildApiUrl(searchGroupEndpoints.leave(groupId)),
@@ -520,6 +521,10 @@ const VolunteerGroupsPage: React.FC = () => {
       );
       await refreshGroups();
       setActiveGroup((current) => (current?.id === groupId ? null : current));
+      setGroupFeedback({
+        severity: "success",
+        message: "You left the volunteer group successfully.",
+      });
     } catch (error: any) {
       console.error(`Error leaving search group ${groupId}:`, error);
       const message =
@@ -528,7 +533,10 @@ const VolunteerGroupsPage: React.FC = () => {
         error?.response?.data ||
         error?.message ||
         "Unknown error";
-      alert(`Failed to leave the volunteer group. ${message}`);
+      setGroupFeedback({
+        severity: "error",
+        message: `Failed to leave the volunteer group. ${String(message)}`,
+      });
     } finally {
       setLeavingGroupId(null);
     }
@@ -539,6 +547,7 @@ const VolunteerGroupsPage: React.FC = () => {
 
     const volunteerKey = `${groupId}:${userId}`;
     setRemovingVolunteerKey(volunteerKey);
+    setGroupFeedback(null);
     try {
       await axios.delete(
         buildApiUrl(searchGroupEndpoints.removeVolunteer(groupId, userId)),
@@ -550,6 +559,10 @@ const VolunteerGroupsPage: React.FC = () => {
           ? persistedGroups.find((group) => group.id === groupId) ?? null
           : current
       );
+      setGroupFeedback({
+        severity: "success",
+        message: `${volunteerName} was removed from the volunteer group successfully.`,
+      });
     } catch (error: any) {
       console.error(`Error removing volunteer ${userId} from search group ${groupId}:`, error);
       const message =
@@ -558,7 +571,10 @@ const VolunteerGroupsPage: React.FC = () => {
         error?.response?.data ||
         error?.message ||
         "Unknown error";
-      alert(`Failed to remove the volunteer. ${message}`);
+      setGroupFeedback({
+        severity: "error",
+        message: `Failed to remove the volunteer. ${String(message)}`,
+      });
     } finally {
       setRemovingVolunteerKey(null);
     }
@@ -625,7 +641,7 @@ const VolunteerGroupsPage: React.FC = () => {
         }) ||
         (currentUserEmail && invitedGroup.createdByEmail.toLowerCase() === currentUserEmail.toLowerCase());
       if (alreadyJoined) {
-        setJoinFeedback({
+        setGroupFeedback({
           severity: "info",
           message: `You are already a member of ${invitedGroup.groupName}.`,
         });
@@ -826,9 +842,9 @@ const VolunteerGroupsPage: React.FC = () => {
         </Alert>
       )}
 
-      {joinFeedback && (
-        <Alert severity={joinFeedback.severity} onClose={() => setJoinFeedback(null)} sx={{ mb: 2 }}>
-          {joinFeedback.message}
+      {groupFeedback && (
+        <Alert severity={groupFeedback.severity} onClose={() => setGroupFeedback(null)} sx={{ mb: 2 }}>
+          {groupFeedback.message}
         </Alert>
       )}
 
