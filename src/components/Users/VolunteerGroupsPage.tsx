@@ -276,6 +276,7 @@ const VolunteerGroupsPage: React.FC = () => {
   const [groupsLoadFinished, setGroupsLoadFinished] = useState(false);
   const [inviteGroupError, setInviteGroupError] = useState("");
   const [joinFeedback, setJoinFeedback] = useState<JoinFeedback | null>(null);
+  const [joinConfirmationGroup, setJoinConfirmationGroup] = useState<SearchGroupDto | null>(null);
   const [pets, setPets] = useState<PetOption[]>([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
@@ -628,8 +629,8 @@ const VolunteerGroupsPage: React.FC = () => {
           severity: "info",
           message: `You are already a member of ${invitedGroup.groupName}.`,
         });
-      } else if (window.confirm(`Do you want to join ${invitedGroup.groupName}?`)) {
-        handleJoinGroup(invitedGroup.id);
+      } else {
+        setJoinConfirmationGroup(invitedGroup);
       }
     };
 
@@ -1112,6 +1113,46 @@ const VolunteerGroupsPage: React.FC = () => {
           );
         })}
       </Stack>
+
+      <Dialog
+        open={Boolean(joinConfirmationGroup)}
+        onClose={() => setJoinConfirmationGroup(null)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle sx={{ fontWeight: 900, color: "#0f172a" }}>
+          Join volunteer group
+        </DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <Typography sx={{ color: "#475569" }}>
+            {joinConfirmationGroup
+              ? `Do you want to join ${joinConfirmationGroup.groupName}?`
+              : ""}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={() => setJoinConfirmationGroup(null)}
+            sx={{ borderRadius: 3, textTransform: "none" }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={joiningGroupId === joinConfirmationGroup?.id ? <CircularProgress size={18} color="inherit" /> : <GroupAddIcon />}
+            disabled={!joinConfirmationGroup || joiningGroupId === joinConfirmationGroup.id}
+            onClick={() => {
+              if (!joinConfirmationGroup) return;
+              const groupId = joinConfirmationGroup.id;
+              setJoinConfirmationGroup(null);
+              void handleJoinGroup(groupId);
+            }}
+            sx={{ borderRadius: 3, textTransform: "none", fontWeight: 900, bgcolor: "#0f172a" }}
+          >
+            {joiningGroupId === joinConfirmationGroup?.id ? "Joining..." : "Join group"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog open={Boolean(activeGroup)} onClose={() => setActiveGroup(null)} fullWidth maxWidth="sm">
         <DialogTitle sx={{ fontWeight: 900, color: "#0f172a" }}>
