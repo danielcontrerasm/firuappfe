@@ -225,6 +225,29 @@ const fetchPersistedGroups = async (): Promise<SearchGroupDto[]> => {
     .map((dto: any) => mapDtoToSearchGroup(dto));
 };
 
+const getKnownJoinedGroupIds = (groupList: SearchGroupDto[]): number[] => {
+  if (!isCurrentUserAdmin()) {
+    // The /my endpoint only returns groups where the current user has an
+    // active membership, including groups they created.
+    return groupList.map((group) => group.id);
+  }
+
+  const currentUserId = getCurrentUserId();
+  const currentUserEmail = getCurrentUserEmail();
+  return groupList
+    .filter((group) => {
+      const isVolunteer = group.volunteers.some((volunteer) =>
+        (currentUserId != null && String(volunteer.userId) === String(currentUserId)) ||
+        (Boolean(currentUserEmail) && volunteer.email.trim().toLowerCase() === currentUserEmail.toLowerCase())
+      );
+      const isCreator =
+        (currentUserId != null && String(group.createdById) === String(currentUserId)) ||
+        (Boolean(currentUserEmail) && group.createdByEmail.trim().toLowerCase() === currentUserEmail.toLowerCase());
+      return isVolunteer || isCreator;
+    })
+    .map((group) => group.id);
+};
+
 const getAuthenticatedUserId = (): number | null => {
   const userId = Number(getCurrentUserId());
   return Number.isInteger(userId) && userId > 0 ? userId : null;
@@ -253,6 +276,7 @@ const VolunteerGroupsPage: React.FC = () => {
   const [inviteGroupError, setInviteGroupError] = useState("");
   const [groupFeedback, setGroupFeedback] = useState<JoinFeedback | null>(null);
   const [joinConfirmationGroup, setJoinConfirmationGroup] = useState<JoinConfirmationGroup | null>(null);
+  const [joinedGroupIds, setJoinedGroupIds] = useState<Set<number>>(() => new Set());
   const [pets, setPets] = useState<PetOption[]>([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
@@ -279,6 +303,7 @@ const VolunteerGroupsPage: React.FC = () => {
   const refreshGroups = useCallback(async () => {
     const persistedGroups = await fetchPersistedGroups();
     setGroups(persistedGroups);
+    setJoinedGroupIds(new Set(getKnownJoinedGroupIds(persistedGroups)));
     return persistedGroups;
   }, []);
 
@@ -310,6 +335,7 @@ const VolunteerGroupsPage: React.FC = () => {
         if (!cancelled && groupsResponse.status === "fulfilled") {
           setGroupsLoadError("");
           setGroups(groupsResponse.value);
+          setJoinedGroupIds(new Set(getKnownJoinedGroupIds(groupsResponse.value)));
         }
         if (!cancelled && groupsResponse.status === "rejected") {
           setGroups([]);
@@ -423,6 +449,7 @@ const VolunteerGroupsPage: React.FC = () => {
       );
 
       let refreshMessage = "";
+      setJoinedGroupIds((current) => new Set(current).add(groupId));
       try {
         const persistedGroups = await refreshGroups();
         setActiveGroup((current) =>
@@ -497,6 +524,11 @@ const VolunteerGroupsPage: React.FC = () => {
       );
       await refreshGroups();
       setActiveGroup((current) => (current?.id === groupId ? null : current));
+      setJoinedGroupIds((current) => {
+        const next = new Set(current);
+        next.delete(groupId);
+        return next;
+      });
       setGroupFeedback({
         severity: "success",
         message: "You left the volunteer group successfully.",
@@ -611,7 +643,7 @@ const VolunteerGroupsPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [currentUserEmail, currentUserId, groups, groupsLoadFinished, handleJoinGroup, inviteJoinPrompted, searchParams, setSearchParams]);
+  }, [currentUserEmail, currentUserId, groups, groupsLoadFinished, handleJoinGroup, inviteJoinPrompted, joinedGroupIds, searchParams, setSearchParams]);
 
   const handleAddVolunteer = async (userId: number) => {
     if (!activeGroup) return;
@@ -864,7 +896,7 @@ const VolunteerGroupsPage: React.FC = () => {
           const isGroupCreator =
             (currentUserId != null && String(group.createdById) === String(currentUserId)) ||
             (Boolean(currentUserEmail) && group.createdByEmail.trim().toLowerCase() === currentUserEmail.toLowerCase());
-          const hasJoined = isCurrentUserVolunteer || isGroupCreator;
+          const hasJoined = joinedGroupIds.has(group.id) || isCurrentUserVolunteer || isGroupCreator;
           const canManageMembers = isGroupCreator;
 
           return (
@@ -942,25 +974,16 @@ const VolunteerGroupsPage: React.FC = () => {
                 <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 2 }}>
                   <Button
                     variant={hasJoined ? "outlined" : "contained"}
-                    startIcon={<GroupAddIcon />}
-                    disabled={hasJoined || joiningGroupId === group.id}
-                    onClick={() => handleJoinGroup(group.id)}
+                    color={hasJoined ? "error" : "primary"}
+                    startIcon={hasJoined ? (leavingGroupId === group.id ? <CircularProgress size={18} /> : <LogoutIcon />) : <GroupAddIcon />}
+                    disabled={hasJoined ? leavingGroupId === group.id : joiningGroupId === group.id}
+                    onClick={() => (hasJoined ? handleLeaveGroup(group.id) : handleJoinGroup(group.id))}
                     sx={{ borderRadius: 999, textTransform: "none", fontWeight: 900, bgcolor: hasJoined ? undefined : "#0f172a" }}
                   >
-                    {hasJoined ? "Joined" : joiningGroupId === group.id ? "Joining..." : "Join group"}
+                    {hasJoined
+                      ? leavingGroupId === group.id ? "Leaving..." : "Leave group"
+                      : joiningGroupId === group.id ? "Joining..." : "Join group"}
                   </Button>
-                  {hasJoined && (
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      startIcon={leavingGroupId === group.id ? <CircularProgress size={18} /> : <LogoutIcon />}
-                      disabled={leavingGroupId === group.id}
-                      onClick={() => handleLeaveGroup(group.id)}
-                      sx={{ borderRadius: 999, textTransform: "none", fontWeight: 900 }}
-                    >
-                      {leavingGroupId === group.id ? "Leaving..." : "Leave group"}
-                    </Button>
-                  )}
                   {hasJoined && (
                     <Button
                       variant="outlined"
