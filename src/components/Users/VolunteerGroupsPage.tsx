@@ -38,7 +38,7 @@ import ShareIcon from "@mui/icons-material/Share";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import { useSearchParams } from "react-router-dom";
 import { buildApiUrl, buildAssetUrl, searchGroupEndpoints } from "../../config/runtime";
-import { getCurrentUserEmail, getCurrentUserId, isOwnedByCurrentUser } from "../../services/auth.ts";
+import { getCurrentUserEmail, getCurrentUserId, isCurrentUserAdmin, isOwnedByCurrentUser } from "../../services/auth.ts";
 import GroupChatDialog from "./GroupChatDialog.tsx";
 
 type VolunteerMemberDto = {
@@ -101,6 +101,8 @@ type JoinFeedback = {
   severity: "success" | "error" | "info";
   message: string;
 };
+
+type JoinConfirmationGroup = Pick<SearchGroupDto, "id" | "groupName">;
 
 const currentUser: VolunteerMemberDto = {
   userId: 104,
@@ -206,45 +208,19 @@ const extractCollection = (data: any): any[] => {
   return [];
 };
 
-const findSearchGroupDto = (data: any, groupId: number): any | undefined => {
-  const targetId = String(groupId);
-  const pending: any[] = [data];
-  const visited = new Set<object>();
-
-  while (pending.length) {
-    const current = pending.shift();
-    if (!current || typeof current !== "object") continue;
-
-    if (visited.has(current)) continue;
-    visited.add(current);
-
-    if (Array.isArray(current)) {
-      pending.push(...current);
-      continue;
-    }
-
-    if (String(getSearchGroupId(current)) === targetId) return current;
-
-    Object.values(current).forEach((value) => {
-      if (value && typeof value === "object") pending.push(value);
-    });
-  }
-
-  return undefined;
-};
-
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
   return token ? { Authorization: `Bearer ${token}` } : undefined;
 };
 
 const fetchPersistedGroups = async (): Promise<SearchGroupDto[]> => {
-  const response = await axios.get(buildApiUrl(searchGroupEndpoints.list), {
+  // Regular users should only see groups where they are already members (or
+  // the owner). A pending invitation is handled by the join-link flow below;
+  // it must not make the public group list visible.
+  const endpoint = isCurrentUserAdmin() ? searchGroupEndpoints.list : searchGroupEndpoints.mine;
+  const response = await axios.get(buildApiUrl(endpoint), {
     headers: getAuthHeaders(),
   });
-  // /api/search-groups is the discovery list used by the Join action. The
-  // bearer token and backend determine which groups are accessible; filtering
-  // here to owned/member groups hides every group a user could join.
   return extractCollection(response.data)
     .map((dto: any) => mapDtoToSearchGroup(dto));
 };
@@ -276,7 +252,7 @@ const VolunteerGroupsPage: React.FC = () => {
   const [groupsLoadFinished, setGroupsLoadFinished] = useState(false);
   const [inviteGroupError, setInviteGroupError] = useState("");
   const [groupFeedback, setGroupFeedback] = useState<JoinFeedback | null>(null);
-  const [joinConfirmationGroup, setJoinConfirmationGroup] = useState<SearchGroupDto | null>(null);
+  const [joinConfirmationGroup, setJoinConfirmationGroup] = useState<JoinConfirmationGroup | null>(null);
   const [pets, setPets] = useState<PetOption[]>([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
@@ -594,26 +570,6 @@ const VolunteerGroupsPage: React.FC = () => {
         return;
       }
 
-      let invitedGroup = groups.find((group) => group.id === groupId);
-      let inviteRequestError = "";
-      if (!invitedGroup) {
-        try {
-          const response = await axios.get(buildApiUrl(searchGroupEndpoints.byId(groupId)), {
-            headers: getAuthHeaders(),
-          });
-          const directDto = findSearchGroupDto(response.data, groupId);
-          if (directDto) {
-            invitedGroup = mapDtoToSearchGroup(directDto);
-          } else {
-            inviteRequestError = "the response did not include the requested group";
-          }
-        } catch (error: any) {
-          const status = error?.response?.status;
-          inviteRequestError = status ? `HTTP ${status}` : error?.message || "the request failed";
-          console.warn(`Could not load invited search group ${groupId}.`, error);
-        }
-      }
-
       if (cancelled) return;
 
       setInviteJoinPrompted(inviteGroupParam);
@@ -621,32 +577,33 @@ const VolunteerGroupsPage: React.FC = () => {
       params.delete("joinGroup");
       setSearchParams(params, { replace: true });
 
-      if (!invitedGroup) {
-        setInviteGroupError(
-          `Group ${groupId} could not be loaded from /api/search-groups/${groupId}: ${inviteRequestError || "no matching group was returned"}.`
-        );
-        return;
+      setInviteGroupError("");
+      const invitedGroup = groups.find((group) => group.id === groupId);
+      const confirmationGroup: JoinConfirmationGroup = invitedGroup ?? {
+        id: groupId,
+        groupName: `Volunteer group #${groupId}`,
+      };
+
+      if (invitedGroup) {
+        window.setTimeout(() => {
+          document.getElementById(`search-group-${groupId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 0);
       }
 
-      setInviteGroupError("");
-      window.setTimeout(() => {
-        document.getElementById(`search-group-${groupId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 0);
-
       const alreadyJoined =
-        invitedGroup.volunteers.some((volunteer) => {
+        invitedGroup?.volunteers.some((volunteer) => {
           const sameId = currentUserId != null && String(volunteer.userId) === String(currentUserId);
           const sameEmail = currentUserEmail && volunteer.email.toLowerCase() === currentUserEmail.toLowerCase();
           return sameId || sameEmail;
         }) ||
-        (currentUserEmail && invitedGroup.createdByEmail.toLowerCase() === currentUserEmail.toLowerCase());
+        (currentUserEmail && invitedGroup?.createdByEmail.toLowerCase() === currentUserEmail.toLowerCase());
       if (alreadyJoined) {
         setGroupFeedback({
           severity: "info",
-          message: `You are already a member of ${invitedGroup.groupName}.`,
+          message: `You are already a member of ${confirmationGroup.groupName}.`,
         });
       } else {
-        setJoinConfirmationGroup(invitedGroup);
+        setJoinConfirmationGroup(confirmationGroup);
       }
     };
 
