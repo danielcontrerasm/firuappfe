@@ -111,7 +111,7 @@ const DashboardLayout = () => {
           background: "#f4f8fb",
         }}
       >
-        <FiruappSidebar current={current} copy={copy} language={language} />
+        <FiruappSidebar current={current} copy={copy} language={language} showBrand={false} />
 
         <Box
           className="firu-layout-content"

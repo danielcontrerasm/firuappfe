@@ -36,7 +36,11 @@ const navItems = [
   { label: "Alerts", icon: NotificationsActiveIcon, to: "/alerts" },
 ];
 
-const FiruappSidebar: React.FC<SidebarProps & { copy?: DashboardCopy; language?: DashboardLanguage }> = ({ onChange, copy = getDashboardCopy("en") }) => {
+const FiruappSidebar: React.FC<SidebarProps & { copy?: DashboardCopy; language?: DashboardLanguage; showBrand?: boolean }> = ({
+  onChange,
+  copy = getDashboardCopy("en"),
+  showBrand = true,
+}) => {
   const navigate = useNavigate();
   const location = useLocation();
   const isAdmin = isCurrentUserAdmin();
@@ -72,9 +76,11 @@ const FiruappSidebar: React.FC<SidebarProps & { copy?: DashboardCopy; language?:
         zIndex: 20,
       }}
     >
-      <Box sx={{ minHeight: 118, display: "grid", placeItems: "center", mb: 1 }}>
-        <FiruBrand />
-      </Box>
+      {showBrand && (
+        <Box sx={{ minHeight: 118, display: "grid", placeItems: "center", mb: 1 }}>
+          <FiruBrand />
+        </Box>
+      )}
 
 
       <Box sx={{ display: "grid", gap: 0.55, width: "100%", mt: 0.25 }}>
