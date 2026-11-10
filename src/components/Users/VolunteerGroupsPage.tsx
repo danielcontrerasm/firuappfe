@@ -150,12 +150,15 @@ const mapDtoToVolunteer = (dto: any): VolunteerMemberDto => ({
   phone: dto.phone ?? dto.phoneNumber ?? "",
 });
 
+const getSearchGroupId = (dto: any): number =>
+  Number(dto?.id ?? dto?.groupId ?? dto?.searchGroupId ?? dto?.search_group_id ?? 0);
+
 const mapDtoToSearchGroup = (dto: any): SearchGroupDto => {
   const memberDtos = dto.volunteers ?? dto.members ?? dto.participants ?? [];
   const volunteers = Array.isArray(memberDtos) ? memberDtos.map(mapDtoToVolunteer) : [];
 
   return {
-    id: Number(dto.id ?? 0),
+    id: getSearchGroupId(dto),
     groupName: dto.groupName ?? dto.name ?? "Unnamed group",
     description: dto.description ?? "",
     status: dto.status ?? "standby",
@@ -186,6 +189,9 @@ const extractCollection = (data: any): any[] => {
   if (Array.isArray(data)) return data;
   if (!data || typeof data !== "object") return [];
 
+  // Some endpoints return one resource directly instead of a collection.
+  if (getSearchGroupId(data) > 0 || data.id != null) return [data];
+
   const collectionKeys = ["content", "items", "groups", "results", "rows", "payload", "records", "data"];
   for (const key of collectionKeys) {
     const nested = extractCollection(data[key]);
@@ -193,6 +199,33 @@ const extractCollection = (data: any): any[] => {
   }
 
   return [];
+};
+
+const findSearchGroupDto = (data: any, groupId: number): any | undefined => {
+  const targetId = String(groupId);
+  const pending: any[] = [data];
+  const visited = new Set<object>();
+
+  while (pending.length) {
+    const current = pending.shift();
+    if (!current || typeof current !== "object") continue;
+
+    if (visited.has(current)) continue;
+    visited.add(current);
+
+    if (Array.isArray(current)) {
+      pending.push(...current);
+      continue;
+    }
+
+    if (String(getSearchGroupId(current)) === targetId) return current;
+
+    Object.values(current).forEach((value) => {
+      if (value && typeof value === "object") pending.push(value);
+    });
+  }
+
+  return undefined;
 };
 
 const getAuthHeaders = () => {
@@ -520,22 +553,21 @@ const VolunteerGroupsPage: React.FC = () => {
       }
 
       let invitedGroup = groups.find((group) => group.id === groupId);
+      let inviteRequestError = "";
       if (!invitedGroup) {
         try {
           const response = await axios.get(buildApiUrl(searchGroupEndpoints.byId(groupId)), {
             headers: getAuthHeaders(),
           });
-          const responseData = response.data;
-          const directDto =
-            extractCollection(responseData)[0] ??
-            responseData?.group ??
-            responseData?.data ??
-            responseData?.payload ??
-            responseData;
-          if (directDto && typeof directDto === "object" && directDto.id != null) {
+          const directDto = findSearchGroupDto(response.data, groupId);
+          if (directDto) {
             invitedGroup = mapDtoToSearchGroup(directDto);
+          } else {
+            inviteRequestError = "the response did not include the requested group";
           }
-        } catch (error) {
+        } catch (error: any) {
+          const status = error?.response?.status;
+          inviteRequestError = status ? `HTTP ${status}` : error?.message || "the request failed";
           console.warn(`Could not load invited search group ${groupId}.`, error);
         }
       }
@@ -549,7 +581,7 @@ const VolunteerGroupsPage: React.FC = () => {
 
       if (!invitedGroup) {
         setInviteGroupError(
-          `Group ${groupId} could not be found. The server must expose this group through /api/search-groups/${groupId}.`
+          `Group ${groupId} could not be loaded from /api/search-groups/${groupId}: ${inviteRequestError || "no matching group was returned"}.`
         );
         return;
       }

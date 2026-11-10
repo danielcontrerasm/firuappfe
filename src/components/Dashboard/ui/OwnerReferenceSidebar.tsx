@@ -2,12 +2,12 @@ import React from "react";
 import { Box, Button, Paper, Stack, Typography } from "@mui/material";
 import { Link as RouterLink, useLocation } from "react-router-dom";
 import BusinessOutlinedIcon from "@mui/icons-material/BusinessOutlined";
-import DashboardCustomizeOutlinedIcon from "@mui/icons-material/DashboardCustomizeOutlined";
-import SensorsOutlinedIcon from "@mui/icons-material/SensorsOutlined";
-import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
+import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
+import PetsIcon from "@mui/icons-material/Pets";
+import RadarIcon from "@mui/icons-material/Radar";
+import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import RouteOutlinedIcon from "@mui/icons-material/RouteOutlined";
 import BarChartOutlinedIcon from "@mui/icons-material/BarChartOutlined";
-import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import PhoneIphoneOutlinedIcon from "@mui/icons-material/PhoneIphoneOutlined";
 import AndroidIcon from "@mui/icons-material/Android";
@@ -23,34 +23,22 @@ const OwnerReferenceSidebar: React.FC<OwnerReferenceSidebarProps> = ({ language 
   const labels = language === "es"
     ? {
         company: "Mi Empresa",
-        panel: "Panel",
-        devices: "Dispositivos",
-        users: "Usuarios y Grupos",
-        routes: "Historial de Rutas",
-        stats: "Estadísticas",
-        settings: "Configuración",
         appTitle: "App Móvil FiruApp",
         appCopy: "Gestiona tus mascotas desde tu celular",
       }
     : {
         company: "My Company",
-        panel: "Dashboard",
-        devices: "Devices",
-        users: "Users & Groups",
-        routes: "Route History",
-        stats: "Statistics",
-        settings: "Settings",
         appTitle: "FiruApp Mobile App",
         appCopy: "Manage your pets from your phone",
       };
 
   const navItems = [
-    { label: labels.panel, to: "/owner-dashboard", Icon: DashboardCustomizeOutlinedIcon },
-    { label: labels.devices, to: "/sensors", Icon: SensorsOutlinedIcon },
-    { label: labels.users, to: "/users", Icon: GroupsOutlinedIcon },
-    { label: labels.routes, to: "/routes/recent", Icon: RouteOutlinedIcon },
-    { label: labels.stats, to: "/routes/recent", Icon: BarChartOutlinedIcon },
-    { label: labels.settings, to: "/profile", Icon: SettingsOutlinedIcon },
+    { label: language === "es" ? "Mapa" : "Map", to: "/owner-dashboard", Icon: PlaceOutlinedIcon },
+    { label: language === "es" ? "Mascotas" : "Pets", to: "/pets", Icon: PetsIcon },
+    { label: language === "es" ? "Geocercas" : "Geofences", to: "/geofence", Icon: RadarIcon },
+    { label: language === "es" ? "Alertas" : "Alerts", to: "/alerts", Icon: NotificationsNoneIcon },
+    { label: language === "es" ? "Rutas" : "Routes", to: "/routes/recent", Icon: RouteOutlinedIcon },
+    { label: language === "es" ? "Reportes" : "Reports", to: "/routes/recent", Icon: BarChartOutlinedIcon },
   ];
 
   return (
@@ -62,7 +50,9 @@ const OwnerReferenceSidebar: React.FC<OwnerReferenceSidebarProps> = ({ language 
 
       <Box component="nav" aria-label={language === "es" ? "Navegación de la empresa" : "Company navigation"} className="owner-reference-side-nav">
         {navItems.map(({ label, to, Icon }, index) => {
-          const active = index === 0 ? location.pathname === "/owner-dashboard" : location.pathname === to && to !== "/routes/recent";
+          const active = index === 0
+            ? location.pathname === "/owner-dashboard"
+            : location.pathname === to && to !== "/routes/recent";
           return (
             <Button
               component={RouterLink}

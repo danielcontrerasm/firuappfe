@@ -10,13 +10,8 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { Link as RouterLink, useLocation } from "react-router-dom";
-import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
-import PetsIcon from "@mui/icons-material/Pets";
-import RadarIcon from "@mui/icons-material/Radar";
+import { Link as RouterLink } from "react-router-dom";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
-import RouteOutlinedIcon from "@mui/icons-material/RouteOutlined";
-import BarChartOutlinedIcon from "@mui/icons-material/BarChartOutlined";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import LogoutIcon from "@mui/icons-material/Logout";
@@ -59,39 +54,19 @@ const OwnerReferenceTopbar: React.FC<OwnerReferenceTopbarProps> = ({
   onToggleLanguage,
   onLogout,
 }) => {
-  const location = useLocation();
   const labels = language === "es"
     ? {
-        map: "Mapa",
-        pets: "Mascotas",
-        geofences: "Geocercas",
         alerts: "Alertas",
-        routes: "Rutas",
-        reports: "Reportes",
         help: "Ayuda",
         switchTheme: "Cambiar tema",
         switchLanguage: "Cambiar idioma",
       }
     : {
-        map: "Map",
-        pets: "Pets",
-        geofences: "Geofences",
         alerts: "Alerts",
-        routes: "Routes",
-        reports: "Reports",
         help: "Help",
         switchTheme: "Switch theme",
         switchLanguage: "Switch language",
       };
-
-  const navItems = [
-    { label: labels.map, to: "/owner-dashboard", Icon: PlaceOutlinedIcon },
-    { label: labels.pets, to: "/pets", Icon: PetsIcon },
-    { label: labels.geofences, to: "/geofence", Icon: RadarIcon },
-    { label: labels.alerts, to: "/alerts", Icon: NotificationsNoneIcon },
-    { label: labels.routes, to: "/routes/recent", Icon: RouteOutlinedIcon },
-    { label: labels.reports, to: "/routes/recent", Icon: BarChartOutlinedIcon },
-  ];
 
   const initials = accountDetails.name
     .split(/\s+/)
@@ -106,26 +81,6 @@ const OwnerReferenceTopbar: React.FC<OwnerReferenceTopbarProps> = ({
         <FiruBrand horizontal />
       </Box>
       <Divider orientation="vertical" flexItem className="owner-reference-topbar-divider" />
-
-      <Box component="nav" aria-label={language === "es" ? "Navegación principal" : "Main navigation"} className="owner-reference-topnav">
-        {navItems.map(({ label, to, Icon }, index) => {
-          const active = index === 0
-            ? location.pathname === "/owner-dashboard"
-            : location.pathname === to && to !== "/routes/recent";
-
-          return (
-            <Box
-              component={RouterLink}
-              to={to}
-              key={`${label}-${index}`}
-              className={`owner-reference-topnav-link${active ? " is-active" : ""}`}
-            >
-              <Icon fontSize="small" />
-              <span>{label}</span>
-            </Box>
-          );
-        })}
-      </Box>
 
       <Stack direction="row" alignItems="center" spacing={0.4} className="owner-reference-topbar-actions">
         <IconButton

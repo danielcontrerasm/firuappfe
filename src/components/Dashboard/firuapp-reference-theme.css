@@ -129,6 +129,7 @@
 }
 
 .owner-reference-topbar-actions {
+  margin-left: auto;
   flex: 0 0 auto;
   padding: 0 18px 0 10px;
 }
