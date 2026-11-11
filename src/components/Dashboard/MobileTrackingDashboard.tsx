@@ -45,7 +45,7 @@ export default function MobileTrackingDashboard({ pets, selectedPet, onSelect, o
     <div className="firu-mobile-tracking">
       <FiruappSidebar current="all" />
       <header className="firu-tracking-header">
-        <FiruBrand />
+        <FiruBrand horizontal />
         <IconButton component={Link} to="/alerts" aria-label="Ver alertas" className="firu-notification-button">
           <Badge badgeContent={alertCount} color="error"><NotificationsNoneIcon /></Badge>
         </IconButton>

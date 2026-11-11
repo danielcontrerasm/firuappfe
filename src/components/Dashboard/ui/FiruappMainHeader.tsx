@@ -10,6 +10,7 @@ import {
   InputBase,
   Menu,
   MenuItem,
+  Paper,
   Stack,
   Typography,
 } from "@mui/material";
@@ -17,12 +18,9 @@ import { Link as RouterLink } from "react-router-dom";
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import MessageOutlinedIcon from "@mui/icons-material/MessageOutlined";
-import PaletteOutlinedIcon from "@mui/icons-material/PaletteOutlined";
-import CheckIcon from "@mui/icons-material/Check";
 import LanguageIcon from "@mui/icons-material/Language";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import LogoutIcon from "@mui/icons-material/Logout";
-import FiruBrand from "./FiruBrand.tsx";
 import { DashboardCopy, DashboardLanguage } from "./dashboardI18n.ts";
 
 export type MainHeaderAccountDetails = {
@@ -35,7 +33,6 @@ export type MainHeaderAccountDetails = {
 interface FiruappMainHeaderProps {
   language: DashboardLanguage;
   copy: DashboardCopy;
-  dashboardTheme: "current" | "reference";
   accountDetails: MainHeaderAccountDetails;
   accountMenuAnchor: HTMLElement | null;
   searchValue?: string;
@@ -44,7 +41,6 @@ interface FiruappMainHeaderProps {
   searchBarRef?: React.Ref<HTMLDivElement>;
   onAccountMenuOpen: (event: React.MouseEvent<HTMLElement>) => void;
   onAccountMenuClose: () => void;
-  onToggleTheme: () => void;
   onToggleLanguage: () => void;
   onLogout: () => void;
 }
@@ -52,7 +48,6 @@ interface FiruappMainHeaderProps {
 const FiruappMainHeader: React.FC<FiruappMainHeaderProps> = ({
   language,
   copy,
-  dashboardTheme,
   accountDetails,
   accountMenuAnchor,
   searchValue = "",
@@ -61,7 +56,6 @@ const FiruappMainHeader: React.FC<FiruappMainHeaderProps> = ({
   searchBarRef,
   onAccountMenuOpen,
   onAccountMenuClose,
-  onToggleTheme,
   onToggleLanguage,
   onLogout,
 }) => {
@@ -73,13 +67,42 @@ const FiruappMainHeader: React.FC<FiruappMainHeaderProps> = ({
     .join("") || "DC";
 
   return (
-    <Box ref={searchBarRef} component="header" className="firu-main-header">
-      <Box component={RouterLink} to="/owner-dashboard" className="firu-main-header-brand" aria-label="FiruApp">
-        <FiruBrand horizontal />
-      </Box>
-      <Divider orientation="vertical" flexItem className="firu-main-header-divider" />
-
-      <Box className="firu-main-header-search">
+    <Paper
+      ref={searchBarRef}
+      component="header"
+      elevation={0}
+      sx={{
+        minHeight: { xs: "auto", md: 78 },
+        px: { xs: 2, md: 2.75 },
+        py: { xs: 1.5, md: 0 },
+        borderRadius: 0,
+        bgcolor: "rgba(255,255,255,0.94)",
+        borderBottom: "1px solid rgba(226,232,240,0.86)",
+        boxShadow: "0 12px 34px rgba(15,23,42,0.045)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 2,
+        flexWrap: { xs: "wrap", md: "nowrap" },
+      }}
+    >
+      <Box
+        sx={{
+          width: { xs: "100%", md: "auto" },
+          maxWidth: 675,
+          minWidth: { md: 240 },
+          flex: { md: "1 1 360px" },
+          height: 46,
+          display: "flex",
+          alignItems: "center",
+          gap: 1.35,
+          bgcolor: "#f8fbff",
+          border: "1px solid #d8e5f1",
+          px: 1.7,
+          borderRadius: 2.2,
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.92), 0 10px 22px rgba(15,23,42,0.035)",
+        }}
+      >
         <InputBase
           fullWidth
           value={searchValue}
@@ -95,32 +118,24 @@ const FiruappMainHeader: React.FC<FiruappMainHeaderProps> = ({
         />
       </Box>
 
-      {controls && <Box className="firu-main-header-controls">{controls}</Box>}
+      {controls}
 
-      <Stack direction="row" spacing={1.1} alignItems="center" className="firu-main-header-actions">
-        <IconButton
-          aria-label={`Switch to ${dashboardTheme === "reference" ? "current" : "reference"} dashboard theme`}
-          title={`Switch to ${dashboardTheme === "reference" ? "current" : "reference"} theme`}
-          onClick={onToggleTheme}
-          className="firu-main-header-action"
-        >
-          {dashboardTheme === "reference" ? <CheckIcon sx={{ color: "#0f5de7" }} /> : <PaletteOutlinedIcon />}
-        </IconButton>
+      <Stack direction="row" spacing={1.35} alignItems="center" sx={{ ml: "auto" }}>
         <Button
           onClick={onToggleLanguage}
           startIcon={<LanguageIcon />}
           aria-label={copy.switchLanguage}
           title={copy.switchLanguage}
-          className="firu-main-header-language"
+          sx={{ minWidth: 74, height: 52, bgcolor: "#f8fbff", border: "1px solid #d8e5f1", borderRadius: 2, color: "#1f3350", fontWeight: 900 }}
         >
           {language.toUpperCase()}
         </Button>
-        <IconButton component={RouterLink} to="/alerts" aria-label={copy.alertsCount} className="firu-main-header-action">
+        <IconButton component={RouterLink} to="/alerts" aria-label={copy.alertsCount} sx={{ width: 52, height: 52, bgcolor: "#f8fbff", border: "1px solid #d8e5f1", borderRadius: 2 }}>
           <Badge color="error" variant="dot">
             <NotificationsNoneIcon />
           </Badge>
         </IconButton>
-        <IconButton aria-label={copy.account} className="firu-main-header-action firu-main-header-message">
+        <IconButton aria-label={copy.account} sx={{ width: 52, height: 52, bgcolor: "#f8fbff", border: "1px solid #d8e5f1", borderRadius: 2 }}>
           <Badge color="primary" badgeContent={3} max={9}>
             <MessageOutlinedIcon />
           </Badge>
@@ -130,11 +145,11 @@ const FiruappMainHeader: React.FC<FiruappMainHeaderProps> = ({
           aria-haspopup="menu"
           aria-expanded={Boolean(accountMenuAnchor)}
           onClick={onAccountMenuOpen}
-          className="firu-main-header-account"
+          sx={{ p: 0.25, borderRadius: 2.5 }}
         >
-          <Avatar>{initials}</Avatar>
+          <Avatar sx={{ width: 50, height: 50, bgcolor: "#062346", color: "white", fontWeight: 950, fontSize: 18 }}>{initials}</Avatar>
         </IconButton>
-        <KeyboardArrowDownIcon className="firu-main-header-chevron" />
+        <KeyboardArrowDownIcon sx={{ color: "#3d516e", display: { xs: "none", sm: "block" } }} />
       </Stack>
 
       <Menu
@@ -143,7 +158,7 @@ const FiruappMainHeader: React.FC<FiruappMainHeaderProps> = ({
         onClose={onAccountMenuClose}
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
         transformOrigin={{ vertical: "top", horizontal: "right" }}
-        PaperProps={{ className: "firu-main-header-account-menu" }}
+        PaperProps={{ sx: { mt: 1, minWidth: 270, borderRadius: 2.5, boxShadow: "0 18px 45px rgba(15,23,42,0.16)" } }}
       >
         <Box sx={{ px: 2, py: 1.5 }}>
           <Typography variant="overline" sx={{ color: "#64748b", fontWeight: 900, letterSpacing: 1 }}>
@@ -164,17 +179,13 @@ const FiruappMainHeader: React.FC<FiruappMainHeaderProps> = ({
           <LanguageIcon fontSize="small" />
           <span>{copy.switchLanguage} ({language.toUpperCase()})</span>
         </MenuItem>
-        <MenuItem onClick={onToggleTheme}>
-          <PaletteOutlinedIcon fontSize="small" />
-          <span>{dashboardTheme === "reference" ? "Switch to current theme" : "Switch to reference theme"}</span>
-        </MenuItem>
         <Divider />
-        <MenuItem onClick={onLogout} className="firu-main-header-logout-item">
+        <MenuItem onClick={onLogout} sx={{ color: "#e53935", fontWeight: 800, gap: 1 }}>
           <LogoutIcon fontSize="small" />
           <span>{copy.logout}</span>
         </MenuItem>
       </Menu>
-    </Box>
+    </Paper>
   );
 };
 

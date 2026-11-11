@@ -328,7 +328,6 @@ const FiruappReferenceDashboard: React.FC<FiruappReferenceDashboardProps> = ({
       <FiruappMainHeader
         language={language}
         copy={copy}
-        dashboardTheme={dashboardTheme}
         accountDetails={accountDetails}
         accountMenuAnchor={accountMenuAnchor}
         searchValue={petFilters.petName}
@@ -336,7 +335,6 @@ const FiruappReferenceDashboard: React.FC<FiruappReferenceDashboardProps> = ({
         searchBarRef={searchBarRef}
         onAccountMenuOpen={onAccountMenuOpen}
         onAccountMenuClose={onAccountMenuClose}
-        onToggleTheme={onToggleTheme}
         onToggleLanguage={onToggleLanguage}
         onLogout={onLogout}
       />

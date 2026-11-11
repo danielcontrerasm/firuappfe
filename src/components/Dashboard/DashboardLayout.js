@@ -2,9 +2,8 @@
 import React, { useMemo, useState } from "react";
 import { Box } from "@mui/material";
 import { Outlet, useLocation } from "react-router-dom";
-import OwnerReferenceSidebar from "./ui/OwnerReferenceSidebar.tsx";
+import FiruappSidebar from "./ui/FiruappSidebar.tsx";
 import FiruappMainHeader from "./ui/FiruappMainHeader.tsx";
-import MobileNavigation from "./ui/MobileNavigation.tsx";
 import { getDashboardCopy } from "./ui/dashboardI18n.ts";
 import {
   decodeAuthToken,
@@ -12,20 +11,25 @@ import {
   getCurrentUserEmail,
   getCurrentUserId,
 } from "../../services/auth.ts";
-import "./firuapp-reference-theme.css";
 
 const DashboardLayout = () => {
   const location = useLocation();
   const [language, setLanguage] = useState(() => (
     typeof window !== "undefined" && window.localStorage.getItem("firuapp-language") === "es" ? "es" : "en"
   ));
-  const [dashboardTheme, setDashboardTheme] = useState(() => (
-    typeof window !== "undefined" && window.localStorage.getItem("firuapp-dashboard-theme") === "current"
-      ? "current"
-      : "reference"
-  ));
   const [accountMenuAnchor, setAccountMenuAnchor] = useState(null);
   const copy = getDashboardCopy(language);
+
+  const current =
+    location.pathname === "/geofence"
+      ? "geofence"
+      : location.pathname === "/route" || location.pathname === "/routes/recent"
+        ? "route"
+        : location.pathname === "/walks"
+          ? "walks"
+          : "all";
+  const isMapPage = ["/geofence", "/route", "/routes/recent"].includes(location.pathname);
+
   const accountDetails = useMemo(() => {
     const claims = decodeAuthToken();
     const nestedAccounts = [claims.user, claims.profile, claims.account, claims.data, claims.payload]
@@ -49,17 +53,7 @@ const DashboardLayout = () => {
     };
   }, []);
 
-  const isMapPage = ["/geofence", "/route", "/routes/recent"].includes(location.pathname);
-
-  const handleToggleTheme = () => {
-    setDashboardTheme((currentTheme) => {
-      const next = currentTheme === "reference" ? "current" : "reference";
-      window.localStorage.setItem("firuapp-dashboard-theme", next);
-      return next;
-    });
-  };
-
-  const handleToggleLanguage = () => {
+  const toggleLanguage = () => {
     setLanguage((currentLanguage) => {
       const next = currentLanguage === "es" ? "en" : "es";
       window.localStorage.setItem("firuapp-language", next);
@@ -73,41 +67,33 @@ const DashboardLayout = () => {
   };
 
   return (
-    <Box className="dashboard-global-shell" sx={{ minHeight: "100vh", background: "#f4f8fb" }}>
-      <Box className="dashboard-global-header">
+    <Box
+      className="firu-app-layout"
+      sx={{
+        minHeight: "100vh",
+        display: "flex",
+        background: "#f7fbff",
+      }}
+    >
+      <FiruappSidebar current={current} copy={copy} language={language} />
+
+      <Box sx={{ flexGrow: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
         <FiruappMainHeader
           language={language}
           copy={copy}
-          dashboardTheme={dashboardTheme}
           accountDetails={accountDetails}
           accountMenuAnchor={accountMenuAnchor}
           onAccountMenuOpen={(event) => setAccountMenuAnchor(event.currentTarget)}
           onAccountMenuClose={() => setAccountMenuAnchor(null)}
-          onToggleTheme={() => {
-            setAccountMenuAnchor(null);
-            handleToggleTheme();
-          }}
           onToggleLanguage={() => {
             setAccountMenuAnchor(null);
-            handleToggleLanguage();
+            toggleLanguage();
           }}
           onLogout={() => {
             setAccountMenuAnchor(null);
             handleLogout();
           }}
         />
-      </Box>
-
-      <Box
-        className="firu-app-layout"
-        sx={{
-          minHeight: "calc(100vh - 82px)",
-          display: "flex",
-          background: "#f4f8fb",
-        }}
-      >
-        <OwnerReferenceSidebar language={language} />
-        <MobileNavigation />
 
         <Box
           className="firu-layout-content"
