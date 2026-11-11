@@ -21,9 +21,9 @@
 .firu-brand-stacked { flex-direction: column; }
 .firu-brand-stacked .firu-brand-image { width: 166px; height: 166px; }
 .firu-brand-horizontal { flex-direction: row; gap: 8px; width: 100%; justify-content: flex-start; white-space: nowrap; }
-.firu-brand-horizontal .firu-brand-mark { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.firu-brand-horizontal .firu-brand-mark .firu-brand-image { width: 54px; height: 54px; }
-.firu-brand-horizontal .firu-brand-wordmark { color: #09233f; font-size: 23px; font-weight: 900; letter-spacing: -1px; line-height: 1; }
+.firu-brand-horizontal .firu-brand-mark { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 68px; height: 60px; flex: 0 0 68px; overflow: hidden; }
+.firu-brand-horizontal .firu-brand-mark .firu-brand-image { position: absolute; top: -1px; left: -10px; width: 108px; height: 108px; max-width: none; object-fit: contain; }
+.firu-brand-horizontal .firu-brand-wordmark { color: #09233f; font-size: 26px; font-weight: 900; letter-spacing: -1.1px; line-height: 1; }
 .firu-mobile-option-header { display: none; }
 .firu-content-page { color: var(--firu-ink); background: white; border-radius: 20px; overflow: hidden; min-height: calc(100dvh - 32px); }
 .firu-page-header { position: relative; min-height: 80px; padding: 22px 60px; display: flex; justify-content: center; align-items: center; border-bottom: 1px solid var(--firu-line); background: white; }
