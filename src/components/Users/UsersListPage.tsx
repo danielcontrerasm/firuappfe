@@ -1,10 +1,28 @@
-import React, { useState } from "react";
-import { Alert, Avatar, Box, Chip, MenuItem, TextField } from "@mui/material";
+import React, { useCallback, useEffect, useState } from "react";
+import axios from "axios";
+import {
+  Alert,
+  Avatar,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  MenuItem,
+  Stack,
+  TextField,
+} from "@mui/material";
+import PersonAddAlt1Icon from "@mui/icons-material/PersonAddAlt1";
 import EntityListPage, { Column } from "./EntityListPage.tsx";
-import { getApiErrorMessage, Plan, PLAN_ORDER, getPlanLabel } from "../../config/plans.ts";
+import { buildApiUrl } from "../../config/runtime";
+import { getStoredAuthToken } from "../../services/auth.ts";
+import { getApiErrorMessage, normalizePlan, Plan, PLAN_ORDER, getPlanLabel } from "../../config/plans.ts";
 import { updateUserPlan } from "../../services/currentUser.ts";
 
-type UserRole = "OWNER" | "ADMIN";
+type UserRole = "OWNER" | "WALKER" | "ADMIN";
 
 export interface UserRow {
   id: string;
@@ -15,29 +33,61 @@ export interface UserRow {
   plan: Plan;
 }
 
-const mockUsers: UserRow[] = [
-  {
-    id: "1",
-    name: "Daniel Contreras",
-    email: "daniel@example.com",
-    role: "OWNER",
-    petsCount: 3,
-    plan: "BASIC",
-  },
-  {
-    id: "2",
-    name: "Admin User",
-    email: "admin@example.com",
-    role: "ADMIN",
-    petsCount: 0,
-    plan: "PREMIUM",
-  },
-];
+const normalizeUserRole = (value: unknown): UserRole => {
+  const role = String(value ?? "USER").trim().toUpperCase();
+  if (role.includes("ADMIN")) return "ADMIN";
+  if (role.includes("WALKER")) return "WALKER";
+  return "OWNER";
+};
+
+const mapUserRow = (value: any, index: number): UserRow => ({
+  id: String(value?.id ?? value?.userId ?? `server-${index}`),
+  name: String(value?.name ?? "Sin nombre"),
+  email: String(value?.email ?? ""),
+  role: normalizeUserRole(value?.role),
+  petsCount: Number(value?.petsCount ?? 0),
+  plan: normalizePlan(value?.plan),
+});
 
 const UsersListPage: React.FC = () => {
-  const [users, setUsers] = useState<UserRow[]>(mockUsers);
+  const [users, setUsers] = useState<UserRow[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ severity: "success" | "error" | "info"; message: string } | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
+  const [newUser, setNewUser] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+    plan: "BASIC" as Plan,
+  });
+
+  const loadUsers = useCallback(async () => {
+    setLoadingUsers(true);
+    try {
+      const token = getStoredAuthToken();
+      const response = await axios.get(buildApiUrl("/api/admin/users"), token ? {
+        headers: { Authorization: `Bearer ${token}` },
+      } : undefined);
+      const collection = Array.isArray(response.data)
+        ? response.data
+        : response.data?.users ?? response.data?.content ?? [];
+      setUsers(collection.map(mapUserRow));
+    } catch (error) {
+      console.error("Error loading admin users:", error);
+      setUsers([]);
+      setFeedback({ severity: "error", message: getApiErrorMessage(error, "No se pudieron cargar todos los usuarios.") });
+    } finally {
+      setLoadingUsers(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadUsers();
+  }, [loadUsers]);
 
   const handlePlanChange = async (row: UserRow, plan: Plan) => {
     if (row.plan === plan) return;
@@ -52,6 +102,59 @@ const UsersListPage: React.FC = () => {
       setFeedback({ severity: "error", message: getApiErrorMessage(error, "No se pudo actualizar el plan del usuario.") });
     } finally {
       setPendingUserId(null);
+    }
+  };
+
+  const closeCreateDialog = () => {
+    if (creating) return;
+    setCreateOpen(false);
+    setCreateError("");
+    setNewUser({ name: "", email: "", phone: "", password: "", plan: "BASIC" });
+  };
+
+  const handleCreateUser = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setCreateError("");
+    setCreating(true);
+
+    try {
+      const token = getStoredAuthToken();
+      const response = await axios.post(
+        buildApiUrl("/api/auth/register"),
+        {
+          name: newUser.name.trim(),
+          email: newUser.email.trim(),
+          password: newUser.password,
+          phone: newUser.phone.trim() || undefined,
+          plan: newUser.plan,
+        },
+        token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+      );
+
+      const responseUser = response.data?.user && typeof response.data.user === "object"
+        ? response.data.user
+        : response.data && typeof response.data === "object"
+          ? response.data
+          : {};
+      const createdUser: UserRow = {
+        id: String(responseUser.id ?? `new-${Date.now()}`),
+        name: String(responseUser.name ?? newUser.name.trim()),
+        email: String(responseUser.email ?? newUser.email.trim()),
+        role: String(responseUser.role ?? "USER").toUpperCase().includes("ADMIN") ? "ADMIN" : "OWNER",
+        petsCount: Number(responseUser.petsCount ?? 0),
+        plan: normalizePlan(responseUser.plan ?? newUser.plan),
+      };
+
+      setUsers((current) => [createdUser, ...current]);
+      setFeedback({ severity: "success", message: `El usuario ${createdUser.name} fue creado correctamente.` });
+      setCreateOpen(false);
+      setCreateError("");
+      setNewUser({ name: "", email: "", phone: "", password: "", plan: "BASIC" });
+    } catch (error) {
+      console.error("Error creating user:", error);
+      setCreateError(getApiErrorMessage(error, "No se pudo crear el usuario."));
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -76,7 +179,7 @@ const UsersListPage: React.FC = () => {
         <Chip
           size="small"
           label={row.role}
-          color={row.role === "ADMIN" ? "primary" : "default"}
+          color={row.role === "ADMIN" ? "primary" : row.role === "WALKER" ? "secondary" : "default"}
         />
       ),
     },
@@ -105,6 +208,12 @@ const UsersListPage: React.FC = () => {
   return (
     <>
       {feedback && <Alert severity={feedback.severity} sx={{ mx: { xs: 1.5, md: 2 }, mt: 1.5 }}>{feedback.message}</Alert>}
+      {loadingUsers && (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mx: { xs: 1.5, md: 2 }, mt: 1.5 }}>
+          <CircularProgress size={20} />
+          Cargando usuarios…
+        </Box>
+      )}
       <EntityListPage<UserRow>
         title="Users"
         columns={columns}
@@ -115,14 +224,76 @@ const UsersListPage: React.FC = () => {
         filterField="role"
         filterOptions={[
           { label: "Owners", value: "OWNER" },
+          { label: "Walkers", value: "WALKER" },
           { label: "Admins", value: "ADMIN" },
         ]}
         onCreate={() => {
-          setFeedback({ severity: "info", message: "La creación de usuarios se realiza desde el registro." });
+          setFeedback(null);
+          setCreateError("");
+          setCreateOpen(true);
         }}
         onEdit={(row) => setFeedback({ severity: "success", message: `Seleccionaste a ${row.name}.` })}
         onDelete={(row) => setFeedback({ severity: "error", message: `La eliminación de ${row.name} aún no está disponible en el contrato de usuarios.` })}
       />
+
+      <Dialog open={createOpen} onClose={closeCreateDialog} fullWidth maxWidth="sm">
+        <DialogTitle>Crear usuario</DialogTitle>
+        <Box component="form" onSubmit={handleCreateUser}>
+          <DialogContent dividers>
+            <Stack spacing={1.5}>
+              <TextField
+                label="Nombre completo"
+                value={newUser.name}
+                onChange={(event) => setNewUser((current) => ({ ...current, name: event.target.value }))}
+                required
+                autoComplete="name"
+                fullWidth
+              />
+              <TextField
+                label="Correo electrónico"
+                type="email"
+                value={newUser.email}
+                onChange={(event) => setNewUser((current) => ({ ...current, email: event.target.value }))}
+                required
+                autoComplete="email"
+                fullWidth
+              />
+              <TextField
+                label="Teléfono (opcional)"
+                value={newUser.phone}
+                onChange={(event) => setNewUser((current) => ({ ...current, phone: event.target.value }))}
+                autoComplete="tel"
+                fullWidth
+              />
+              <TextField
+                label="Contraseña temporal"
+                type="password"
+                value={newUser.password}
+                onChange={(event) => setNewUser((current) => ({ ...current, password: event.target.value }))}
+                required
+                autoComplete="new-password"
+                fullWidth
+              />
+              <TextField
+                select
+                label="Plan"
+                value={newUser.plan}
+                onChange={(event) => setNewUser((current) => ({ ...current, plan: event.target.value as Plan }))}
+                fullWidth
+              >
+                {PLAN_ORDER.map((plan) => <MenuItem key={plan} value={plan}>{getPlanLabel(plan)}</MenuItem>)}
+              </TextField>
+              {createError && <Alert severity="error">{createError}</Alert>}
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, py: 2 }}>
+            <Button onClick={closeCreateDialog} disabled={creating}>Cancelar</Button>
+            <Button type="submit" variant="contained" startIcon={creating ? <CircularProgress size={18} color="inherit" /> : <PersonAddAlt1Icon />} disabled={creating}>
+              {creating ? "Creando…" : "Crear usuario"}
+            </Button>
+          </DialogActions>
+        </Box>
+      </Dialog>
     </>
   );
 };

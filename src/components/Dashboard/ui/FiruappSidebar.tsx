@@ -62,7 +62,7 @@ const FiruappSidebar: React.FC<SidebarProps & { copy?: DashboardCopy; language?:
   const navContent = (
     <Box
       sx={{
-        width: { xs: 284, md: 208 },
+        width: { xs: 284, md: 240 },
         minHeight: "100vh",
         py: 2.25,
         px: 1.75,
@@ -77,7 +77,7 @@ const FiruappSidebar: React.FC<SidebarProps & { copy?: DashboardCopy; language?:
         zIndex: 20,
       }}
     >
-      <Box sx={{ minHeight: 118, display: "flex", alignItems: "center", justifyContent: "flex-start", mb: 1, px: 0.5, overflow: "hidden" }}>
+      <Box className="firu-sidebar-brand" sx={{ minHeight: 118, display: "flex", alignItems: "center", justifyContent: "flex-start", mb: 1, overflow: "hidden" }}>
         <FiruBrand horizontal />
       </Box>
 
