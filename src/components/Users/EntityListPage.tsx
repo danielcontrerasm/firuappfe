@@ -22,6 +22,7 @@ import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import ShareIcon from "@mui/icons-material/Share";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
 
 export interface Column<T> {
   field: keyof T | string;
@@ -48,6 +49,7 @@ export interface EntityListPageProps<T> {
   onEdit?: (row: T) => void;
   onDelete?: (row: T) => void;
   onShare?: (row: T) => void;
+  onTemporaryAccess?: (row: T) => void;
 
   pageSize?: number;
   renderMobileRow?: (row: T) => React.ReactNode;
@@ -66,6 +68,7 @@ function EntityListPage<T extends { id: string | number }>({
   onEdit,
   onDelete,
   onShare,
+  onTemporaryAccess,
   pageSize = 5,
   renderMobileRow,
 }: EntityListPageProps<T>) {
@@ -185,6 +188,7 @@ function EntityListPage<T extends { id: string | number }>({
           {renderMobileRow(row)}
           <div className="firu-managed-pet-actions">
             {onShare && <Button size="small" startIcon={<ShareIcon />} onClick={() => onShare(row)}>Compartir</Button>}
+            {onTemporaryAccess && <Button size="small" startIcon={<AccessTimeIcon />} onClick={() => onTemporaryAccess(row)}>Acceso temporal</Button>}
             <Button size="small" startIcon={<EditIcon />} onClick={() => onEdit?.(row)}>Editar</Button>
             <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={() => onDelete?.(row)}>Eliminar</Button>
           </div>
@@ -244,6 +248,9 @@ function EntityListPage<T extends { id: string | number }>({
                   <TableCell align="right">
                     {onShare && <IconButton size="small" onClick={() => onShare(row)} aria-label="Compartir">
                       <ShareIcon fontSize="small" />
+                    </IconButton>}
+                    {onTemporaryAccess && <IconButton size="small" onClick={() => onTemporaryAccess(row)} aria-label="Acceso temporal">
+                      <AccessTimeIcon fontSize="small" />
                     </IconButton>}
                     <IconButton
                       size="small"

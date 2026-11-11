@@ -6,10 +6,14 @@ import {
   Box,
   Button,
   Chip,
+  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
+  FormControlLabel,
+  FormGroup,
   MenuItem,
   TextField,
   Typography,
@@ -20,6 +24,14 @@ import { buildApiUrl, buildAssetUrl } from "../../config/runtime";
 import { isOwnedByCurrentUser } from "../../services/auth.ts";
 import { getApiErrorMessage } from "../../config/plans.ts";
 import { usePlan } from "../../context/PlanContext.tsx";
+import {
+  inviteTemporaryAccess,
+  listTemporaryAccess,
+  revokeTemporaryAccess,
+  TemporaryAccessDto,
+  TemporaryAccessPermission,
+  TemporaryAccessRole,
+} from "../../services/temporaryAccess.ts";
 
 type PetStatus = "active" | "lost" | "offline";
 
@@ -43,6 +55,84 @@ type SharedPersonDto = {
   name: string;
   email: string;
   sharedAt: string;
+};
+
+type TemporaryAccessMode = "ONCE" | "RECURRING";
+
+type TemporaryAccessForm = {
+  name: string;
+  email: string;
+  role: TemporaryAccessRole;
+  mode: TemporaryAccessMode;
+  startsAt: string;
+  endsAt: string;
+  startTime: string;
+  endTime: string;
+  daysOfWeek: number[];
+  permissions: Record<TemporaryAccessPermission, boolean>;
+};
+
+const temporaryAccessPermissionLabels: Array<{ value: TemporaryAccessPermission; label: string; description: string }> = [
+  { value: "LIVE_LOCATION", label: "Ubicación en vivo", description: "Posición actual y estado de conexión." },
+  { value: "ALERTS", label: "Alertas y batería", description: "Alertas de seguridad y batería." },
+  { value: "HISTORY", label: "Historial y recorridos", description: "Recorridos disponibles para esta mascota." },
+  { value: "GEOFENCES", label: "Geocercas", description: "Estado de las zonas seguras de esta mascota." },
+];
+
+const weekdays = [
+  { value: 1, label: "Lun" },
+  { value: 2, label: "Mar" },
+  { value: 3, label: "Mié" },
+  { value: 4, label: "Jue" },
+  { value: 5, label: "Vie" },
+  { value: 6, label: "Sáb" },
+  { value: 7, label: "Dom" },
+];
+
+const toLocalDateTimeInput = (date: Date) => {
+  const offset = date.getTimezoneOffset();
+  const localDate = new Date(date.getTime() - offset * 60_000);
+  return localDate.toISOString().slice(0, 16);
+};
+
+const createTemporaryAccessForm = (): TemporaryAccessForm => {
+  const startsAt = new Date(Date.now() + 60 * 60 * 1000);
+  const endsAt = new Date(startsAt.getTime() + 60 * 60 * 1000);
+  return {
+    name: "",
+    email: "",
+    role: "WALKER",
+    mode: "ONCE",
+    startsAt: toLocalDateTimeInput(startsAt),
+    endsAt: toLocalDateTimeInput(endsAt),
+    startTime: "08:00",
+    endTime: "17:00",
+    daysOfWeek: [1, 2, 3, 4, 5],
+    permissions: {
+      LIVE_LOCATION: true,
+      ALERTS: true,
+      HISTORY: true,
+      GEOFENCES: true,
+    },
+  };
+};
+
+const mapTemporaryAccess = (access: any, fallbackId?: string | number): TemporaryAccessDto => ({
+  id: access?.id ?? access?.accessId ?? fallbackId ?? `temporary-${Date.now()}`,
+  name: access?.name ?? access?.userName ?? access?.inviteeName ?? "Usuario invitado",
+  email: access?.email ?? access?.userEmail ?? "",
+  role: access?.role ?? "WALKER",
+  status: access?.status ?? "ACTIVE",
+  startsAt: access?.startsAt ?? access?.validFrom ?? access?.startAt,
+  endsAt: access?.endsAt ?? access?.validUntil ?? access?.endAt,
+  permissions: access?.permissions ?? [],
+  recurrence: access?.recurrence ?? null,
+});
+
+const formatTemporaryAccessDate = (value?: string) => {
+  if (!value) return "Sin fecha";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 };
 
 const emptyPetDraft: PetRow = {
@@ -194,7 +284,13 @@ const PetsListPage: React.FC = () => {
   const [shareSaving, setShareSaving] = useState(false);
   const [shareFeedback, setShareFeedback] = useState<{ severity: "success" | "error"; message: string } | null>(null);
   const [petFeedback, setPetFeedback] = useState<{ severity: "success" | "error"; message: string } | null>(null);
-  const { limits, isAdmin } = usePlan();
+  const [temporaryAccessPet, setTemporaryAccessPet] = useState<PetRow | null>(null);
+  const [temporaryAccesses, setTemporaryAccesses] = useState<TemporaryAccessDto[]>([]);
+  const [temporaryAccessForm, setTemporaryAccessForm] = useState<TemporaryAccessForm>(createTemporaryAccessForm);
+  const [temporaryAccessLoading, setTemporaryAccessLoading] = useState(false);
+  const [temporaryAccessSaving, setTemporaryAccessSaving] = useState(false);
+  const [temporaryAccessFeedback, setTemporaryAccessFeedback] = useState<{ severity: "success" | "error" | "warning"; message: string } | null>(null);
+  const { limits, isAdmin, canUseCaregiverAccess, hasRecurringCaregiverSchedule } = usePlan();
 
   const handleEditChange = (field: keyof PetRow, value: string) => {
     setEditingPet((current) => current ? { ...current, [field]: value } : current);
@@ -403,6 +499,126 @@ const PetsListPage: React.FC = () => {
     }
   };
 
+  const handleOpenTemporaryAccess = async (pet: PetRow) => {
+    setTemporaryAccessPet(pet);
+    setTemporaryAccessForm(createTemporaryAccessForm());
+    setTemporaryAccessFeedback(null);
+    setTemporaryAccesses([]);
+
+    if (!canUseCaregiverAccess && !isAdmin) return;
+
+    setTemporaryAccessLoading(true);
+    try {
+      const accesses = await listTemporaryAccess(pet.id);
+      setTemporaryAccesses(accesses.map((access, index) => mapTemporaryAccess(access, `${pet.id}-${index}`)));
+    } catch (error) {
+      console.error("Error loading temporary pet access:", error);
+      setTemporaryAccessFeedback({ severity: "error", message: getApiErrorMessage(error, "No se pudieron cargar los accesos temporales.") });
+    } finally {
+      setTemporaryAccessLoading(false);
+    }
+  };
+
+  const handleCloseTemporaryAccess = () => {
+    if (temporaryAccessSaving) return;
+    setTemporaryAccessPet(null);
+    setTemporaryAccessFeedback(null);
+  };
+
+  const handleTemporaryPermissionChange = (permission: TemporaryAccessPermission, checked: boolean) => {
+    setTemporaryAccessForm((current) => ({
+      ...current,
+      permissions: { ...current.permissions, [permission]: checked },
+    }));
+  };
+
+  const handleTemporaryDayChange = (day: number) => {
+    setTemporaryAccessForm((current) => ({
+      ...current,
+      daysOfWeek: current.daysOfWeek.includes(day)
+        ? current.daysOfWeek.filter((value) => value !== day)
+        : [...current.daysOfWeek, day].sort((a, b) => a - b),
+    }));
+  };
+
+  const handleCreateTemporaryAccess = async () => {
+    if (!temporaryAccessPet) return;
+    if (!canUseCaregiverAccess && !isAdmin) {
+      setTemporaryAccessFeedback({ severity: "warning", message: "El acceso temporal está disponible desde el plan Family." });
+      return;
+    }
+    if (temporaryAccessForm.mode === "RECURRING" && !hasRecurringCaregiverSchedule && !isAdmin) {
+      setTemporaryAccessFeedback({ severity: "warning", message: "Los horarios recurrentes están disponibles únicamente para Premium." });
+      return;
+    }
+    if (!temporaryAccessForm.name.trim() || !temporaryAccessForm.email.trim()) {
+      setTemporaryAccessFeedback({ severity: "error", message: "Ingresa el nombre y correo del cuidador o paseador." });
+      return;
+    }
+
+    const startsAt = new Date(temporaryAccessForm.startsAt);
+    const endsAt = new Date(temporaryAccessForm.endsAt);
+    if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime()) || endsAt <= startsAt) {
+      setTemporaryAccessFeedback({ severity: "error", message: "La fecha de finalización debe ser posterior al inicio." });
+      return;
+    }
+    if (temporaryAccessForm.mode === "RECURRING" && temporaryAccessForm.daysOfWeek.length === 0) {
+      setTemporaryAccessFeedback({ severity: "error", message: "Selecciona al menos un día para el horario recurrente." });
+      return;
+    }
+
+    setTemporaryAccessSaving(true);
+    setTemporaryAccessFeedback(null);
+    try {
+      const response = await inviteTemporaryAccess(temporaryAccessPet.id, {
+        email: temporaryAccessForm.email.trim(),
+        name: temporaryAccessForm.name.trim(),
+        role: temporaryAccessForm.role,
+        startsAt: startsAt.toISOString(),
+        endsAt: endsAt.toISOString(),
+        permissions: temporaryAccessPermissionLabels
+          .filter(({ value }) => temporaryAccessForm.permissions[value])
+          .map(({ value }) => value),
+        recurrence: temporaryAccessForm.mode === "RECURRING"
+          ? {
+              daysOfWeek: temporaryAccessForm.daysOfWeek,
+              startTime: temporaryAccessForm.startTime,
+              endTime: temporaryAccessForm.endTime,
+            }
+          : null,
+        createAccountIfMissing: true,
+        sendCredentials: true,
+      });
+      const createdAccess = mapTemporaryAccess(response?.access ?? response?.temporaryAccess ?? response, `${temporaryAccessPet.id}-${Date.now()}`);
+      setTemporaryAccesses((current) => [createdAccess, ...current]);
+      setTemporaryAccessForm(createTemporaryAccessForm());
+      setTemporaryAccessFeedback({
+        severity: "success",
+        message: `Se creó el acceso para ${temporaryAccessForm.name.trim()} y se enviaron las instrucciones a su correo.`,
+      });
+    } catch (error) {
+      console.error("Error creating temporary pet access:", error);
+      setTemporaryAccessFeedback({ severity: "error", message: getApiErrorMessage(error, "No se pudo crear el acceso temporal.") });
+    } finally {
+      setTemporaryAccessSaving(false);
+    }
+  };
+
+  const handleRevokeTemporaryAccess = async (accessId: string | number) => {
+    if (!temporaryAccessPet) return;
+    setTemporaryAccessSaving(true);
+    try {
+      await revokeTemporaryAccess(temporaryAccessPet.id, accessId);
+      setTemporaryAccesses((current) => current.filter((access) => String(access.id) !== String(accessId)));
+      setTemporaryAccessFeedback({ severity: "success", message: "El acceso temporal fue revocado." });
+    } catch (error) {
+      console.error("Error revoking temporary pet access:", error);
+      setTemporaryAccessFeedback({ severity: "error", message: getApiErrorMessage(error, "No se pudo revocar el acceso temporal.") });
+    } finally {
+      setTemporaryAccessSaving(false);
+    }
+  };
+
   const handleCreatePet = async () => {
     if (!creatingPet) return;
 
@@ -488,6 +704,7 @@ const PetsListPage: React.FC = () => {
           setEditingPet(row);
         }}
         onShare={handleOpenShare}
+        onTemporaryAccess={handleOpenTemporaryAccess}
         onDelete={handleDeletePet}
       />
 
@@ -616,6 +833,202 @@ const PetsListPage: React.FC = () => {
             sx={{ bgcolor: "#0f172a", borderRadius: 3, textTransform: "none", fontWeight: 900 }}
           >
             {creatingPetRequest ? "Creating..." : "Create pet"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(temporaryAccessPet)}
+        onClose={handleCloseTemporaryAccess}
+        fullWidth
+        maxWidth="md"
+        PaperProps={{ sx: { borderRadius: 4 } }}
+      >
+        <DialogTitle sx={{ color: "#0f172a", fontWeight: 900 }}>
+          Acceso temporal · {temporaryAccessPet?.name || "mascota"}
+        </DialogTitle>
+        <DialogContent sx={{ display: "grid", gap: 2, pt: 1 }}>
+          {!canUseCaregiverAccess && !isAdmin && (
+            <Alert severity="warning">
+              Esta función está disponible desde el plan Family. Premium también permite horarios recurrentes.
+            </Alert>
+          )}
+          {temporaryAccessFeedback && <Alert severity={temporaryAccessFeedback.severity}>{temporaryAccessFeedback.message}</Alert>}
+
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
+            <TextField
+              label="Nombre del cuidador o paseador"
+              value={temporaryAccessForm.name}
+              onChange={(event) => setTemporaryAccessForm((current) => ({ ...current, name: event.target.value }))}
+              fullWidth
+              required
+              disabled={!canUseCaregiverAccess && !isAdmin}
+            />
+            <TextField
+              label="Correo electrónico"
+              type="email"
+              value={temporaryAccessForm.email}
+              onChange={(event) => setTemporaryAccessForm((current) => ({ ...current, email: event.target.value }))}
+              fullWidth
+              required
+              disabled={!canUseCaregiverAccess && !isAdmin}
+              helperText="Si no existe, se creará la cuenta automáticamente."
+            />
+            <TextField
+              select
+              label="Tipo de acceso"
+              value={temporaryAccessForm.role}
+              onChange={(event) => setTemporaryAccessForm((current) => ({ ...current, role: event.target.value as TemporaryAccessRole }))}
+              fullWidth
+              disabled={!canUseCaregiverAccess && !isAdmin}
+            >
+              <MenuItem value="WALKER">Paseador</MenuItem>
+              <MenuItem value="CAREGIVER">Cuidador</MenuItem>
+            </TextField>
+            <TextField
+              select
+              label="Tipo de vigencia"
+              value={temporaryAccessForm.mode}
+              onChange={(event) => setTemporaryAccessForm((current) => ({ ...current, mode: event.target.value as TemporaryAccessMode }))}
+              fullWidth
+              disabled={!canUseCaregiverAccess && !isAdmin}
+            >
+              <MenuItem value="ONCE">Acceso puntual</MenuItem>
+              <MenuItem value="RECURRING" disabled={!hasRecurringCaregiverSchedule && !isAdmin}>Horario recurrente · Premium</MenuItem>
+            </TextField>
+            <TextField
+              label="Inicio"
+              type="datetime-local"
+              value={temporaryAccessForm.startsAt}
+              onChange={(event) => setTemporaryAccessForm((current) => ({ ...current, startsAt: event.target.value }))}
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+              disabled={!canUseCaregiverAccess && !isAdmin}
+            />
+            <TextField
+              label="Vencimiento"
+              type="datetime-local"
+              value={temporaryAccessForm.endsAt}
+              onChange={(event) => setTemporaryAccessForm((current) => ({ ...current, endsAt: event.target.value }))}
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+              disabled={!canUseCaregiverAccess && !isAdmin}
+            />
+          </Box>
+
+          {temporaryAccessForm.mode === "RECURRING" && (
+            <Box sx={{ display: "grid", gap: 1.5, p: 2, borderRadius: 3, bgcolor: "#f8fafc", border: "1px solid #e2e8f0" }}>
+              <Typography variant="subtitle2" sx={{ color: "#0f172a", fontWeight: 900 }}>
+                Horario recurrente
+              </Typography>
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
+                {weekdays.map((day) => {
+                  const selected = temporaryAccessForm.daysOfWeek.includes(day.value);
+                  return (
+                    <Button
+                      key={day.value}
+                      size="small"
+                      variant={selected ? "contained" : "outlined"}
+                      onClick={() => handleTemporaryDayChange(day.value)}
+                      disabled={!hasRecurringCaregiverSchedule && !isAdmin}
+                      sx={{ minWidth: 48, borderRadius: 2, textTransform: "none" }}
+                    >
+                      {day.label}
+                    </Button>
+                  );
+                })}
+              </Box>
+              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
+                <TextField
+                  label="Hora de inicio"
+                  type="time"
+                  value={temporaryAccessForm.startTime}
+                  onChange={(event) => setTemporaryAccessForm((current) => ({ ...current, startTime: event.target.value }))}
+                  InputLabelProps={{ shrink: true }}
+                  disabled={!hasRecurringCaregiverSchedule && !isAdmin}
+                />
+                <TextField
+                  label="Hora de finalización"
+                  type="time"
+                  value={temporaryAccessForm.endTime}
+                  onChange={(event) => setTemporaryAccessForm((current) => ({ ...current, endTime: event.target.value }))}
+                  InputLabelProps={{ shrink: true }}
+                  disabled={!hasRecurringCaregiverSchedule && !isAdmin}
+                />
+              </Box>
+            </Box>
+          )}
+
+          <Box>
+            <Typography variant="subtitle2" sx={{ color: "#0f172a", fontWeight: 900, mb: 0.5 }}>
+              Permisos para esta mascota
+            </Typography>
+            <FormGroup>
+              {temporaryAccessPermissionLabels.map((permission) => (
+                <FormControlLabel
+                  key={permission.value}
+                  control={(
+                    <Checkbox
+                      checked={temporaryAccessForm.permissions[permission.value]}
+                      onChange={(event) => handleTemporaryPermissionChange(permission.value, event.target.checked)}
+                      disabled={!canUseCaregiverAccess && !isAdmin}
+                    />
+                  )}
+                  label={(
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 800 }}>{permission.label}</Typography>
+                      <Typography variant="caption" color="text.secondary">{permission.description}</Typography>
+                    </Box>
+                  )}
+                />
+              ))}
+            </FormGroup>
+          </Box>
+
+          <Alert severity="info">
+            Si el correo no pertenece a un usuario, el sistema creará una cuenta de paseador/cuidador y enviará las credenciales temporales por correo. El acceso queda limitado a esta mascota y a la vigencia indicada.
+          </Alert>
+
+          <Divider />
+          <Box>
+            <Typography variant="subtitle2" sx={{ color: "#0f172a", fontWeight: 900, mb: 1 }}>
+              Accesos activos
+            </Typography>
+            {temporaryAccessLoading ? (
+              <Typography variant="body2" color="text.secondary">Cargando accesos temporales…</Typography>
+            ) : temporaryAccesses.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">Todavía no hay accesos temporales para esta mascota.</Typography>
+            ) : (
+              <Box sx={{ display: "grid", gap: 1 }}>
+                {temporaryAccesses.map((access) => (
+                  <Box key={String(access.id)} sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1.5, p: 1.25, borderRadius: 2, bgcolor: "#f8fafc" }}>
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 800 }}>{access.name || access.email}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {access.email} · {access.role === "CAREGIVER" ? "Cuidador" : "Paseador"}
+                      </Typography>
+                      <Typography variant="caption" display="block" color="text.secondary">
+                        {formatTemporaryAccessDate(access.startsAt)} → {formatTemporaryAccessDate(access.endsAt)}
+                      </Typography>
+                    </Box>
+                    <Button size="small" color="error" onClick={() => handleRevokeTemporaryAccess(access.id)} disabled={temporaryAccessSaving}>
+                      Revocar
+                    </Button>
+                  </Box>
+                ))}
+              </Box>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={handleCloseTemporaryAccess} disabled={temporaryAccessSaving}>Cerrar</Button>
+          <Button
+            variant="contained"
+            onClick={handleCreateTemporaryAccess}
+            disabled={(!canUseCaregiverAccess && !isAdmin) || temporaryAccessSaving || !temporaryAccessForm.name.trim() || !temporaryAccessForm.email.trim()}
+            sx={{ fontWeight: 900 }}
+          >
+            {temporaryAccessSaving ? "Guardando…" : "Crear acceso y enviar correo"}
           </Button>
         </DialogActions>
       </Dialog>
