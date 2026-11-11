@@ -27,6 +27,7 @@ import {
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
+import EditIcon from "@mui/icons-material/Edit";
 import GroupAddIcon from "@mui/icons-material/GroupAdd";
 import LinkIcon from "@mui/icons-material/Link";
 import LogoutIcon from "@mui/icons-material/Logout";
@@ -39,6 +40,7 @@ import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import { useSearchParams } from "react-router-dom";
 import { buildApiUrl, buildAssetUrl, searchGroupEndpoints } from "../../config/runtime";
 import { getCurrentUserEmail, getCurrentUserId, isCurrentUserAdmin, isOwnedByCurrentUser } from "../../services/auth.ts";
+import { usePlan } from "../../context/PlanContext.tsx";
 import GroupChatDialog from "./GroupChatDialog.tsx";
 
 type VolunteerMemberDto = {
@@ -57,6 +59,7 @@ type VolunteerCandidateDto = {
 type SearchGroupDto = {
   id: number;
   groupName: string;
+  visibility: "PRIVATE" | "PUBLIC";
   description: string;
   status: string;
   area: string;
@@ -79,6 +82,7 @@ type SearchGroupDto = {
 
 type NewGroupFormState = {
   groupName: string;
+  visibility: "PRIVATE" | "PUBLIC";
   description: string;
   status: string;
   area: string;
@@ -90,6 +94,19 @@ type NewGroupFormState = {
   whatsappGroupLink: string;
   photoFile: File | null;
   photoPreviewUrl: string;
+};
+
+type EditGroupFormState = {
+  groupName: string;
+  visibility: "PRIVATE" | "PUBLIC";
+  description: string;
+  status: string;
+  area: string;
+  city: string;
+  leaderName: string;
+  leaderPhone: string;
+  coverageRadiusKm: string;
+  whatsappGroupLink: string;
 };
 
 type PetOption = {
@@ -167,6 +184,7 @@ const mapDtoToSearchGroup = (dto: any): SearchGroupDto => {
   return {
     id: getSearchGroupId(dto),
     groupName: dto.groupName ?? dto.name ?? "Unnamed group",
+    visibility: String(dto.visibility ?? "PRIVATE").toUpperCase() === "PUBLIC" ? "PUBLIC" : "PRIVATE",
     description: dto.description ?? "",
     status: dto.status ?? "standby",
     area: dto.area ?? dto.zone ?? "",
@@ -213,11 +231,11 @@ const getAuthHeaders = () => {
   return token ? { Authorization: `Bearer ${token}` } : undefined;
 };
 
-const fetchPersistedGroups = async (): Promise<SearchGroupDto[]> => {
+const fetchPersistedGroups = async (admin = isCurrentUserAdmin()): Promise<SearchGroupDto[]> => {
   // Regular users should only see groups where they are already members (or
   // the owner). A pending invitation is handled by the join-link flow below;
   // it must not make the public group list visible.
-  const endpoint = isCurrentUserAdmin() ? searchGroupEndpoints.list : searchGroupEndpoints.mine;
+  const endpoint = admin ? searchGroupEndpoints.list : searchGroupEndpoints.mine;
   const response = await axios.get(buildApiUrl(endpoint), {
     headers: getAuthHeaders(),
   });
@@ -225,8 +243,8 @@ const fetchPersistedGroups = async (): Promise<SearchGroupDto[]> => {
     .map((dto: any) => mapDtoToSearchGroup(dto));
 };
 
-const getKnownJoinedGroupIds = (groupList: SearchGroupDto[]): number[] => {
-  if (!isCurrentUserAdmin()) {
+const getKnownJoinedGroupIds = (groupList: SearchGroupDto[], admin = isCurrentUserAdmin()): number[] => {
+  if (!admin) {
     // The /my endpoint only returns groups where the current user has an
     // active membership, including groups they created.
     return groupList.map((group) => group.id);
@@ -255,6 +273,7 @@ const getAuthenticatedUserId = (): number | null => {
 
 const createDefaultGroupForm = (): NewGroupFormState => ({
   groupName: "",
+  visibility: "PRIVATE",
   description: "",
   status: "active",
   area: "",
@@ -266,6 +285,19 @@ const createDefaultGroupForm = (): NewGroupFormState => ({
   whatsappGroupLink: "",
   photoFile: null,
   photoPreviewUrl: "",
+});
+
+const editGroupFormFromDto = (group: SearchGroupDto): EditGroupFormState => ({
+  groupName: group.groupName,
+  visibility: group.visibility,
+  description: group.description,
+  status: group.status,
+  area: group.area,
+  city: group.city,
+  leaderName: group.leaderName,
+  leaderPhone: group.leaderPhone,
+  coverageRadiusKm: String(group.coverageRadiusKm || ""),
+  whatsappGroupLink: group.whatsappGroupLink,
 });
 
 const VolunteerGroupsPage: React.FC = () => {
@@ -290,6 +322,9 @@ const VolunteerGroupsPage: React.FC = () => {
   const [whatsappMessage, setWhatsappMessage] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newGroupForm, setNewGroupForm] = useState<NewGroupFormState>(createDefaultGroupForm);
+  const [editingGroup, setEditingGroup] = useState<SearchGroupDto | null>(null);
+  const [editGroupForm, setEditGroupForm] = useState<EditGroupFormState | null>(null);
+  const [isUpdatingGroup, setIsUpdatingGroup] = useState(false);
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const [joiningGroupId, setJoiningGroupId] = useState<number | null>(null);
   const [leavingGroupId, setLeavingGroupId] = useState<number | null>(null);
@@ -299,13 +334,23 @@ const VolunteerGroupsPage: React.FC = () => {
   const [inviteJoinPrompted, setInviteJoinPrompted] = useState<string | null>(null);
   const currentUserId = useMemo(getAuthenticatedUserId, []);
   const currentUserEmail = useMemo(() => getCurrentUserEmail() ?? "", []);
+  const { limits, isAdmin, plan, user: planUser } = usePlan();
+  const resolvedUserId = currentUserId ?? (planUser?.id ? Number(planUser.id) : null);
+  const resolvedUserEmail = currentUserEmail || planUser?.email || "";
+
+  const createdGroupCount = useMemo(() => groups.filter((group) => {
+    const matchesId = resolvedUserId != null && String(group.createdById) === String(resolvedUserId);
+    const matchesEmail = Boolean(resolvedUserEmail) && group.createdByEmail.trim().toLowerCase() === resolvedUserEmail.toLowerCase();
+    return matchesId || matchesEmail;
+  }).length, [groups, resolvedUserEmail, resolvedUserId]);
+  const groupLimitReached = !isAdmin && createdGroupCount >= limits.searchGroups;
 
   const refreshGroups = useCallback(async () => {
-    const persistedGroups = await fetchPersistedGroups();
+    const persistedGroups = await fetchPersistedGroups(isAdmin);
     setGroups(persistedGroups);
-    setJoinedGroupIds(new Set(getKnownJoinedGroupIds(persistedGroups)));
+    setJoinedGroupIds(new Set(getKnownJoinedGroupIds(persistedGroups, isAdmin)));
     return persistedGroups;
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => {
     if (searchParams.get("create") !== "true") return;
@@ -328,14 +373,14 @@ const VolunteerGroupsPage: React.FC = () => {
         const token = localStorage.getItem("token");
         const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
         const [groupsResponse, petsResponse] = await Promise.allSettled([
-          fetchPersistedGroups(),
+          fetchPersistedGroups(isAdmin),
           axios.get(buildApiUrl("/api/pets"), { headers }),
         ]);
 
         if (!cancelled && groupsResponse.status === "fulfilled") {
           setGroupsLoadError("");
           setGroups(groupsResponse.value);
-          setJoinedGroupIds(new Set(getKnownJoinedGroupIds(groupsResponse.value)));
+          setJoinedGroupIds(new Set(getKnownJoinedGroupIds(groupsResponse.value, isAdmin)));
         }
         if (!cancelled && groupsResponse.status === "rejected") {
           setGroups([]);
@@ -368,7 +413,7 @@ const VolunteerGroupsPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => {
     const query = memberSearch.trim();
@@ -680,6 +725,10 @@ const VolunteerGroupsPage: React.FC = () => {
   };
 
   const handleCreateGroup = async () => {
+    if (groupLimitReached) {
+      setGroupFeedback({ severity: "error", message: `Tu plan ${plan} permite crear hasta ${limits.searchGroups} grupos de búsqueda.` });
+      return;
+    }
     const groupName = newGroupForm.groupName.trim();
     const description = newGroupForm.description.trim();
     const area = newGroupForm.area.trim();
@@ -694,6 +743,7 @@ const VolunteerGroupsPage: React.FC = () => {
 
     const payload = {
       groupName,
+      visibility: newGroupForm.visibility,
       description,
       status: newGroupForm.status,
       area,
@@ -703,7 +753,7 @@ const VolunteerGroupsPage: React.FC = () => {
       leaderName,
       leaderPhone,
       whatsappGroupLink: newGroupForm.whatsappGroupLink.trim(),
-      volunteerUserIds: currentUserId ? [currentUserId] : [],
+      volunteerUserIds: resolvedUserId ? [resolvedUserId] : [],
     };
 
     setIsCreatingGroup(true);
@@ -738,6 +788,49 @@ const VolunteerGroupsPage: React.FC = () => {
       alert(`Failed to create the volunteer group in /api/search-groups. ${message}`);
     } finally {
       setIsCreatingGroup(false);
+    }
+  };
+
+  const handleUpdateGroup = async () => {
+    if (!editingGroup || !editGroupForm) return;
+    const coverageRadiusKm = Number(editGroupForm.coverageRadiusKm);
+    if (!editGroupForm.groupName.trim() || !editGroupForm.description.trim() || !editGroupForm.area.trim() || !editGroupForm.city.trim() || !coverageRadiusKm) {
+      setGroupFeedback({ severity: "error", message: "Completa los datos requeridos del grupo." });
+      return;
+    }
+
+    setIsUpdatingGroup(true);
+    setGroupFeedback(null);
+    try {
+      await axios.put(
+        buildApiUrl(searchGroupEndpoints.update(editingGroup.id)),
+        {
+          groupName: editGroupForm.groupName.trim(),
+          visibility: editGroupForm.visibility,
+          description: editGroupForm.description.trim(),
+          status: editGroupForm.status,
+          area: editGroupForm.area.trim(),
+          city: editGroupForm.city.trim(),
+          leaderName: editGroupForm.leaderName.trim(),
+          leaderPhone: editGroupForm.leaderPhone.trim(),
+          coverageRadiusKm,
+          whatsappGroupLink: editGroupForm.whatsappGroupLink.trim(),
+        },
+        { headers: getAuthHeaders() }
+      );
+      const persistedGroups = await refreshGroups();
+      setActiveGroup((current) => current?.id === editingGroup.id
+        ? persistedGroups.find((group) => group.id === editingGroup.id) ?? current
+        : current);
+      setEditingGroup(null);
+      setEditGroupForm(null);
+      setGroupFeedback({ severity: "success", message: "El grupo de búsqueda se actualizó correctamente." });
+    } catch (error: any) {
+      console.error("Error updating search group:", error);
+      const message = error?.response?.data?.message || error?.response?.data?.error || error?.message || "No se pudo actualizar el grupo.";
+      setGroupFeedback({ severity: "error", message: String(message) });
+    } finally {
+      setIsUpdatingGroup(false);
     }
   };
 
@@ -812,7 +905,14 @@ const VolunteerGroupsPage: React.FC = () => {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => setIsCreateDialogOpen(true)}
+          onClick={() => {
+            if (groupLimitReached) {
+              setGroupFeedback({ severity: "error", message: `Tu plan ${plan} permite crear hasta ${limits.searchGroups} grupos de búsqueda.` });
+              return;
+            }
+            setIsCreateDialogOpen(true);
+          }}
+          disabled={groupLimitReached}
           sx={{
             borderRadius: 999,
             textTransform: "none",
@@ -836,6 +936,12 @@ const VolunteerGroupsPage: React.FC = () => {
           {groupFeedback.message}
         </Alert>
       )}
+
+      <Alert severity={groupLimitReached ? "warning" : "info"} sx={{ mb: 2 }}>
+        {isAdmin
+          ? "Administrador: puedes crear grupos sin límite de plan."
+          : `Grupos creados: ${createdGroupCount} de ${limits.searchGroups} disponibles en tu plan ${plan}.`}
+      </Alert>
 
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mb: 2 }}>
         <TextField
@@ -942,6 +1048,7 @@ const VolunteerGroupsPage: React.FC = () => {
                   <Chip label={`${group.coverageRadiusKm} km coverage`} />
                   <Chip label={`${group.membersCount} members`} />
                   <Chip label={`${group.petName} · ${group.petStatus}`} color={group.petStatus === "lost" ? "error" : "default"} />
+                  <Chip label={group.visibility === "PUBLIC" ? "Público" : "Privado"} color={group.visibility === "PUBLIC" ? "info" : "default"} />
                 </Box>
 
                 <Divider sx={{ my: 2 }} />
@@ -1024,6 +1131,19 @@ const VolunteerGroupsPage: React.FC = () => {
                       sx={{ borderRadius: 999, textTransform: "none", fontWeight: 900 }}
                     >
                       Message leader
+                    </Button>
+                  )}
+                  {canManageMembers && (
+                    <Button
+                      variant="outlined"
+                      startIcon={<EditIcon />}
+                      onClick={() => {
+                        setEditingGroup(group);
+                        setEditGroupForm(editGroupFormFromDto(group));
+                      }}
+                      sx={{ borderRadius: 999, textTransform: "none", fontWeight: 900 }}
+                    >
+                      Edit group
                     </Button>
                   )}
                   <Button
@@ -1317,6 +1437,18 @@ const VolunteerGroupsPage: React.FC = () => {
             minRows={3}
             required
           />
+          <TextField
+            select
+            label="Visibilidad"
+            value={newGroupForm.visibility}
+            onChange={(event) => setNewGroupForm((current) => ({ ...current, visibility: event.target.value as "PRIVATE" | "PUBLIC" }))}
+            size="small"
+            SelectProps={{ native: true }}
+            helperText="Los grupos privados solo aparecen para sus miembros o invitados."
+          >
+            <option value="PRIVATE">Privado</option>
+            <option value="PUBLIC">Público</option>
+          </TextField>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap" }}>
             <Avatar
               variant="rounded"
@@ -1445,10 +1577,53 @@ const VolunteerGroupsPage: React.FC = () => {
           <Button
             variant="contained"
             onClick={handleCreateGroup}
-            disabled={isCreatingGroup}
+            disabled={isCreatingGroup || groupLimitReached}
             sx={{ borderRadius: 3, textTransform: "none", fontWeight: 900 }}
           >
             {isCreatingGroup ? "Creating..." : "Create group"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(editingGroup && editGroupForm)}
+        onClose={() => {
+          setEditingGroup(null);
+          setEditGroupForm(null);
+        }}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle sx={{ fontWeight: 900, color: "#0f172a" }}>Edit search group</DialogTitle>
+        <DialogContent sx={{ display: "grid", gap: 2, pt: 1 }}>
+          <TextField label="Group name" value={editGroupForm?.groupName ?? ""} onChange={(event) => setEditGroupForm((current) => current ? { ...current, groupName: event.target.value } : current)} fullWidth size="small" />
+          <TextField select label="Visibilidad" value={editGroupForm?.visibility ?? "PRIVATE"} onChange={(event) => setEditGroupForm((current) => current ? { ...current, visibility: event.target.value as "PRIVATE" | "PUBLIC" } : current)} size="small" SelectProps={{ native: true }}>
+            <option value="PRIVATE">Privado</option>
+            <option value="PUBLIC">Público</option>
+          </TextField>
+          <TextField label="Description" value={editGroupForm?.description ?? ""} onChange={(event) => setEditGroupForm((current) => current ? { ...current, description: event.target.value } : current)} fullWidth size="small" multiline minRows={3} />
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
+            <TextField select label="Status" value={editGroupForm?.status ?? "active"} onChange={(event) => setEditGroupForm((current) => current ? { ...current, status: event.target.value } : current)} size="small" SelectProps={{ native: true }}>
+              <option value="active">Active</option>
+              <option value="standby">Standby</option>
+              <option value="closed">Closed</option>
+            </TextField>
+            <TextField label="Coverage radius (km)" type="number" value={editGroupForm?.coverageRadiusKm ?? ""} onChange={(event) => setEditGroupForm((current) => current ? { ...current, coverageRadiusKm: event.target.value } : current)} size="small" inputProps={{ min: 1, step: 0.5 }} />
+          </Box>
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
+            <TextField label="Area" value={editGroupForm?.area ?? ""} onChange={(event) => setEditGroupForm((current) => current ? { ...current, area: event.target.value } : current)} size="small" />
+            <TextField label="City" value={editGroupForm?.city ?? ""} onChange={(event) => setEditGroupForm((current) => current ? { ...current, city: event.target.value } : current)} size="small" />
+          </Box>
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
+            <TextField label="Leader name" value={editGroupForm?.leaderName ?? ""} onChange={(event) => setEditGroupForm((current) => current ? { ...current, leaderName: event.target.value } : current)} size="small" />
+            <TextField label="Leader phone" value={editGroupForm?.leaderPhone ?? ""} onChange={(event) => setEditGroupForm((current) => current ? { ...current, leaderPhone: event.target.value } : current)} size="small" />
+          </Box>
+          <TextField label="WhatsApp group link" value={editGroupForm?.whatsappGroupLink ?? ""} onChange={(event) => setEditGroupForm((current) => current ? { ...current, whatsappGroupLink: event.target.value } : current)} fullWidth size="small" />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={() => { setEditingGroup(null); setEditGroupForm(null); }}>Cancel</Button>
+          <Button variant="contained" onClick={handleUpdateGroup} disabled={isUpdatingGroup}>
+            {isUpdatingGroup ? "Saving…" : "Save changes"}
           </Button>
         </DialogActions>
       </Dialog>

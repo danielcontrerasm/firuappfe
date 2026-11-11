@@ -4,24 +4,19 @@ import {
   Avatar,
   Box,
   Button,
-  Chip,
   CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  IconButton,
   Paper,
   Stack,
   TextField,
-  Tooltip,
   Typography,
 } from "@mui/material";
-import AttachFileIcon from "@mui/icons-material/AttachFile";
 import CloseIcon from "@mui/icons-material/Close";
-import LocationOnIcon from "@mui/icons-material/LocationOn";
 import SendIcon from "@mui/icons-material/Send";
-import { buildApiUrl, buildAssetUrl, searchGroupEndpoints } from "../../config/runtime";
+import { buildApiUrl, searchGroupEndpoints } from "../../config/runtime";
 import { getCurrentUserId } from "../../services/auth.ts";
 
 type GroupChatDialogProps = {
@@ -30,26 +25,12 @@ type GroupChatDialogProps = {
   onClose: () => void;
 };
 
-type ChatAttachment = {
-  id: string;
-  name: string;
-  url: string;
-  contentType: string;
-};
-
-type ChatLocation = {
-  latitude: number;
-  longitude: number;
-};
-
 type GroupChatMessage = {
   id: string;
   senderId: string;
   senderName: string;
   text: string;
   createdAt: string;
-  attachments: ChatAttachment[];
-  location?: ChatLocation;
 };
 
 const getAuthHeaders = () => {
@@ -69,45 +50,13 @@ const extractCollection = (data: any): any[] => {
   return [];
 };
 
-const normalizeMediaUrl = (value: unknown): string => {
-  if (typeof value !== "string" || !value.trim()) return "";
-  const trimmed = value.trim();
-  if (/^(https?:)?\/\//.test(trimmed) || trimmed.startsWith("data:") || trimmed.startsWith("blob:")) {
-    return trimmed;
-  }
-  return buildAssetUrl(trimmed) ?? trimmed;
-};
-
 const mapChatMessage = (dto: any, index: number): GroupChatMessage => {
-  const attachmentDtos = Array.isArray(dto.attachments)
-    ? dto.attachments
-    : Array.isArray(dto.files)
-      ? dto.files
-      : Array.isArray(dto.media)
-        ? dto.media
-        : [];
-  const location = dto.location ?? dto.sharedLocation;
-  const latitude = Number(location?.latitude ?? dto.latitude);
-  const longitude = Number(location?.longitude ?? dto.longitude);
-
   return {
     id: String(dto.id ?? dto.messageId ?? `${dto.createdAt ?? Date.now()}-${index}`),
     senderId: String(dto.senderId ?? dto.sender?.id ?? dto.userId ?? dto.user?.id ?? ""),
     senderName: dto.senderName ?? dto.sender?.name ?? dto.userName ?? dto.user?.name ?? "Group member",
-    text: dto.text ?? dto.content ?? dto.message ?? dto.body ?? "",
+    text: dto.body ?? dto.text ?? dto.content ?? dto.message ?? "",
     createdAt: dto.createdAt ?? dto.sentAt ?? dto.timestamp ?? new Date().toISOString(),
-    attachments: attachmentDtos
-      .map((attachment: any, attachmentIndex: number): ChatAttachment => ({
-        id: String(attachment.id ?? `${index}-${attachmentIndex}`),
-        name: attachment.name ?? attachment.fileName ?? attachment.originalName ?? "Attachment",
-        url: normalizeMediaUrl(attachment.url ?? attachment.downloadUrl ?? attachment.fileUrl ?? attachment.path),
-        contentType: attachment.contentType ?? attachment.mimeType ?? attachment.type ?? "",
-      }))
-      .filter((attachment: ChatAttachment) => attachment.url),
-    location:
-      Number.isFinite(latitude) && Number.isFinite(longitude)
-        ? { latitude, longitude }
-        : undefined,
   };
 };
 
@@ -118,17 +67,11 @@ const formatMessageDate = (value: string) => {
     : date.toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" });
 };
 
-const isImage = (attachment: ChatAttachment) => attachment.contentType.startsWith("image/");
-const isVideo = (attachment: ChatAttachment) => attachment.contentType.startsWith("video/");
-
 const GroupChatDialog: React.FC<GroupChatDialogProps> = ({ groupId, groupName, onClose }) => {
   const [messages, setMessages] = useState<GroupChatMessage[]>([]);
   const [messageText, setMessageText] = useState("");
-  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const [pendingLocation, setPendingLocation] = useState<ChatLocation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
-  const [isLocating, setIsLocating] = useState(false);
   const [error, setError] = useState("");
   const currentUserId = useMemo(() => getCurrentUserId() ?? "", []);
 
@@ -157,64 +100,16 @@ const GroupChatDialog: React.FC<GroupChatDialogProps> = ({ groupId, groupName, o
     return () => window.clearInterval(intervalId);
   }, [loadMessages]);
 
-  const handleSelectFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(event.target.files ?? []);
-    setPendingFiles((current) => [...current, ...selectedFiles]);
-    event.target.value = "";
-  };
-
-  const handleShareLocation = () => {
-    if (!navigator.geolocation) {
-      setError("Tu navegador no permite compartir la ubicación.");
-      return;
-    }
-
-    setIsLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setPendingLocation({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        });
-        setIsLocating(false);
-        setError("");
-      },
-      () => {
-        setIsLocating(false);
-        setError("No fue posible obtener tu ubicación.");
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  };
-
   const handleSendMessage = async () => {
     const text = messageText.trim();
-    if (!text && pendingFiles.length === 0 && !pendingLocation) return;
-
-    const payload = {
-      text,
-      content: text,
-      location: pendingLocation,
-      latitude: pendingLocation?.latitude,
-      longitude: pendingLocation?.longitude,
-    };
+    if (!text) return;
 
     setIsSending(true);
     try {
-      let body: FormData | typeof payload = payload;
-      if (pendingFiles.length > 0) {
-        const formData = new FormData();
-        formData.append("message", new Blob([JSON.stringify(payload)], { type: "application/json" }));
-        pendingFiles.forEach((file) => formData.append("files", file));
-        body = formData;
-      }
-
-      await axios.post(buildApiUrl(searchGroupEndpoints.messages(groupId)), body, {
+      await axios.post(buildApiUrl(searchGroupEndpoints.messages(groupId)), { body: text }, {
         headers: getAuthHeaders(),
       });
       setMessageText("");
-      setPendingFiles([]);
-      setPendingLocation(null);
       await loadMessages();
     } catch (sendError: any) {
       console.error(`Error sending message to search group ${groupId}:`, sendError);
@@ -281,34 +176,6 @@ const GroupChatDialog: React.FC<GroupChatDialogProps> = ({ groupId, groupName, o
                         </Typography>
                       </Box>
                       {message.text && <Typography sx={{ whiteSpace: "pre-wrap", color: "#334155" }}>{message.text}</Typography>}
-                      {message.location && (
-                        <Button
-                          component="a"
-                          href={`https://www.google.com/maps?q=${message.location.latitude},${message.location.longitude}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          size="small"
-                          startIcon={<LocationOnIcon />}
-                          sx={{ mt: 0.5, px: 0, textTransform: "none" }}
-                        >
-                          Ver ubicación compartida
-                        </Button>
-                      )}
-                      <Stack spacing={0.75} sx={{ mt: message.text || message.location ? 0.75 : 0 }}>
-                        {message.attachments.map((attachment) => (
-                          <Box key={attachment.id}>
-                            {isImage(attachment) ? (
-                              <Box component="img" src={attachment.url} alt={attachment.name} sx={{ maxWidth: "100%", maxHeight: 220, borderRadius: 1.5 }} />
-                            ) : isVideo(attachment) ? (
-                              <Box component="video" src={attachment.url} controls sx={{ maxWidth: "100%", maxHeight: 220, borderRadius: 1.5 }} />
-                            ) : (
-                              <Button component="a" href={attachment.url} target="_blank" rel="noreferrer" size="small" startIcon={<AttachFileIcon />} sx={{ textTransform: "none" }}>
-                                {attachment.name}
-                              </Button>
-                            )}
-                          </Box>
-                        ))}
-                      </Stack>
                     </Paper>
                   </Box>
                 );
@@ -318,29 +185,6 @@ const GroupChatDialog: React.FC<GroupChatDialogProps> = ({ groupId, groupName, o
         </Box>
 
         {error && <Typography sx={{ color: "#b91c1c", fontSize: 13 }}>{error}</Typography>}
-
-        {pendingFiles.length > 0 && (
-          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-            {pendingFiles.map((file, index) => (
-              <Chip
-                key={`${file.name}-${file.size}-${index}`}
-                label={file.name}
-                onDelete={() => setPendingFiles((current) => current.filter((_, fileIndex) => fileIndex !== index))}
-                size="small"
-              />
-            ))}
-          </Box>
-        )}
-
-        {pendingLocation && (
-          <Chip
-            icon={<LocationOnIcon />}
-            label={`Ubicación: ${pendingLocation.latitude.toFixed(5)}, ${pendingLocation.longitude.toFixed(5)}`}
-            onDelete={() => setPendingLocation(null)}
-            color="success"
-            variant="outlined"
-          />
-        )}
 
         <TextField
           value={messageText}
@@ -359,28 +203,7 @@ const GroupChatDialog: React.FC<GroupChatDialogProps> = ({ groupId, groupName, o
           disabled={isSending}
         />
       </DialogContent>
-      <DialogActions sx={{ px: 2, pb: 2, justifyContent: "space-between", gap: 1, flexWrap: "wrap" }}>
-        <Box sx={{ display: "flex", gap: 0.5 }}>
-          <Tooltip title="Adjuntar imágenes, videos o documentos">
-            <IconButton component="label" disabled={isSending} aria-label="Adjuntar archivos">
-              <AttachFileIcon />
-              <input
-                hidden
-                type="file"
-                multiple
-                accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
-                onChange={handleSelectFiles}
-              />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Compartir ubicación">
-            <span>
-              <IconButton onClick={handleShareLocation} disabled={isSending || isLocating} aria-label="Compartir ubicación">
-                {isLocating ? <CircularProgress size={22} /> : <LocationOnIcon />}
-              </IconButton>
-            </span>
-          </Tooltip>
-        </Box>
+      <DialogActions sx={{ px: 2, pb: 2, justifyContent: "flex-end", gap: 1, flexWrap: "wrap" }}>
         <Box sx={{ display: "flex", gap: 1 }}>
           <Button onClick={onClose} startIcon={<CloseIcon />} sx={{ textTransform: "none" }}>
             Cerrar
@@ -388,7 +211,7 @@ const GroupChatDialog: React.FC<GroupChatDialogProps> = ({ groupId, groupName, o
           <Button
             variant="contained"
             onClick={handleSendMessage}
-            disabled={isSending || (!messageText.trim() && pendingFiles.length === 0 && !pendingLocation)}
+            disabled={isSending || !messageText.trim()}
             startIcon={isSending ? <CircularProgress size={18} color="inherit" /> : <SendIcon />}
             sx={{ textTransform: "none", fontWeight: 900 }}
           >

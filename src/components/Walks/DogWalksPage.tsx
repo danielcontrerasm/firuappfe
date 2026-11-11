@@ -35,6 +35,7 @@ import { CircleMarker, MapContainer, Polyline, Popup, TileLayer, useMap } from "
 import L from "leaflet";
 import { buildApiUrl } from "../../config/runtime";
 import { isCurrentUserAdmin } from "../../services/auth.ts";
+import { usePlan } from "../../context/PlanContext.tsx";
 import PageHeader from "../Dashboard/ui/PageHeader.tsx";
 
 type UserRole = "USER" | "ADMIN" | "WALKER" | string;
@@ -398,6 +399,7 @@ const DogWalksPage: React.FC = () => {
   const isWalker = me?.role === "WALKER";
   const isAdmin = me?.role === "ADMIN" || isCurrentUserAdmin();
   const hasToken = typeof window !== "undefined" && Boolean(window.localStorage.getItem("token"));
+  const { canUseCaregiverAccess, plan } = usePlan();
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -834,6 +836,17 @@ const DogWalksPage: React.FC = () => {
   const requestPanelTitle = isWalker ? "Solicitudes recibidas" : "Mis solicitudes de paseo";
   const visibleWalks = useMemo(() => dogWalks, [dogWalks]);
   const selectedWalkIsPaused = Boolean(selectedWalk && (selectedWalk.status === "PAUSED" || locallyPausedWalkIds[String(selectedWalk.id)]));
+
+  if (!loading && Boolean(me) && !isWalker && !isAdmin && !canUseCaregiverAccess) {
+    return (
+      <Box sx={{ pb: 4 }}>
+        <PageHeader title="Dog walks" />
+        <Alert severity="info" sx={{ mt: 2 }}>
+          El acceso temporal para cuidador o paseador está disponible desde el plan Family. Tu plan actual es {plan}.
+        </Alert>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ pb: 4 }}>

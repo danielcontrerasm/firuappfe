@@ -7,20 +7,17 @@ import FiruappMapView from "./ui/FiruappMapView.tsx";
 import FiruappPetsList from "./ui/FiruappPetList.tsx";
 import FiruappReferenceDashboard from "./FiruappReferenceDashboard.tsx";
 import DashboardControls from "./ui/DashboardControls.tsx";
+import FiruappMainHeader from "./ui/FiruappMainHeader.tsx";
 import { demoPets } from "./ui/dashboardDemoData.ts";
 import { MapStyle, Pet, PetDataMode, firuColors } from "./ui/FiruappStyles.ts";
 import { isGpsOnline, useGpsStatusTime } from "./ui/petConnectivity.ts";
 import {
   Avatar,
-  Badge,
   Box,
   Button,
   Chip,
-  Divider,
   IconButton,
   InputAdornment,
-  InputBase,
-  Menu,
   MenuItem,
   Paper,
   Select,
@@ -30,8 +27,6 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
-import MessageOutlinedIcon from "@mui/icons-material/MessageOutlined";
 import SearchIcon from "@mui/icons-material/Search";
 import BatteryChargingFullIcon from "@mui/icons-material/BatteryChargingFull";
 import WifiIcon from "@mui/icons-material/Wifi";
@@ -45,10 +40,6 @@ import NavigationIcon from "@mui/icons-material/Navigation";
 import PetsIcon from "@mui/icons-material/Pets";
 import SecurityIcon from "@mui/icons-material/Security";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
-import PaletteOutlinedIcon from "@mui/icons-material/PaletteOutlined";
-import CheckIcon from "@mui/icons-material/Check";
-import LanguageIcon from "@mui/icons-material/Language";
-import LogoutIcon from "@mui/icons-material/Logout";
 import { usePetImage } from "../../services/usePetImage.ts";
 import { buildApiUrl } from "../../config/runtime";
 import {
@@ -469,7 +460,7 @@ const FiruappDashboard: React.FC = () => {
   const copy = getDashboardCopy(language);
   const [dashboardTheme, setDashboardTheme] = useState<"current" | "reference">(() => {
     if (typeof window === "undefined") return "reference";
-    return window.localStorage.getItem("firuapp-dashboard-theme") === "current" ? "current" : "reference";
+    return window.localStorage.getItem("firuapp-dashboard-theme") === "reference" ? "reference" : "current";
   });
   const petDataMode: PetDataMode = demoEnabled ? "mixed" : "database";
   const dashboardControls = {
@@ -981,126 +972,35 @@ const FiruappDashboard: React.FC = () => {
 
   return (
     <Box className={`firu-dashboard-shell ${dashboardTheme === "reference" ? "firu-reference-theme" : ""}`} sx={{ minHeight: "100vh", display: "flex", bgcolor: "#f7fbff", color: firuColors.text }}>
-      <FiruappSidebar current={section} onChange={setSection} copy={copy} language={language} />
+      <FiruappSidebar current={section} onChange={setSection} copy={copy} language={language} showBrand={false} />
 
       <Box sx={{ flexGrow: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-        <Paper
-          ref={searchBarRef}
-          elevation={0}
-          sx={{
-            height: { xs: "auto", md: 78 },
-            px: { xs: 2, md: 2.75 },
-            py: { xs: 1.5, md: 0 },
-            borderRadius: 0,
-            bgcolor: "rgba(255,255,255,0.94)",
-            borderBottom: "1px solid rgba(226,232,240,0.86)",
-            boxShadow: "0 12px 34px rgba(15,23,42,0.045)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 2,
-            flexWrap: { xs: "wrap", md: "nowrap" },
+        <FiruappMainHeader
+          language={language}
+          copy={copy}
+          dashboardTheme={dashboardTheme}
+          accountDetails={accountDetails}
+          accountMenuAnchor={accountMenuAnchor}
+          searchValue={petFilters.petName}
+          onSearchChange={(value) => setPetFilters((current) => ({ ...current, petName: value }))}
+          controls={<DashboardControls {...dashboardControls} compact />}
+          searchBarRef={searchBarRef}
+          onAccountMenuOpen={(event) => setAccountMenuAnchor(event.currentTarget)}
+          onAccountMenuClose={() => setAccountMenuAnchor(null)}
+          onToggleTheme={() => {
+            setAccountMenuAnchor(null);
+            toggleDashboardTheme();
           }}
-        >
-          <Box
-            sx={{
-              width: { xs: "100%", md: "auto" },
-              maxWidth: 675,
-              minWidth: { md: 240 },
-              flex: { md: "1 1 360px" },
-              height: 46,
-              display: "flex",
-              alignItems: "center",
-              gap: 1.35,
-              bgcolor: "#f8fbff",
-              border: "1px solid #d8e5f1",
-              px: 1.7,
-              borderRadius: 2.2,
-              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.92), 0 10px 22px rgba(15,23,42,0.035)",
-            }}
-          >
-            <SearchIcon sx={{ color: "#607491", fontSize: 25 }} />
-            <InputBase
-              placeholder={copy.search}
-              value={petFilters.petName}
-              onChange={(event) => setPetFilters((current) => ({ ...current, petName: event.target.value }))}
-              sx={{ flex: 1, fontSize: 16, color: "#1f3350", fontWeight: 600 }}
-            />
-          </Box>
-
-          <DashboardControls {...dashboardControls} compact />
-
-          <Stack direction="row" spacing={1.35} alignItems="center" sx={{ ml: "auto" }}>
-            <IconButton
-              aria-label={`Switch to ${dashboardTheme === "reference" ? "current" : "reference"} dashboard theme`}
-              title={`Switch to ${dashboardTheme === "reference" ? "current" : "reference"} theme`}
-              onClick={toggleDashboardTheme}
-              sx={{ width: 52, height: 52, bgcolor: "#f8fbff", border: "1px solid #d8e5f1", borderRadius: 2 }}
-            >
-              {dashboardTheme === "reference" ? <CheckIcon sx={{ color: "#0f5de7" }} /> : <PaletteOutlinedIcon />}
-            </IconButton>
-            <Button
-              onClick={toggleLanguage}
-              startIcon={<LanguageIcon />}
-              aria-label={copy.switchLanguage}
-              title={copy.switchLanguage}
-              sx={{ minWidth: 74, height: 52, bgcolor: "#f8fbff", border: "1px solid #d8e5f1", borderRadius: 2, color: "#1f3350", fontWeight: 900 }}
-            >
-              {language.toUpperCase()}
-            </Button>
-            <IconButton sx={{ width: 52, height: 52, bgcolor: "#f8fbff", border: "1px solid #d8e5f1", borderRadius: 2 }}>
-              <Badge color="error" variant="dot"><NotificationsNoneIcon /></Badge>
-            </IconButton>
-            <IconButton sx={{ width: 52, height: 52, bgcolor: "#f8fbff", border: "1px solid #d8e5f1", borderRadius: 2 }}>
-              <Badge color="primary" badgeContent={3}><MessageOutlinedIcon /></Badge>
-            </IconButton>
-            <IconButton
-              aria-label="Open account details"
-              aria-haspopup="menu"
-              aria-expanded={Boolean(accountMenuAnchor)}
-              onClick={(event) => setAccountMenuAnchor(event.currentTarget)}
-              sx={{ p: 0.25, borderRadius: 2.5 }}
-            >
-              <Avatar sx={{ width: 50, height: 50, bgcolor: "#062346", color: "white", fontWeight: 950, fontSize: 18 }}>DC</Avatar>
-            </IconButton>
-            <KeyboardArrowDownIcon sx={{ color: "#3d516e", display: { xs: "none", sm: "block" } }} />
-          </Stack>
-          <Menu
-            anchorEl={accountMenuAnchor}
-            open={Boolean(accountMenuAnchor)}
-            onClose={() => setAccountMenuAnchor(null)}
-            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-            transformOrigin={{ vertical: "top", horizontal: "right" }}
-            PaperProps={{ sx: { mt: 1, minWidth: 270, borderRadius: 2.5, boxShadow: "0 18px 45px rgba(15,23,42,0.16)" } }}
-          >
-            <Box sx={{ px: 2, py: 1.5 }}>
-              <Typography variant="overline" sx={{ color: "#64748b", fontWeight: 900, letterSpacing: 1 }}>
-                {copy.account}
-              </Typography>
-              <Typography sx={{ color: "#071735", fontWeight: 900 }}>{accountDetails.name}</Typography>
-              <Typography variant="body2" sx={{ color: "#64748b", overflowWrap: "anywhere" }}>{accountDetails.email}</Typography>
-            </Box>
-            <Divider />
-            <MenuItem disabled sx={{ opacity: "1 !important", color: "#33445e !important" }}>
-              {copy.role}: {accountDetails.role}
-            </MenuItem>
-            <MenuItem disabled sx={{ opacity: "1 !important", color: "#33445e !important" }}>
-              {copy.accountId}: {accountDetails.id}
-            </MenuItem>
-            <Divider />
-            <MenuItem
-              onClick={() => {
-                setAccountMenuAnchor(null);
-                localStorage.removeItem("token");
-                window.location.href = "/login";
-              }}
-              sx={{ color: "#e53935", fontWeight: 800, gap: 1 }}
-            >
-              <LogoutIcon fontSize="small" />
-              {copy.logout}
-            </MenuItem>
-          </Menu>
-        </Paper>
+          onToggleLanguage={() => {
+            setAccountMenuAnchor(null);
+            toggleLanguage();
+          }}
+          onLogout={() => {
+            setAccountMenuAnchor(null);
+            localStorage.removeItem("token");
+            window.location.href = "/login";
+          }}
+        />
 
         <Box sx={{ px: { xs: 2, md: 2.75 }, py: { xs: 2, md: 2.25 }, display: "grid", gap: 2.05 }}>
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 2, flexWrap: { xs: "wrap", lg: "nowrap" } }}>

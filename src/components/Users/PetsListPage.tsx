@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import {
   Avatar,
+  Alert,
   Box,
   Button,
   Chip,
@@ -11,11 +12,14 @@ import {
   DialogTitle,
   MenuItem,
   TextField,
+  Typography,
 } from "@mui/material";
 import EntityListPage, { Column } from "./EntityListPage.tsx";
 import { petImageEndpoint, usePetImage } from "../../services/usePetImage.ts";
 import { buildApiUrl, buildAssetUrl } from "../../config/runtime";
 import { isOwnedByCurrentUser } from "../../services/auth.ts";
+import { getApiErrorMessage } from "../../config/plans.ts";
+import { usePlan } from "../../context/PlanContext.tsx";
 
 type PetStatus = "active" | "lost" | "offline";
 
@@ -33,6 +37,13 @@ export interface PetRow {
   status: PetStatus;
   lastSeen: string;
 }
+
+type SharedPersonDto = {
+  userId: number;
+  name: string;
+  email: string;
+  sharedAt: string;
+};
 
 const emptyPetDraft: PetRow = {
   id: "",
@@ -176,6 +187,14 @@ const PetsListPage: React.FC = () => {
   const [creatingPetRequest, setCreatingPetRequest] = useState(false);
   const [loadingPets, setLoadingPets] = useState(true);
   const [editImageStatus, setEditImageStatus] = useState("");
+  const [sharePet, setSharePet] = useState<PetRow | null>(null);
+  const [shareEmail, setShareEmail] = useState("");
+  const [sharedPeople, setSharedPeople] = useState<SharedPersonDto[]>([]);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareSaving, setShareSaving] = useState(false);
+  const [shareFeedback, setShareFeedback] = useState<{ severity: "success" | "error"; message: string } | null>(null);
+  const [petFeedback, setPetFeedback] = useState<{ severity: "success" | "error"; message: string } | null>(null);
+  const { limits, isAdmin } = usePlan();
 
   const handleEditChange = (field: keyof PetRow, value: string) => {
     setEditingPet((current) => current ? { ...current, [field]: value } : current);
@@ -307,6 +326,83 @@ const PetsListPage: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
+  const handleOpenShare = async (pet: PetRow) => {
+    setSharePet(pet);
+    setShareEmail("");
+    setSharedPeople([]);
+    setShareFeedback(null);
+    setShareLoading(true);
+    try {
+      const response = await axios.get(buildApiUrl(`/api/pets/${pet.id}/shares`), {
+        headers: localStorage.getItem("token") ? { Authorization: `Bearer ${localStorage.getItem("token")}` } : undefined,
+      });
+      const people = Array.isArray(response.data) ? response.data : response.data?.items ?? [];
+      setSharedPeople(people.map((person: any) => ({
+        userId: Number(person.userId ?? person.id),
+        name: person.name ?? person.fullName ?? "Usuario autorizado",
+        email: person.email ?? "",
+        sharedAt: person.sharedAt ?? person.createdAt ?? "",
+      })));
+    } catch (error) {
+      console.error("Error loading shared pet users:", error);
+      setShareFeedback({ severity: "error", message: getApiErrorMessage(error, "No se pudieron cargar las personas autorizadas.") });
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  const handleSharePet = async () => {
+    if (!sharePet || !shareEmail.trim()) return;
+    if (!isAdmin && sharedPeople.length >= limits.authorizedPeoplePerPet) {
+      setShareFeedback({ severity: "error", message: `Tu plan permite hasta ${limits.authorizedPeoplePerPet} personas autorizadas por mascota.` });
+      return;
+    }
+
+    setShareSaving(true);
+    setShareFeedback(null);
+    try {
+      const response = await axios.post(
+        buildApiUrl(`/api/pets/${sharePet.id}/shares`),
+        { email: shareEmail.trim() },
+        { headers: localStorage.getItem("token") ? { Authorization: `Bearer ${localStorage.getItem("token")}` } : undefined }
+      );
+      const person = response.data;
+      setSharedPeople((current) => {
+        const normalizedEmail = String(person?.email ?? shareEmail).trim().toLowerCase();
+        if (current.some((item) => item.userId === Number(person?.userId) || item.email.toLowerCase() === normalizedEmail)) {
+          return current;
+        }
+        return [...current, {
+          userId: Number(person?.userId ?? Date.now()),
+          name: person?.name ?? normalizedEmail,
+          email: person?.email ?? normalizedEmail,
+          sharedAt: person?.sharedAt ?? new Date().toISOString(),
+        }];
+      });
+      setShareEmail("");
+      setShareFeedback({ severity: "success", message: "La mascota fue compartida. La persona ya puede verla con su cuenta." });
+    } catch (error) {
+      console.error("Error sharing pet:", error);
+      setShareFeedback({ severity: "error", message: getApiErrorMessage(error, "No se pudo compartir la mascota.") });
+    } finally {
+      setShareSaving(false);
+    }
+  };
+
+  const handleRevokeShare = async (userId: number) => {
+    if (!sharePet) return;
+    try {
+      await axios.delete(buildApiUrl(`/api/pets/${sharePet.id}/shares/${userId}`), {
+        headers: localStorage.getItem("token") ? { Authorization: `Bearer ${localStorage.getItem("token")}` } : undefined,
+      });
+      setSharedPeople((current) => current.filter((person) => person.userId !== userId));
+      setShareFeedback({ severity: "success", message: "El acceso fue revocado." });
+    } catch (error) {
+      console.error("Error revoking pet share:", error);
+      setShareFeedback({ severity: "error", message: getApiErrorMessage(error, "No se pudo revocar el acceso.") });
+    }
+  };
+
   const handleCreatePet = async () => {
     if (!creatingPet) return;
 
@@ -351,8 +447,23 @@ const PetsListPage: React.FC = () => {
     }
   };
 
+  const handleDeletePet = async (pet: PetRow) => {
+    setPetFeedback(null);
+    try {
+      await axios.delete(buildApiUrl(`/api/pets/${pet.id}`), {
+        headers: localStorage.getItem("token") ? { Authorization: `Bearer ${localStorage.getItem("token")}` } : undefined,
+      });
+      setPets((currentPets) => currentPets.filter((currentPet) => currentPet.id !== pet.id));
+      setPetFeedback({ severity: "success", message: `${pet.name} fue eliminada correctamente.` });
+    } catch (error) {
+      console.error("Error deleting pet:", error);
+      setPetFeedback({ severity: "error", message: getApiErrorMessage(error, "No se pudo eliminar la mascota.") });
+    }
+  };
+
   return (
     <>
+      {petFeedback && <Alert severity={petFeedback.severity} sx={{ mb: 1.5 }} onClose={() => setPetFeedback(null)}>{petFeedback.message}</Alert>}
       <EntityListPage<PetRow>
         title={loadingPets ? "Mis mascotas · Cargando…" : "Mis mascotas"}
         columns={columns}
@@ -376,9 +487,8 @@ const PetsListPage: React.FC = () => {
           setEditPetImage(null);
           setEditingPet(row);
         }}
-        onDelete={(row) => {
-          setPets((currentPets) => currentPets.filter((pet) => pet.id !== row.id));
-        }}
+        onShare={handleOpenShare}
+        onDelete={handleDeletePet}
       />
 
       <Dialog
@@ -506,6 +616,60 @@ const PetsListPage: React.FC = () => {
             sx={{ bgcolor: "#0f172a", borderRadius: 3, textTransform: "none", fontWeight: 900 }}
           >
             {creatingPetRequest ? "Creating..." : "Create pet"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(sharePet)}
+        onClose={() => setSharePet(null)}
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{ sx: { borderRadius: 4 } }}
+      >
+        <DialogTitle sx={{ color: "#0f172a", fontWeight: 900 }}>
+          Compartir {sharePet?.name || "mascota"}
+        </DialogTitle>
+        <DialogContent sx={{ display: "grid", gap: 2, pt: 1 }}>
+          <TextField
+            label="Correo de la persona autorizada"
+            type="email"
+            value={shareEmail}
+            onChange={(event) => setShareEmail(event.target.value)}
+            fullWidth
+            size="small"
+            placeholder="persona@example.com"
+            helperText={`${sharedPeople.length} / ${isAdmin ? "sin límite" : limits.authorizedPeoplePerPet} personas autorizadas`}
+            disabled={shareSaving}
+          />
+          {shareFeedback && <Alert severity={shareFeedback.severity}>{shareFeedback.message}</Alert>}
+          <Box>
+            <Typography variant="subtitle2" sx={{ fontWeight: 900, color: "#0f172a", mb: 1 }}>
+              Personas con acceso
+            </Typography>
+            {shareLoading ? (
+              <Typography variant="body2" color="text.secondary">Cargando accesos…</Typography>
+            ) : sharedPeople.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">Todavía no has compartido esta mascota.</Typography>
+            ) : (
+              <Box sx={{ display: "grid", gap: 1 }}>
+                {sharedPeople.map((person) => (
+                  <Box key={`${person.userId}-${person.email}`} sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, p: 1, borderRadius: 2, bgcolor: "#f8fafc" }}>
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 800 }}>{person.name}</Typography>
+                      <Typography variant="caption" color="text.secondary">{person.email}</Typography>
+                    </Box>
+                    <Button size="small" color="error" onClick={() => handleRevokeShare(person.userId)}>Revocar</Button>
+                  </Box>
+                ))}
+              </Box>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={() => setSharePet(null)}>Cerrar</Button>
+          <Button variant="contained" onClick={handleSharePet} disabled={shareSaving || !shareEmail.trim() || (!isAdmin && sharedPeople.length >= limits.authorizedPeoplePerPet)}>
+            {shareSaving ? "Compartiendo…" : "Compartir"}
           </Button>
         </DialogActions>
       </Dialog>

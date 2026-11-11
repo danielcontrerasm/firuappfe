@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { Alert } from "@mui/material";
 import { MapContainer, Marker, Polyline, Popup, TileLayer } from "react-leaflet";
 import L from "leaflet";
 import axios from "axios";
@@ -10,6 +11,9 @@ import PageHeader from "../Dashboard/ui/PageHeader.tsx";
 import { buildApiUrl } from "../../config/runtime";
 import { isOwnedByCurrentUser } from "../../services/auth.ts";
 import { extractPetDtos } from "../../services/petData.ts";
+import { getApiErrorMessage } from "../../config/plans.ts";
+import { usePlan } from "../../context/PlanContext.tsx";
+import { downloadPetReport } from "../../services/currentUser.ts";
 
 const mapStyles = {
   clean: {
@@ -174,6 +178,9 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
   const [routeRange, setRouteRange] = useState({ from: "", to: "" });
   const [appliedRouteRange, setAppliedRouteRange] = useState(null);
   const [walkDistanceWeek, setWalkDistanceWeek] = useState(() => normalizeWalkDistanceWeek([]));
+  const [routeFeedback, setRouteFeedback] = useState(null);
+  const [exportingFormat, setExportingFormat] = useState("");
+  const { limits, isAdmin, plan, canExportReports } = usePlan();
 
   const activeMapStyle = mapStyles[mapStyle];
 
@@ -263,7 +270,10 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
         if (!cancelled) setRoutePoints(normalizedRoutePoints);
       } catch (error) {
         console.error("Error fetching pet route:", error);
-        if (!cancelled) setRoutePoints([]);
+        if (!cancelled) {
+          setRoutePoints([]);
+          setRouteFeedback({ severity: "error", message: getApiErrorMessage(error, "No se pudo cargar el historial de la mascota.") });
+        }
       } finally {
         if (!cancelled) setLoadingRoute(false);
       }
@@ -319,6 +329,7 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
   );
 
   const handleApplyRouteRange = () => {
+    setRouteFeedback(null);
     if (!selectedPetId) {
       alert("Select a pet before searching route positions.");
       return;
@@ -334,6 +345,12 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
       return;
     }
 
+    const cutoff = Date.now() - limits.historyDays * 24 * 60 * 60 * 1000;
+    if (!isAdmin && new Date(routeRange.from).getTime() < cutoff) {
+      setRouteFeedback({ severity: "warning", message: `Tu plan ${plan} permite consultar únicamente los últimos ${limits.historyDays} días de historial.` });
+      return;
+    }
+
     setAppliedRouteRange(routeRange);
   };
 
@@ -343,11 +360,34 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
   };
 
   const handleRecentRoutePeriod = ({ minutes, label }) => {
+    setRouteFeedback(null);
     const to = new Date();
     const from = new Date(to.getTime() - minutes * 60 * 1000);
     const range = { from: toRouteTimeInput(from), to: toRouteTimeInput(to) };
     setRouteRange(range);
     setAppliedRouteRange({ ...range, presetLabel: label });
+  };
+
+  const handleExport = async (format) => {
+    if (!selectedPetId) {
+      setRouteFeedback({ severity: "warning", message: "Selecciona una mascota antes de descargar el reporte." });
+      return;
+    }
+    if (!canExportReports) {
+      setRouteFeedback({ severity: "warning", message: "La descarga de reportes está disponible únicamente para usuarios Premium." });
+      return;
+    }
+
+    setExportingFormat(format);
+    setRouteFeedback(null);
+    try {
+      await downloadPetReport(selectedPetId, format);
+      setRouteFeedback({ severity: "success", message: `El reporte ${format.toUpperCase()} se descargó correctamente.` });
+    } catch (error) {
+      setRouteFeedback({ severity: "error", message: getApiErrorMessage(error, "No se pudo descargar el reporte.") });
+    } finally {
+      setExportingFormat("");
+    }
   };
 
   const routePeriodLabel = appliedRouteRange
@@ -383,6 +423,13 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
           {loadingPets ? "Loading pets from the database." : "Select a database pet and optionally search positions by time range."}
         </p>
       </div>
+
+      <Alert severity={canExportReports ? "success" : "info"} sx={{ mb: 1.5 }}>
+        {isAdmin
+          ? "Administrador: historial y exportaciones sin límite de plan."
+          : `Tu plan ${plan} permite ${limits.historyDays} días de historial${canExportReports ? " y exportación PDF/CSV" : ". La exportación está disponible en Premium"}.`}
+      </Alert>
+      {routeFeedback && <Alert severity={routeFeedback.severity} sx={{ mb: 1.5 }}>{routeFeedback.message}</Alert>}
 
       <div className={`firu-route-map-shell map-style-${mapStyle}`}>
         <div className="firu-history-pets"><FiruappPetsList
@@ -487,6 +534,22 @@ const MultiPetRouteView = ({ apiBaseUrl = buildApiUrl("/api/pets") }) => {
             onClick={() => setMapStyle((current) => current === "natural" ? "clean" : "natural")}
           >
             {activeMapStyle.label}
+          </button>
+          <button
+            className="firu-route-tool firu-geofence-button"
+            type="button"
+            onClick={() => handleExport("pdf")}
+            disabled={!selectedPetId || Boolean(exportingFormat)}
+          >
+            {exportingFormat === "pdf" ? "Downloading…" : "Export PDF"}
+          </button>
+          <button
+            className="firu-route-tool firu-geofence-button"
+            type="button"
+            onClick={() => handleExport("csv")}
+            disabled={!selectedPetId || Boolean(exportingFormat)}
+          >
+            {exportingFormat === "csv" ? "Downloading…" : "Export CSV"}
           </button>
         </div>
 

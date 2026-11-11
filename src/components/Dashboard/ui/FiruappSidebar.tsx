@@ -16,6 +16,7 @@ import MobileNavigation from "./MobileNavigation.tsx";
 import FiruBrand from "./FiruBrand.tsx";
 import { firuColors } from "./FiruappStyles.ts";
 import { isCurrentUserAdmin } from "../../../services/auth.ts";
+import { usePlan } from "../../../context/PlanContext.tsx";
 import { DashboardCopy, DashboardLanguage, getDashboardCopy } from "./dashboardI18n.ts";
 
 interface SidebarProps {
@@ -43,7 +44,8 @@ const FiruappSidebar: React.FC<SidebarProps & { copy?: DashboardCopy; language?:
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const isAdmin = isCurrentUserAdmin();
+  const { isAdmin: planIsAdmin } = usePlan();
+  const isAdmin = planIsAdmin || isCurrentUserAdmin();
 
   const handleLogout = () => {
     localStorage.removeItem("token");

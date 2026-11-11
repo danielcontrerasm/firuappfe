@@ -21,7 +21,7 @@ export interface DashboardControlsProps {
 }
 
 export default function DashboardControls({ demoEnabled, onDemoToggle, showGeofences, onShowGeofencesChange, mapStyle, onMapStyleChange, canUseDemoData = true, compact = false, copy, language = "en" }: DashboardControlsProps) {
-  const labels = copy || (language === "es" ? { demoData: "Datos de demostración", geofencesToggle: "Geocercas", maps: "Mapas", clearMap: "Mapa limpio", detailedMap: "Mapa detallado", controls: "Controles del panel" } : { demoData: "Demo data", geofencesToggle: "Geofences", maps: "Maps", clearMap: "Clear map", detailedMap: "Detailed map", controls: "Dashboard controls" });
+  const labels = copy || (language === "es" ? { demoData: "Datos de demostración", geofencesToggle: "Geocercas", maps: "Mapas", clearMap: "Mapa limpio", detailedMap: "Mapa detallado", controls: "Controles del panel" } : { demoData: "Demo Data", geofencesToggle: "Geofences", maps: "Maps", clearMap: "Clear map", detailedMap: "Detailed map", controls: "Dashboard controls" });
   const [mapMenuAnchor, setMapMenuAnchor] = useState<HTMLElement | null>(null);
   const menuId = useId();
   const mapMenuOpen = Boolean(mapMenuAnchor);

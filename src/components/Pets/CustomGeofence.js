@@ -1,4 +1,5 @@
 import { useMediaQuery } from "@mui/material";
+import { Alert } from "@mui/material";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FeatureGroup,
@@ -18,6 +19,7 @@ import "./routeMapStyles.css";
 import { buildApiUrl } from "../../config/runtime";
 import { isOwnedByCurrentUser } from "../../services/auth.ts";
 import { extractPetDtos } from "../../services/petData.ts";
+import { usePlan } from "../../context/PlanContext.tsx";
 import MapControls from "./MapControls.tsx";
 import PageHeader from "../Dashboard/ui/PageHeader.tsx";
 import AddIcon from "@mui/icons-material/Add";
@@ -160,6 +162,7 @@ const CustomGeofence = () => {
   const [loading, setLoading] = useState(true);
   const [loadingPets, setLoadingPets] = useState(true);
   const [mapStyle, setMapStyle] = useState("clean");
+  const [planFeedback, setPlanFeedback] = useState("");
   const [petFilters, setPetFilters] = useState({
     city: "",
     neighborhood: "",
@@ -168,9 +171,17 @@ const CustomGeofence = () => {
   });
 
   const token = useMemo(() => localStorage.getItem("token"), []);
+  const { limits, isAdmin, plan } = usePlan();
   const activeMapStyle = mapStyles[mapStyle];
   const selectedPet = pets.find((pet) => pet.id === String(activePetId));
   const selectedPetLabel = activePetId === "all" ? "All pets" : selectedPet?.name || "Selected pet";
+  const selectedPetGeofenceCount = useMemo(
+    () => activePetId === "all"
+      ? 0
+      : storedGeofences.filter((geofence) => String(geofence.petId) === String(activePetId)).length,
+    [activePetId, storedGeofences]
+  );
+  const geofenceLimitReached = activePetId !== "all" && !isAdmin && selectedPetGeofenceCount >= limits.geofencesPerPet;
   const handlePetSelection = useCallback((nextPetId) => {
     setIsCreatingGeofence(false);
     setPolygon([]);
@@ -310,8 +321,13 @@ const CustomGeofence = () => {
   };
 
   const handleStartGeofence = () => {
+    setPlanFeedback("");
     if (activePetId === "all") {
       alert("Select one pet before creating a new geofence.");
+      return;
+    }
+    if (geofenceLimitReached) {
+      setPlanFeedback(`Tu plan ${plan} permite hasta ${limits.geofencesPerPet} geocercas para ${selectedPetLabel}.`);
       return;
     }
 
@@ -339,8 +355,14 @@ const CustomGeofence = () => {
   };
 
   const handleSaveGeofence = async () => {
+    setPlanFeedback("");
     if (activePetId === "all") {
       alert("Select one pet before saving a new geofence.");
+      return;
+    }
+
+    if (geofenceLimitReached) {
+      setPlanFeedback(`Tu plan ${plan} permite hasta ${limits.geofencesPerPet} geocercas por mascota.`);
       return;
     }
 
@@ -402,10 +424,18 @@ const CustomGeofence = () => {
     if (!confirmed) return;
 
     try {
-      await axios.delete(buildApiUrl(`/api/geofences/${deletePetId}`), {
+      const numericGeofenceId = Number(geofence?.id);
+      const endpoint = Number.isFinite(numericGeofenceId) && numericGeofenceId > 0
+        ? `/api/geofences/${deletePetId}/${numericGeofenceId}`
+        : `/api/geofences/${deletePetId}`;
+      await axios.delete(buildApiUrl(endpoint), {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
-      setStoredGeofences((current) => current.filter((item) => String(item.petId) !== String(deletePetId)));
+      setStoredGeofences((current) => current.filter((item) =>
+        numericGeofenceId > 0
+          ? String(item.id) !== String(geofence.id)
+          : String(item.petId) !== String(deletePetId)
+      ));
     } catch (error) {
       console.error("Error deleting geofence:", error);
       alert("Failed to delete geofence.");
@@ -426,6 +456,15 @@ const CustomGeofence = () => {
               : `Click Create to start a new safe zone for ${selectedPetLabel}.`}
         </p>
       </div>
+
+      <Alert severity={geofenceLimitReached ? "warning" : "info"} sx={{ mb: 1.5 }}>
+        {activePetId === "all"
+          ? "Selecciona una mascota para crear una zona segura."
+          : isAdmin
+            ? "Administrador: puedes crear geocercas sin límite de plan."
+            : `Geocercas de ${selectedPetLabel}: ${selectedPetGeofenceCount} de ${limits.geofencesPerPet} disponibles en ${plan}.`}
+      </Alert>
+      {planFeedback && <Alert severity="error" sx={{ mb: 1.5 }}>{planFeedback}</Alert>}
 
       <button type="button" className="firu-filter-toggle firu-mobile-only" aria-expanded={showFilters} onClick={() => setShowFilters(current => !current)}>Filtrar mascotas</button>
       <div className={`firu-geofence-searchbar${showFilters ? " is-open" : ""}`}>
@@ -545,7 +584,14 @@ const CustomGeofence = () => {
         {isMobile && <div className="firu-mobile-zone-create firu-mobile-only">
           <label>Mascota<select aria-label="Mascota para la zona segura" value={activePetId} onChange={handlePetFilterChange}><option value="all">Todas las mascotas</option>{filteredPets.map(pet => <option key={pet.id} value={pet.id}>{pet.name}</option>)}</select></label>
           <button type="button" className="firu-primary-button" disabled={!filteredPets.length || loadingPets} onClick={() => {
-            if (activePetId === "all" && filteredPets.length) handlePetSelection(filteredPets[0].id);
+            const targetPet = activePetId === "all" ? filteredPets[0] : selectedPet;
+            if (!targetPet) return;
+            const targetCount = storedGeofences.filter((geofence) => String(geofence.petId) === String(targetPet.id)).length;
+            if (!isAdmin && targetCount >= limits.geofencesPerPet) {
+              setPlanFeedback(`Tu plan ${plan} permite hasta ${limits.geofencesPerPet} geocercas para ${targetPet.name}.`);
+              return;
+            }
+            if (activePetId === "all") handlePetSelection(targetPet.id);
             setPolygon([]); setCircleCenter(null); setIsCreatingGeofence(true);
           }}><AddIcon />Nueva geocerca</button>
         </div>}
@@ -621,7 +667,7 @@ const CustomGeofence = () => {
             style={isMobile ? { display: "none" } : undefined}
             className={`firu-route-tool firu-geofence-button ${isCreatingGeofence ? "active" : ""}`}
             onClick={handleStartGeofence}
-            disabled={activePetId === "all"}
+            disabled={activePetId === "all" || geofenceLimitReached}
           >
             {isMobile ? "Crear" : "Create"}
           </button>
@@ -658,7 +704,7 @@ const CustomGeofence = () => {
           <button
             className="firu-route-tool firu-geofence-button"
             onClick={handleSaveGeofence}
-            disabled={!isCreatingGeofence || (drawMode === "circle" ? !circleCenter : polygon.length < 3)}
+            disabled={geofenceLimitReached || !isCreatingGeofence || (drawMode === "circle" ? !circleCenter : polygon.length < 3)}
           >
             {isMobile ? "Guardar" : "Save"}
           </button>

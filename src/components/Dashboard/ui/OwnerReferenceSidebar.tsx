@@ -1,6 +1,6 @@
 import React from "react";
 import { Box, Button, Paper, Stack, Typography } from "@mui/material";
-import { Link as RouterLink, useLocation } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
 import BusinessOutlinedIcon from "@mui/icons-material/BusinessOutlined";
 import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
 import PetsIcon from "@mui/icons-material/Pets";
@@ -19,7 +19,10 @@ interface OwnerReferenceSidebarProps {
 }
 
 const OwnerReferenceSidebar: React.FC<OwnerReferenceSidebarProps> = ({ language }) => {
-  const location = useLocation();
+  // DashboardLayout rerenders this sidebar on route changes. Reading the
+  // browser path here also keeps the sidebar renderable in isolated previews
+  // where a router provider is intentionally omitted.
+  const currentPath = typeof window !== "undefined" ? window.location.pathname : "/owner-dashboard";
   const labels = language === "es"
     ? {
         company: "Mi Empresa",
@@ -51,8 +54,8 @@ const OwnerReferenceSidebar: React.FC<OwnerReferenceSidebarProps> = ({ language 
       <Box component="nav" aria-label={language === "es" ? "Navegación de la empresa" : "Company navigation"} className="owner-reference-side-nav">
         {navItems.map(({ label, to, Icon }, index) => {
           const active = index === 0
-            ? location.pathname === "/owner-dashboard"
-            : location.pathname === to && to !== "/routes/recent";
+            ? currentPath === "/owner-dashboard"
+            : currentPath === to && to !== "/routes/recent";
           return (
             <Button
               component={RouterLink}

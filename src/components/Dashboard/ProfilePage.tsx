@@ -12,6 +12,7 @@ import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import LogoutIcon from "@mui/icons-material/Logout";
 import PageHeader from "./ui/PageHeader.tsx";
+import PlanSummary from "../Plans/PlanSummary.tsx";
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -43,6 +44,10 @@ export default function ProfilePage() {
         <div className="firu-profile-avatar"><PersonOutlineIcon /></div>
         <h2>{user.name || 'Mi cuenta'}</h2><p>{user.sub || 'Gestiona tus datos y preferencias'}</p>
         <span className="firu-protected-badge"><VerifiedUserOutlinedIcon />{localStorage.getItem('token') ? 'Sesión iniciada' : 'Tu espacio FiruApp'}</span>
+      </section>
+      <section className="firu-profile-group">
+        <h2>Plan y beneficios</h2>
+        <PlanSummary />
       </section>
       {groups.map(group => <section className="firu-profile-group" key={group.title}><h2>{group.title}</h2><div className="firu-menu-card">
         {group.items.map(({ label, to, Icon }) => <Link key={to} to={to}><span className="firu-menu-icon"><Icon /></span><span>{label}</span><ChevronRightIcon /></Link>)}

@@ -33,7 +33,7 @@ import { usePetImage } from "../../services/usePetImage.ts";
 import FiruappMapView from "./ui/FiruappMapView.tsx";
 import FiruappPetsList from "./ui/FiruappPetList.tsx";
 import OwnerReferenceSidebar from "./ui/OwnerReferenceSidebar.tsx";
-import OwnerReferenceTopbar, { OwnerAccountDetails } from "./ui/OwnerReferenceTopbar.tsx";
+import FiruappMainHeader, { MainHeaderAccountDetails } from "./ui/FiruappMainHeader.tsx";
 import { DashboardCopy, DashboardLanguage } from "./ui/dashboardI18n.ts";
 import { MapStyle, Pet, PetDataMode } from "./ui/FiruappStyles.ts";
 import "./firuapp-reference-theme.css";
@@ -73,7 +73,7 @@ interface FiruappReferenceDashboardProps {
   language: DashboardLanguage;
   copy: DashboardCopy;
   dashboardTheme: "current" | "reference";
-  accountDetails: OwnerAccountDetails;
+  accountDetails: MainHeaderAccountDetails;
   accountMenuAnchor: HTMLElement | null;
   onAccountMenuOpen: (event: React.MouseEvent<HTMLElement>) => void;
   onAccountMenuClose: () => void;
@@ -325,12 +325,14 @@ const FiruappReferenceDashboard: React.FC<FiruappReferenceDashboardProps> = ({
 
   return (
     <Box className="owner-reference-dashboard">
-      <OwnerReferenceTopbar
+      <FiruappMainHeader
         language={language}
         copy={copy}
         dashboardTheme={dashboardTheme}
         accountDetails={accountDetails}
         accountMenuAnchor={accountMenuAnchor}
+        searchValue={petFilters.petName}
+        onSearchChange={(value) => onPetFiltersChange({ ...petFilters, petName: value })}
         searchBarRef={searchBarRef}
         onAccountMenuOpen={onAccountMenuOpen}
         onAccountMenuClose={onAccountMenuClose}

@@ -2,8 +2,9 @@
 import React, { useMemo, useState } from "react";
 import { Box } from "@mui/material";
 import { Outlet, useLocation } from "react-router-dom";
-import FiruappSidebar from "./ui/FiruappSidebar.tsx";
-import OwnerReferenceTopbar from "./ui/OwnerReferenceTopbar.tsx";
+import OwnerReferenceSidebar from "./ui/OwnerReferenceSidebar.tsx";
+import FiruappMainHeader from "./ui/FiruappMainHeader.tsx";
+import MobileNavigation from "./ui/MobileNavigation.tsx";
 import { getDashboardCopy } from "./ui/dashboardI18n.ts";
 import {
   decodeAuthToken,
@@ -48,12 +49,6 @@ const DashboardLayout = () => {
     };
   }, []);
 
-  const current =
-    location.pathname === "/geofence"
-      ? "geofence"
-      : location.pathname === "/route" || location.pathname === "/routes/recent"
-        ? "route"
-        : "all";
   const isMapPage = ["/geofence", "/route", "/routes/recent"].includes(location.pathname);
 
   const handleToggleTheme = () => {
@@ -80,7 +75,7 @@ const DashboardLayout = () => {
   return (
     <Box className="dashboard-global-shell" sx={{ minHeight: "100vh", background: "#f4f8fb" }}>
       <Box className="dashboard-global-header">
-        <OwnerReferenceTopbar
+        <FiruappMainHeader
           language={language}
           copy={copy}
           dashboardTheme={dashboardTheme}
@@ -111,7 +106,8 @@ const DashboardLayout = () => {
           background: "#f4f8fb",
         }}
       >
-        <FiruappSidebar current={current} copy={copy} language={language} showBrand={false} />
+        <OwnerReferenceSidebar language={language} />
+        <MobileNavigation />
 
         <Box
           className="firu-layout-content"

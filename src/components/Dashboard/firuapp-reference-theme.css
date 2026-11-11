@@ -34,6 +34,155 @@
   z-index: 30;
 }
 
+.firu-main-header {
+  position: relative;
+  z-index: 30;
+  min-height: 78px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 24px;
+  background: rgba(255,255,255,0.98);
+  border-bottom: 1px solid #dbe6f3;
+  box-shadow: 0 8px 24px rgba(20, 45, 85, 0.045);
+}
+
+.firu-main-header-brand {
+  width: 270px;
+  flex: 0 0 270px;
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  overflow: visible;
+}
+
+.firu-main-header-brand .firu-brand-horizontal {
+  justify-content: flex-start;
+  gap: 8px;
+  padding-left: 8px;
+}
+
+.firu-main-header-brand .firu-brand-mark {
+  position: relative;
+  width: 78px;
+  height: 58px;
+  flex: 0 0 78px;
+  overflow: hidden;
+}
+
+.firu-main-header-brand .firu-brand-mark .firu-brand-image {
+  position: absolute;
+  top: -1px;
+  left: -8px;
+  width: 110px;
+  height: 110px;
+  max-width: none;
+  object-fit: contain;
+}
+
+.firu-main-header-brand .firu-brand-wordmark {
+  color: #102640;
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: -1.2px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.firu-main-header-divider {
+  height: 52px;
+  border-color: #cbd8e7;
+}
+
+.firu-main-header-search {
+  min-width: 220px;
+  max-width: 540px;
+  flex: 1 1 360px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  border: 1px solid #d8e5f1;
+  border-radius: 10px;
+  background: #f8fbff;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.92), 0 10px 22px rgba(15,23,42,0.035);
+}
+
+.firu-main-header-search .MuiInputBase-root {
+  color: #1f3350;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.firu-main-header-search .MuiInputAdornment-root {
+  color: #607491;
+}
+
+.firu-main-header-controls {
+  flex: 0 0 auto;
+}
+
+.firu-main-header-actions {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.firu-main-header-action,
+.firu-main-header-language {
+  width: 48px;
+  height: 48px;
+  color: #1f3350 !important;
+  background: #f8fbff !important;
+  border: 1px solid #d8e5f1 !important;
+  border-radius: 10px !important;
+}
+
+.firu-main-header-language {
+  width: auto;
+  min-width: 66px;
+  padding: 0 12px !important;
+  font-weight: 900 !important;
+  text-transform: none !important;
+}
+
+.firu-main-header-account {
+  padding: 3px !important;
+  border-radius: 12px !important;
+}
+
+.firu-main-header-account .MuiAvatar-root {
+  width: 48px;
+  height: 48px;
+  color: #ffffff;
+  background: #062346;
+  font-size: 17px;
+  font-weight: 950;
+}
+
+.firu-main-header-chevron {
+  color: #3d516e;
+}
+
+.firu-main-header-account-menu {
+  min-width: 280px;
+  margin-top: 8px;
+  border: 1px solid #dbe6f3;
+  border-radius: 14px !important;
+  box-shadow: 0 18px 45px rgba(20, 35, 63, 0.18) !important;
+}
+
+.firu-main-header-account-menu .MuiMenuItem-root {
+  gap: 10px;
+  min-height: 42px;
+  font-weight: 700;
+}
+
+.firu-main-header-logout-item,
+.firu-main-header-logout-item svg {
+  color: #e53935 !important;
+}
+
 .owner-reference-brand-link {
   width: 326px;
   height: 100%;
@@ -1357,6 +1506,83 @@
 @media (max-width: 899.95px) {
   .owner-reference-dashboard {
     display: none;
+  }
+
+  .firu-main-header {
+    min-height: 64px;
+    gap: 6px;
+    padding: 8px 10px;
+    overflow: hidden;
+  }
+
+  .firu-main-header-brand {
+    width: 150px;
+    flex: 0 1 150px;
+    min-width: 0;
+  }
+
+  .firu-main-header-brand .firu-brand-horizontal {
+    gap: 4px;
+    padding-left: 0;
+  }
+
+  .firu-main-header-brand .firu-brand-mark {
+    width: 50px;
+    height: 46px;
+    flex-basis: 50px;
+  }
+
+  .firu-main-header-brand .firu-brand-mark .firu-brand-image {
+    left: -5px;
+    width: 68px;
+    height: 68px;
+  }
+
+  .firu-main-header-brand .firu-brand-wordmark {
+    font-size: 21px;
+    letter-spacing: -0.8px;
+  }
+
+  .firu-main-header-divider,
+  .firu-main-header-search,
+  .firu-main-header-controls,
+  .firu-main-header-message,
+  .firu-main-header-chevron {
+    display: none;
+  }
+
+  .firu-main-header-actions {
+    gap: 0 !important;
+  }
+
+  .firu-main-header-action {
+    width: 38px;
+    height: 38px;
+  }
+
+  .firu-main-header-language {
+    min-width: 42px;
+    width: 42px;
+    height: 38px;
+    padding: 0 4px !important;
+  }
+
+  .firu-main-header-language .MuiButton-startIcon {
+    margin-right: 2px;
+  }
+
+  .firu-main-header-account .MuiAvatar-root {
+    width: 38px;
+    height: 38px;
+    font-size: 13px;
+  }
+
+  .dashboard-global-shell .owner-reference-sidebar {
+    display: none;
+  }
+
+  .dashboard-global-shell .firu-layout-content {
+    padding-bottom: var(--firu-nav-height, 76px) !important;
   }
 
   .dashboard-global-header .owner-reference-topbar {

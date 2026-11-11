@@ -5,6 +5,7 @@ import {
   Button,
   Chip,
   CircularProgress,
+  Alert,
   Paper,
   Stack,
   TextField,
@@ -17,16 +18,22 @@ import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import { useNavigate } from "react-router-dom";
 import FiruBrand from "../Dashboard/ui/FiruBrand.tsx";
 import { buildApiUrl } from "../../config/runtime";
+import PlanSelector from "../Plans/PlanSelector.tsx";
+import { getApiErrorMessage } from "../../config/plans.ts";
 
 function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [plan, setPlan] = useState("BASIC");
+  const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMessage("");
     setLoading(true);
 
     try {
@@ -34,13 +41,15 @@ function Register() {
         name,
         email,
         password,
+        phone: phone.trim() || undefined,
+        plan,
         role: "USER",
       });
-      alert("Registration successful! Please log in.");
+      setErrorMessage("");
       navigate("/login");
     } catch (error) {
       console.error("Registration failed", error);
-      alert("Failed to register");
+      setErrorMessage(getApiErrorMessage(error, "No se pudo crear la cuenta."));
     } finally {
       setLoading(false);
     }
@@ -148,6 +157,15 @@ function Register() {
               />
               <TextField
                 fullWidth
+                label="Teléfono (opcional)"
+                autoComplete="tel"
+                variant="outlined"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3, bgcolor: "#f8fafc" } }}
+              />
+              <TextField
+                fullWidth
                 label="Contraseña"
                 autoComplete="new-password"
                 type="password"
@@ -158,7 +176,10 @@ function Register() {
                 helperText="Elige una contraseña para proteger tu cuenta."
                 sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3, bgcolor: "#f8fafc" } }}
               />
+              <PlanSelector value={plan} onChange={setPlan} />
             </Stack>
+
+            {errorMessage && <Alert severity="error" sx={{ mt: 1.5 }}>{errorMessage}</Alert>}
 
             <Button
               className="firu-login-submit"

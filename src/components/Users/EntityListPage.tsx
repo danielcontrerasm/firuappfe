@@ -21,6 +21,7 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import ShareIcon from "@mui/icons-material/Share";
 
 export interface Column<T> {
   field: keyof T | string;
@@ -46,6 +47,7 @@ export interface EntityListPageProps<T> {
   onCreate?: () => void;
   onEdit?: (row: T) => void;
   onDelete?: (row: T) => void;
+  onShare?: (row: T) => void;
 
   pageSize?: number;
   renderMobileRow?: (row: T) => React.ReactNode;
@@ -63,6 +65,7 @@ function EntityListPage<T extends { id: string | number }>({
   onCreate,
   onEdit,
   onDelete,
+  onShare,
   pageSize = 5,
   renderMobileRow,
 }: EntityListPageProps<T>) {
@@ -181,6 +184,7 @@ function EntityListPage<T extends { id: string | number }>({
         {pageRows.map(row => <article key={String(row.id)} className="firu-managed-pet-card">
           {renderMobileRow(row)}
           <div className="firu-managed-pet-actions">
+            {onShare && <Button size="small" startIcon={<ShareIcon />} onClick={() => onShare(row)}>Compartir</Button>}
             <Button size="small" startIcon={<EditIcon />} onClick={() => onEdit?.(row)}>Editar</Button>
             <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={() => onDelete?.(row)}>Eliminar</Button>
           </div>
@@ -238,6 +242,9 @@ function EntityListPage<T extends { id: string | number }>({
                     </TableCell>
                   ))}
                   <TableCell align="right">
+                    {onShare && <IconButton size="small" onClick={() => onShare(row)} aria-label="Compartir">
+                      <ShareIcon fontSize="small" />
+                    </IconButton>}
                     <IconButton
                       size="small"
                       onClick={() => onEdit && onEdit(row)}

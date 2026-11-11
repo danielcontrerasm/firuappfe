@@ -16,9 +16,14 @@ import AlertsPage from "./components/Dashboard/AlertsPage.tsx";
 import DogWalksPage from "./components/Walks/DogWalksPage.tsx";
 import WalkerDashboard from "./components/Dashboard/WalkerDashboard.tsx";
 import { isCurrentUserAdmin } from "./services/auth.ts";
+import { PlanProvider, usePlan } from "./context/PlanContext.tsx";
 
 const AdminOnlyRoute = ({ children }) => {
-  if (!isCurrentUserAdmin()) {
+  const { isAdmin, loading } = usePlan();
+  if (loading) {
+    return <div aria-busy="true" />;
+  }
+  if (!isAdmin && !isCurrentUserAdmin()) {
     return <Navigate to="/owner-dashboard" replace />;
   }
 
@@ -29,7 +34,8 @@ const AdminOnlyRoute = ({ children }) => {
 function App() {
   console.log("App loaded ✅");
   return (
-    <Routes>
+    <PlanProvider>
+      <Routes>
       {/* Default routes */}
       <Route path="/" element={<Navigate to="/login" replace />} />
 
@@ -58,7 +64,8 @@ function App() {
 
       {/* Catch-all */}
       <Route path="*" element={<Navigate to="/login" replace />} />
-    </Routes>
+      </Routes>
+    </PlanProvider>
   );
 }
 
